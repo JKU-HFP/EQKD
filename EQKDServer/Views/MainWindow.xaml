@@ -1,0 +1,112 @@
+﻿<Window x:Class="EQKDServer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:intr="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+        xmlns:local="clr-namespace:EQKDServer"
+        xmlns:views="clr-namespace:EQKDServer.Views"
+        xmlns:vm="clr-namespace:EQKDServer.ViewModels"
+        xmlns:scv="clr-namespace:EQKDServer.Views.SettingControls"
+        xmlns:scvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels"
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+        mc:Ignorable="d"
+        Title="EKQD Server" Height="800"  Width="800"  Style="{StaticResource RedWindowStyle}"
+        Icon="Pics/Logo_32x32.ico" BorderBrush="{StaticResource WindowDarkBackColor}"
+        DataContext="{StaticResource MainWindowViewModel}">
+
+    <Window.Resources>
+        
+        <Style TargetType="{x:Type GridSplitter}" x:Key="GridSplitterBaseStyle">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Background" Value="{StaticResource WindowDarkBackColor}"/>
+        </Style>
+      
+        <Style TargetType="{x:Type GridSplitter}" x:Key="HorizontalGridSplitterStyle" BasedOn="{StaticResource GridSplitterBaseStyle}">
+            <Setter Property="Height" Value="5"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+        </Style>
+        
+    </Window.Resources>
+    
+    <intr:Interaction.Triggers>
+        <intr:EventTrigger EventName="Loaded">
+            <intr:InvokeCommandAction Command="{Binding WindowLoadedCommand}"/>
+        </intr:EventTrigger>
+    </intr:Interaction.Triggers>
+
+    <Grid Background="{DynamicResource WindowBackColor}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="20" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="20" />
+            <RowDefinition Height="250" />
+            <RowDefinition Height="20" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="20" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="238*"/>
+            <ColumnDefinition Width="20" />
+        </Grid.ColumnDefinitions>
+
+        <!-- MENU BAR -->
+        <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Height="Auto" Margin="0,0,-0.4,19.6" Grid.RowSpan="2">
+            <MenuItem Header="File">
+                <MenuItem Header="Load Config" />
+                <MenuItem Header="Save Config" />
+            </MenuItem>
+            <MenuItem Header="Settings">
+                <MenuItem Header="Server Timetagger" Command="{Binding Settings_ServerTagger_Command}"/>
+                <MenuItem Header="Client Timetagger" Command="{Binding Settings_ClientTagger_Command}"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- STATS WINDOW -->
+        <ContentControl Grid.Row="2" Grid.Column="1">
+            <Border BorderThickness="1" BorderBrush="{StaticResource SolidBorderBrush}"  Background="{StaticResource WindowDarkBackColor}">
+                <views:StatusWindow/>
+            </Border>
+        </ContentControl>
+
+        <GridSplitter Grid.Row="2" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
+
+        <!-- SETTINGS AREA -->
+        <TabControl Grid.Row="3" Grid.Column="1"
+                    Grid.ColumnSpan="3" Margin="0,19.8,19.6,19.8" Grid.RowSpan="3">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Vertical">
+                        <Image Height="16" Source="Pics/Network_16x.png"/>
+                        <Label Foreground="White" Content="Network"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <scv:NetworkControl />
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Vertical">
+                        <Image Height="16" Source="Pics/Tagger_16x.png"/>
+                        <Label Foreground="White" Content="TimeTagger"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <scv:TaggerControl/>
+            </TabItem>
+        </TabControl>
+
+        <!-- MESSAGE AREA -->
+
+        <TextBox Grid.Row="6" Grid.Column="1"
+                BorderThickness="1"
+                vm:TextBoxBehaviour.ScrollOnTextChanged="True"
+                IsReadOnly="True"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                ScrollViewer.CanContentScroll="True"
+                Text="{Binding Messages, Mode=OneWay}" Grid.ColumnSpan="3" Margin="0,0.2,19.6,19.2" Grid.RowSpan="2"/>
+    </Grid>
+
+</Window>

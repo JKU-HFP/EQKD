@@ -1,0 +1,48 @@
+﻿<UserControl x:Class="EQKDServer.Views.SettingControls.NetworkControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:EQKDServer.Views.SettingControls"
+             xmlns:scvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels"
+             xmlns:vm="clr-namespace:EQKDServer.ViewModels"         
+             mc:Ignorable="d" 
+             d:DesignHeight="250" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <scvm:NetworkControlViewModel x:Key="NetWorkControlViewModel" />
+        <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource PropertyTextBoxStyle}" />
+        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource PropertyTextBlockStyle}" />
+    </UserControl.Resources>
+
+    <Grid DataContext="{StaticResource NetWorkControlViewModel}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="5" />
+            <RowDefinition Height="30" />
+            <RowDefinition Height="30" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="5" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5" />
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="5" />
+        </Grid.ColumnDefinitions>
+
+ 
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="Server IP Address" />
+        <TextBox Grid.Row="1" Grid.Column="2" MinWidth="200" Text="{Binding ServerIPAddress}"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="Port"/>
+        <TextBox Grid.Row="2" Grid.Column="2" MinWidth="100" Text="{Binding Port}" />
+
+        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal">
+            <Button Width="150" Content="Listen to Network" Command="{ Binding StartListeningToNetworkCommand}" />
+            <Button Width="150"  Content="Synchronize" Command="{ Binding SynchronizeCommand}"/>
+        </StackPanel>
+      
+    </Grid>
+</UserControl>
