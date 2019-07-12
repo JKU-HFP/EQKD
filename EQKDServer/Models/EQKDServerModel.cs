@@ -11,6 +11,8 @@ using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
 using TimeTaggerWPF_Library;
+using Stage_Library;
+using Stage_Library.Thorlabs;
 
 namespace EQKDServer.Models
 {
@@ -94,6 +96,25 @@ namespace EQKDServer.Models
             ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = secQNetServer };    
 
             _sync_status = SyncStatus.Sync_Required;
+
+            //Thorlabs stage test
+            KPRM1EStage stage1 = new KPRM1EStage(_loggerCallback);
+            KPRM1EStage stage2 = new KPRM1EStage(_loggerCallback);
+            bool res = stage1.Connect("27003707");
+            res = stage2.Connect("27254310");
+            
+
+            for(int i=1; i<5; i++)
+            {
+                stage1.Move_Absolute(90);
+                stage2.Move_Absolute(180);
+                Thread.Sleep(500);
+                stage1.Move_Absolute(0);
+                stage2.Move_Absolute(0);
+                Thread.Sleep(500);
+            }
+
+
         }
 
 
