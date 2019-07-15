@@ -128,10 +128,25 @@ namespace Entanglement_Library
                 if (ct.IsCancellationRequested) return false;
 
                 //Asynchronously Rotate stages to position
-                Task hwpA_Task = Task.Run( () => _HWP_A.Move_Absolute(basis.BasisConfig[0]) );
-                Task qwpA_Task = Task.Run( () =>_QWP_A.Move_Absolute(basis.BasisConfig[1]) );
-                Task hwpB_Task = Task.Run(() =>_HWP_B.Move_Absolute(basis.BasisConfig[0]) );
-                Task qwpB_Task = Task.Run(() => _QWP_B.Move_Absolute(basis.BasisConfig[1]) );
+                Task hwpA_Task = Task.Run( () => {
+                    _HWP_A.Move_Absolute(basis.BasisConfig[0]);
+                    _HWP_A.WaitForPos();
+                    });
+
+                Task qwpA_Task = Task.Run( () => {
+                    _QWP_A.Move_Absolute(basis.BasisConfig[1]);
+                    _QWP_A.WaitForPos();
+                    });
+
+                Task hwpB_Task = Task.Run(() => {
+                    _HWP_B.Move_Absolute(basis.BasisConfig[0]);
+                    _HWP_B.WaitForPos();
+                    });
+
+                Task qwpB_Task = Task.Run(() => {
+                    _QWP_B.Move_Absolute(basis.BasisConfig[1]);
+                    _QWP_B.WaitForPos();
+                    });
 
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 

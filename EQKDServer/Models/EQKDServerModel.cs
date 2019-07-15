@@ -13,6 +13,7 @@ using TimeTagger_Library.TimeTagger;
 using TimeTaggerWPF_Library;
 using Stage_Library;
 using Stage_Library.Thorlabs;
+using Stage_Library.NewPort;
 
 namespace EQKDServer.Models
 {
@@ -102,18 +103,33 @@ namespace EQKDServer.Models
             KPRM1EStage stage2 = new KPRM1EStage(_loggerCallback);
             bool res = stage1.Connect("27003707");
             res = stage2.Connect("27254310");
-            
 
-            for(int i=1; i<5; i++)
+
+            //Newport stage test
+            SMC100Controller smccont = new SMC100Controller(_loggerCallback);
+            smccont.Connect("COM4");
+            int num = smccont.NumStages;
+            if (num != 3) return;
+
+            smccont[1].InvertRotationSense = true;
+            smccont[2].InvertRotationSense = true;
+
+
+            Task t1 = Task.Run(() =>
+               {
+                   smccont[1].Move_Absolute(0);
+                   smccont[1].WaitForPos();
+               });
+
+            Task t2 = Task.Run(() =>
             {
-                stage1.Move_Absolute(90);
-                stage2.Move_Absolute(180);
-                Thread.Sleep(500);
-                stage1.Move_Absolute(0);
-                stage2.Move_Absolute(0);
-                Thread.Sleep(500);
-            }
+                smccont[2].Move_Absolute(0);
+                smccont[2].WaitForPos();
+            });
 
+            Task.WhenAll(t1, t2).GetAwaiter().GetResult();
+
+            bool test = false;
 
         }
 
