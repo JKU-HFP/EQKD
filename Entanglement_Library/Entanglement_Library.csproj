@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,33 +50,31 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newport.SMC100.CommandInterface">
-      <HintPath>..\..\ProjectLibrary\Assemblies\Newport_x64\Newport.SMC100.CommandInterface.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="Thorlabs.MotionControl.DeviceManagerCLI">
-      <HintPath>..\..\ProjectLibrary\Assemblies\Thorlabs_x64\Thorlabs.MotionControl.DeviceManagerCLI.dll</HintPath>
-    </Reference>
-    <Reference Include="Thorlabs.MotionControl.GenericMotorCLI">
-      <HintPath>..\..\ProjectLibrary\Assemblies\Thorlabs_x64\Thorlabs.MotionControl.GenericMotorCLI.dll</HintPath>
-    </Reference>
-    <Reference Include="ThorLabs.MotionControl.KCube.DCServoCLI">
-      <HintPath>..\..\ProjectLibrary\Assemblies\Thorlabs_x64\ThorLabs.MotionControl.KCube.DCServoCLI.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Basis.cs" />
     <Compile Include="DensityMatrixMeasurement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <Import Project="..\..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems" Label="Shared" />
-  <Import Project="..\..\ProjectLibrary\Stage_Library\Stage_Library.projitems" Label="Shared" />
+  <ItemGroup>
+    <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
+      <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
+      <Name>Extensions_Library</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

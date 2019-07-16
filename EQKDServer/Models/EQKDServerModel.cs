@@ -14,6 +14,8 @@ using TimeTaggerWPF_Library;
 using Stage_Library;
 using Stage_Library.Thorlabs;
 using Stage_Library.NewPort;
+using Entanglement_Library;
+using System.IO;
 
 namespace EQKDServer.Models
 {
@@ -34,18 +36,24 @@ namespace EQKDServer.Models
         private long _taggersOffset_Latency;
         private long _taggersOffset_Drift;
 
-        //Client Comunication
-        private CancellationTokenSource _requestTimeTags_cts;
-        private volatile bool _IsRequestingClientTimeTags = false;
 
         //-----------------------------------
         //----  P R O P E R T I E S
         //-----------------------------------
 
+        //SecQNet Connection
         public SecQNetServer secQNetServer { get; private set; }
 
+        //Time Tagger
         public ITimeTagger ServerTimeTagger { get; set; }
         public ITimeTagger ClientTimeTagger { get; set; }
+        
+        //Rotation Stages
+        public SMC100Controller _smcController { get; private set; }
+        public SMC100Stage _HWP_A { get; private set; }
+        public KPRM1EStage _QWP_A { get; private set; }
+        public SMC100Stage _HWP_B { get; private set; }
+        public KPRM1EStage _QWP_B { get; private set; }
 
         public SyncStatus SynchronizationStatus
         {
@@ -93,44 +101,43 @@ namespace EQKDServer.Models
             //TimeTaggerFactory clienttaggerFactory = new TimeTaggerFactory("ClientTagger", _loggerCallback) { SecQNetServer = secQNetServer };
             //ClientTimeTagger = clienttaggerFactory.GetDefaultTimeTagger();
 
+            //Instanciate TimeTaggers
             ServerTimeTagger = new HydraHarp(_loggerCallback);
             ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = secQNetServer };    
 
             _sync_status = SyncStatus.Sync_Required;
 
-            //Thorlabs stage test
-            KPRM1EStage stage1 = new KPRM1EStage(_loggerCallback);
-            KPRM1EStage stage2 = new KPRM1EStage(_loggerCallback);
-            bool res = stage1.Connect("27003707");
-            res = stage2.Connect("27254310");
+            //DENSITY MATRIX TEST
+            MeasureDensityMatrix();
+        }
 
+        public void MeasureDensityMatrix()
+        {
+            //Instanciate and connect rotation Stages
+            _QWP_A = new KPRM1EStage(_loggerCallback);
+            _QWP_B = new KPRM1EStage(_loggerCallback);
+            if (!_QWP_A.Connect("27003707")) return;
+            if (!_QWP_B.Connect("27254310")) return;
 
-            //Newport stage test
-            SMC100Controller smccont = new SMC100Controller(_loggerCallback);
-            smccont.Connect("COM4");
-            int num = smccont.NumStages;
-            if (num != 3) return;
+            _smcController = new SMC100Controller(_loggerCallback);
+            _smcController.Connect("COM4");           
+            if (_smcController.NumStages != 3) return;
 
-            smccont[1].InvertRotationSense = true;
-            smccont[2].InvertRotationSense = true;
+            _HWP_A = _smcController[1];
+            _HWP_B = _smcController[2];
+            _HWP_A.InvertRotationSense = true;
+            _HWP_B.InvertRotationSense = true;
 
+            DensityMatrixMeasurement densMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
 
-            Task t1 = Task.Run(() =>
-               {
-                   smccont[1].Move_Absolute(0);
-                   smccont[1].WaitForPos();
-               });
+            densMeas.DensityMatrixCompleted += new EventHandler<DensityMatrixCompletedEventArgs>((object sender, DensityMatrixCompletedEventArgs e) =>
+           {
+               string[] relareas_output = e.RelPeakAreas.Select(p => p.ToString()).ToArray();
+               File.WriteAllLines("DensityMatrix", relareas_output);
+           });
 
-            Task t2 = Task.Run(() =>
-            {
-                smccont[2].Move_Absolute(0);
-                smccont[2].WaitForPos();
-            });
-
-            Task.WhenAll(t1, t2).GetAwaiter().GetResult();
-
-            bool test = false;
-
+            //densMeas.MeasurePeakAreasAsync();
+                        
         }
 
 

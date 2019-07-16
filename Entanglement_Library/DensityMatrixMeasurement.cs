@@ -14,6 +14,66 @@ namespace Entanglement_Library
     public class DensityMatrixMeasurement
     {
         //#################################################
+        //##  C O N S T A N T S 
+        //#################################################
+
+        //Standard-Basis sequence 36 elements
+        public readonly List<double[]> StdBasis36 = new List<double[]>
+        {
+            // HWP_A, QWP_A, HWP_B, QWP_B
+
+            //Hx
+            new double[] {0,0,0,0}, //xH
+            new double[] {0,0,45,0}, //xV
+            new double[] {0,0,22.5,0}, //xD
+            new double[] {0,0,-22.5,0}, //xA
+            new double[] {0,0,0,45}, //xR
+            new double[] {0,0,0,-45}, //xL
+
+            //Vx
+            new double[] {45,0,0,0}, //xH
+            new double[] {45,0,45,0}, //xV
+            new double[] {45,0,22.5,0}, //xD
+            new double[] {45,0,-22.5,0}, //xA
+            new double[] {45,0,0,45}, //xR
+            new double[] {45,0,0,-45}, //xL
+
+            //Dx
+            new double[] {22.5,0,0,0}, //xH
+            new double[] {22.5, 0,45,0}, //xV
+            new double[] {22.5, 0,22.5,0}, //xD
+            new double[] {22.5, 0,-22.5,0}, //xA
+            new double[] {22.5, 0,0,45}, //xR
+            new double[] {22.5, 0,0,-45}, //xL
+
+            //Ax
+            new double[] {-22.5,0,0,0}, //xH
+            new double[] {-22.5, 0,45,0}, //xV
+            new double[] {-22.5, 0,22.5,0}, //xD
+            new double[] {-22.5, 0,-22.5,0}, //xA
+            new double[] {-22.5, 0,0,45}, //xR
+            new double[] {-22.5, 0,0,-45}, //xL
+
+            //Rx
+            new double[] {0,45,0,0}, //xH
+            new double[] {0,45, 45,0}, //xV
+            new double[] {0,45,22.5,0}, //xD
+            new double[] {0,45,-22.5,0}, //xA
+            new double[] {0,45,0,45}, //xR
+            new double[] {0,45,0,-45}, //xL
+
+            //Lx
+            new double[] {0,-45,0,0}, //xH
+            new double[] {0,-45, 45,0}, //xV
+            new double[] {0,-45,22.5,0}, //xD
+            new double[] {0,-45,-22.5,0}, //xA
+            new double[] {0,-45,0,45}, //xR
+            new double[] {0,-45,0,-45}, //xL
+        };
+        
+
+
+        //#################################################
         //##  P R O P E R T I E S
         //#################################################
 
@@ -36,8 +96,6 @@ namespace Entanglement_Library
 
         private CancellationTokenSource _cts;
         private List<Basis> _basisMeasurements;
-        private List<Histogram> _basisHistograms;
-        private Kurolator correlator;
         private List<double> _relMiddlePeakAreas;
         private Action<string> _loggerCallback;
 
@@ -72,8 +130,11 @@ namespace Entanglement_Library
             _loggerCallback = loggerCallback;
         }     
         
-        public async Task MeasurePeakAreasAsync(List<double[]> basisConfigs)
+        public async Task MeasurePeakAreasAsync(List<double[]> basisConfigsIn = null)
         {
+            //Use standard basis if no other given
+            List<double[]> basisConfigs = basisConfigsIn ?? StdBasis36;
+            
             if(!basisConfigs.TrueForAll(p => p.Count() == 4))
             {
                 WriteLog("Wrong Basis format.");
@@ -90,9 +151,11 @@ namespace Entanglement_Library
             _cts = new CancellationTokenSource();
 
             //Measure Histograms
+            WriteLog("Start measuring histograms with " + basisConfigs.Count.ToString() + " basis");
             bool result = await Task.Run(() => DoMeasureHistograms(_cts.Token));
 
             //Calculate relative Peak areas from Histograms
+            WriteLog("Calculating relative peak areas");
             _relMiddlePeakAreas = new List<double>();
             foreach(var basis in _basisMeasurements)
             {
@@ -148,7 +211,10 @@ namespace Entanglement_Library
                     _QWP_B.WaitForPos();
                     });
 
+                //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
+
+                WriteLog("Collecting coincidences in configuration " + basis.BasisConfig[0] + ","  +basis.BasisConfig[1] + ","  +basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
 
                 //Start collecting timetags
                 _tagger.StartCollectingTimeTagsAsync();

@@ -187,7 +187,6 @@ namespace SecQNet
             {
                 Disconnect();
                 throw new Exception(ex.Message, ex.InnerException);
-                return false;
             }
             return true;
         }
