@@ -17,6 +17,7 @@ using System.Windows.Shapes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using LiveCharts.Defaults;
 using GalaSoft.MvvmLight.Messaging;
 using EQKDServer.Models.Messages;
@@ -207,10 +208,16 @@ namespace EQKDServer.ViewModels
             ServerBufferStatus = 0;
             ClientBufferSize = 1000;
             ClientBufferStatus = 0;
-
+         
             //Initialize Chart elements
             ClientTagsReceiveRateCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
+
+            Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler((sender, e) =>
+           {
+               LogMessage(e.Exception.Message);
+               e.Handled = true;
+           });
         }
 
 
