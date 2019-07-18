@@ -95,7 +95,7 @@ namespace Entanglement_Library
         private IRotationStage _QWP_B;
 
         private CancellationTokenSource _cts;
-        private List<Basis> _basisMeasurements;
+        private List<DMBasis> _basisMeasurements;
         private List<double> _relMiddlePeakAreas;
         private Action<string> _loggerCallback;
 
@@ -128,8 +128,12 @@ namespace Entanglement_Library
             _QWP_B = QWP_B;
 
             _loggerCallback = loggerCallback;
-        }     
-        
+        }
+
+
+        //#################################################
+        //##  M E T H O D S
+        //#################################################
         public async Task MeasurePeakAreasAsync(List<double[]> basisConfigsIn = null)
         {
             //Use standard basis if no other given
@@ -142,10 +146,10 @@ namespace Entanglement_Library
             }
 
             //Create Basis elements
-            _basisMeasurements = new List<Basis>();
+            _basisMeasurements = new List<DMBasis>();
             foreach (var basisConfig in basisConfigs)
             {
-                _basisMeasurements.Add(new Basis(basisConfig, ChannelA, ChannelB, 100000));
+                _basisMeasurements.Add(new DMBasis(basisConfig, ChannelA, ChannelB, 100000));
             }
 
             _cts = new CancellationTokenSource();
@@ -159,13 +163,7 @@ namespace Entanglement_Library
             _relMiddlePeakAreas = new List<double>();
             foreach(var basis in _basisMeasurements)
             {
-                IEnumerable<Peak> e_MiddlePeak = basis.Peaks.Where(p => Math.Abs(p.MeanTime) == basis.Peaks.Select(a => Math.Abs(a.MeanTime)).Min());
-                IEnumerable<Peak> e_SidePeaks = basis.Peaks.Except(e_MiddlePeak);
-
-                var A_Middle = e_MiddlePeak.Select(p => p.Area).Average();
-                var A_Side_Average = e_SidePeaks.Select(p => p.Area).Average();
-
-                _relMiddlePeakAreas.Add(A_Middle / A_Side_Average);
+                _relMiddlePeakAreas.Add(Histogram.GetRelativeMiddlePeakArea(basis.Peaks));
             }
 
             //Report
@@ -193,22 +191,18 @@ namespace Entanglement_Library
                 //Asynchronously Rotate stages to position
                 Task hwpA_Task = Task.Run( () => {
                     _HWP_A.Move_Absolute(basis.BasisConfig[0]);
-                    _HWP_A.WaitForPos();
                     });
 
                 Task qwpA_Task = Task.Run( () => {
                     _QWP_A.Move_Absolute(basis.BasisConfig[1]);
-                    _QWP_A.WaitForPos();
                     });
 
                 Task hwpB_Task = Task.Run(() => {
                     _HWP_B.Move_Absolute(basis.BasisConfig[0]);
-                    _HWP_B.WaitForPos();
                     });
 
                 Task qwpB_Task = Task.Run(() => {
                     _QWP_B.Move_Absolute(basis.BasisConfig[1]);
-                    _QWP_B.WaitForPos();
                     });
 
                 //Wait for all stages to arrive at destination
@@ -246,7 +240,12 @@ namespace Entanglement_Library
 
     }
 
-    public class BasisCompletedEventArgs
+
+    //#################################################
+    //##  E V E N T   A R G U M E N T S
+    //#################################################
+
+    public class BasisCompletedEventArgs : EventArgs
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
@@ -259,7 +258,7 @@ namespace Entanglement_Library
 
     }
 
-    public class DensityMatrixCompletedEventArgs
+    public class DensityMatrixCompletedEventArgs : EventArgs
     {
         public List<double> RelPeakAreas { get; private set; }
 

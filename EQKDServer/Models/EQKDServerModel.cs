@@ -132,8 +132,9 @@ namespace EQKDServer.Models
 
             densMeas.DensityMatrixCompleted += new EventHandler<DensityMatrixCompletedEventArgs>((object sender, DensityMatrixCompletedEventArgs e) =>
            {
+               //Output 
                string[] relareas_output = e.RelPeakAreas.Select(p => p.ToString()).ToArray();
-               File.WriteAllLines("DensityMatrix", relareas_output);
+               File.WriteAllLines("DensityMatrix.txt", relareas_output);
            });
 
             //densMeas.MeasurePeakAreasAsync();

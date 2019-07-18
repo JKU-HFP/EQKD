@@ -8,7 +8,7 @@ using TimeTagger_Library.Correlation;
 
 namespace Entanglement_Library
 {
-    internal class Basis
+    internal class DMBasis
     {
         private Kurolator _correlator;
        
@@ -18,7 +18,7 @@ namespace Entanglement_Library
         public Histogram CrossCorrHistogram { get; private set; }
         public List<Peak> Peaks { get; private set; }
 
-        public Basis(double[] basisconfig, uint chanA, uint chanB, ulong timewindow)
+        public DMBasis(double[] basisconfig, uint chanA, uint chanB, ulong timewindow)
         {
             BasisConfig = basisconfig;
 
