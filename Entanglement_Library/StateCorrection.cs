@@ -50,6 +50,19 @@ namespace Entanglement_Library
         /// </summary>
         public ulong TimeBin { get; set; } = 1000;
         
+        /// <summary>
+        /// T = ln(d/e)/ln(n-1) (t n)^3
+        /// ------------------------------
+        /// T... Overall measurement time
+        /// d... Initial Range
+        /// e... Target accuracy
+        /// n... Number of points per iteration
+        /// t... Time for one integration (+movement)
+        /// </summary>
+        public double TotalTime
+        {
+            get => Math.Log(_initRange / Accurracy) / Math.Log(2) * Math.Pow(1.3*IntegrationTime * 2, 3);
+        }
 
         //#################################################
         //##  P R I V A T E S
@@ -64,6 +77,8 @@ namespace Entanglement_Library
         private Action<string> _loggerCallback;
         private CancellationTokenSource _cts;
 
+        private double _initRange = 180;
+
         //#################################################
         //##  E V E N T
         //#################################################
@@ -74,6 +89,11 @@ namespace Entanglement_Library
             CostFunctionAquired?.Invoke(this, e);  
         }
 
+        public event EventHandler<OptimizationCompleteEventArgs> OptimizationComplete;
+        private void OnOptimizationComplete(OptimizationCompleteEventArgs e)
+        {
+            OptimizationComplete?.Invoke(this, e);
+        }
 
         //#################################################
         //##  C O N S T R U C T O R
@@ -96,13 +116,12 @@ namespace Entanglement_Library
         public bool DoOptimize(CancellationToken ct)
         {
             //Make finer grid at first take to avoid false extremal points
-            double initRange = 180.0;
             int initNumPoints = 10;
 
-            MinPos = GetOptimumPositions(new double[] { 0, 0, 0 }, initNumPoints, initRange, ct);
+            MinPos = GetOptimumPositions(new double[] { 0, 0, 0 }, initNumPoints, _initRange, ct);
 
             //Bisect until Accuracy is reached
-            double Range = initRange / initNumPoints;
+            double Range = _initRange / initNumPoints;
                               
             while(Range<=Accurracy)
             {
@@ -233,5 +252,10 @@ namespace Entanglement_Library
             HistogramY = histY;
             Cost = cost;
         }
+    }
+    
+    public class OptimizationCompleteEventArgs
+    {
+
     }
 }
