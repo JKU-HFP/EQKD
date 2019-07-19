@@ -52,6 +52,10 @@
     <Reference Include="Newport.SMC100.CommandInterface">
       <HintPath>..\..\ProjectLibrary\Assemblies\Newport_x64\Newport.SMC100.CommandInterface.dll</HintPath>
     </Reference>
+    <Reference Include="SwabianInstruments.TimeTagger, Version=2.4.2.0, Culture=neutral, PublicKeyToken=b205e4d8392117f7, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\ProjectLibrary\Assemblies\SwabianInstruments_x64\SwabianInstruments.TimeTagger.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -72,6 +76,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArrayExtensions.cs" />
     <Compile Include="EventManipulation.cs" />
     <Compile Include="UIEventMarshalling.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
