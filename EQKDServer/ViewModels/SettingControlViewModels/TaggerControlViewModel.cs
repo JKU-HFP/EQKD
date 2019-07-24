@@ -17,6 +17,8 @@ using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
+using Entanglement_Library;
+using System.IO;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -84,8 +86,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         {
             //Map RelayCommmands
             StartCollectingCommand = new RelayCommand<object>( (o) =>
-            {              
-                _EQKDServer.ServerTimeTagger.StartCollectingTimeTagsAsync();
+            {
+                //_EQKDServer.ServerTimeTagger.StartCollectingTimeTagsAsync();
+                _EQKDServer.MeasureDensityMatrix();
             });
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
@@ -96,8 +99,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
             {
                 _EQKDServer= servermsg.EQKDServer;
-                _EQKDServer.ServerTimeTagger.TimeTagsCollected += TimeTagsCollected;
-                _EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
+                _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
+                _EQKDServer.DensMeas.DensityMatrixCompleted += DensityMatrixComplete;
+                //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
             });
 
            
@@ -128,6 +132,17 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         }
                     
         //Event Handler
+        private void BasisComplete(object sender, BasisCompletedEventArgs e )
+        {
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+        }
+
+        private void DensityMatrixComplete(object sender, DensityMatrixCompletedEventArgs e)
+        {
+            File.WriteAllLines("DensityMatrix.txt", e.RelPeakAreas.Select( p=> p.ToString()).ToArray());
+        }
+
         private void TimeTagsCollected(object sender, TimeTagsCollectedEventArgs e)
         {
             if(OverwriteChecked || _correlator==null)

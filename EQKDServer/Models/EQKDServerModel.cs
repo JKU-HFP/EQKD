@@ -37,9 +37,12 @@ namespace EQKDServer.Models
         private long _taggersOffset_Drift;
 
 
+
         //-----------------------------------
         //----  P R O P E R T I E S
         //-----------------------------------
+
+        public DensityMatrixMeasurement DensMeas;
 
         //SecQNet Connection
         public SecQNetServer secQNetServer { get; private set; }
@@ -108,11 +111,7 @@ namespace EQKDServer.Models
             _sync_status = SyncStatus.Sync_Required;
 
             //DENSITY MATRIX TEST
-            MeasureDensityMatrix();
-        }
 
-        public void MeasureDensityMatrix()
-        {
             //Instanciate and connect rotation Stages
             _QWP_A = new KPRM1EStage(_loggerCallback);
             _QWP_B = new KPRM1EStage(_loggerCallback);
@@ -120,7 +119,7 @@ namespace EQKDServer.Models
             if (!_QWP_B.Connect("27254310")) return;
 
             _smcController = new SMC100Controller(_loggerCallback);
-            _smcController.Connect("COM4");           
+            _smcController.Connect("COM4");
             if (_smcController.NumStages != 3) return;
 
             _HWP_A = _smcController[1];
@@ -128,16 +127,22 @@ namespace EQKDServer.Models
             _HWP_A.InvertRotationSense = true;
             _HWP_B.InvertRotationSense = true;
 
-            DensityMatrixMeasurement densMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
+            ServerTimeTagger.Connect(null);
 
-            densMeas.DensityMatrixCompleted += new EventHandler<DensityMatrixCompletedEventArgs>((object sender, DensityMatrixCompletedEventArgs e) =>
-           {
-               //Output 
-               string[] relareas_output = e.RelPeakAreas.Select(p => p.ToString()).ToArray();
-               File.WriteAllLines("DensityMatrix.txt", relareas_output);
-           });
+            //Define Offsets
+            _HWP_A.Offset = 42.5349; //with inverted direction
+            _HWP_B.Offset = 278.007; //with inverted direction
+            _QWP_A.Offset = 3.147;
+            _QWP_B.Offset = 2.119;
 
-            //densMeas.MeasurePeakAreasAsync();
+            DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
+     
+        }
+
+        public void MeasureDensityMatrix()
+        {
+           
+            DensMeas.MeasurePeakAreasAsync();
                         
         }
 

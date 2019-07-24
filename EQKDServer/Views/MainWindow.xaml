@@ -42,7 +42,7 @@
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
             <RowDefinition Height="20" />
-            <RowDefinition Height="250" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
             <RowDefinition Height="20" />

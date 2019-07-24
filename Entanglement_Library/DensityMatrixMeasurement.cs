@@ -198,11 +198,11 @@ namespace Entanglement_Library
                     });
 
                 Task hwpB_Task = Task.Run(() => {
-                    _HWP_B.Move_Absolute(basis.BasisConfig[0]);
+                    _HWP_B.Move_Absolute(basis.BasisConfig[2]);
                     });
 
                 Task qwpB_Task = Task.Run(() => {
-                    _QWP_B.Move_Absolute(basis.BasisConfig[1]);
+                    _QWP_B.Move_Absolute(basis.BasisConfig[3]);
                     });
 
                 //Wait for all stages to arrive at destination
@@ -228,7 +228,7 @@ namespace Entanglement_Library
                 basis.CreateHistogram(tt,OffsetChanB);
 
                 //Report
-                OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y));
+                OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y, basis.Peaks));
             }
 
             return true;
@@ -249,11 +249,13 @@ namespace Entanglement_Library
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
+        public List<Peak> Peaks { get; private set; }
 
-        public BasisCompletedEventArgs(long[] histX, long[] histY)
+        public BasisCompletedEventArgs(long[] histX, long[] histY, List<Peak> peaks)
         {
             HistogramX = histX;
             HistogramY = histY;
+            Peaks = peaks;
         }
 
     }
