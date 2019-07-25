@@ -132,8 +132,10 @@ namespace EQKDServer.Models
             //Define Offsets
             _HWP_A.Offset = 42.5349; //with inverted direction
             _HWP_B.Offset = 278.007; //with inverted direction
-            _QWP_A.Offset = 3.147;
-            _QWP_B.Offset = 2.119;
+            //_QWP_A.Offset = 3.147;
+            //_QWP_B.Offset = 2.119;
+            _QWP_A.Offset = 0;
+            _QWP_B.Offset = 0;
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
      
