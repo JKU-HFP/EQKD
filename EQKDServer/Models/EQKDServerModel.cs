@@ -115,27 +115,33 @@ namespace EQKDServer.Models
             //Instanciate and connect rotation Stages
             _QWP_A = new KPRM1EStage(_loggerCallback);
             _QWP_B = new KPRM1EStage(_loggerCallback);
-            if (!_QWP_A.Connect("27003707")) return;
-            if (!_QWP_B.Connect("27254310")) return;
 
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
-            if (_smcController.NumStages != 3) return;
 
             _HWP_A = _smcController[1];
             _HWP_B = _smcController[2];
-            _HWP_A.InvertRotationSense = true;
-            _HWP_B.InvertRotationSense = true;
 
-            ServerTimeTagger.Connect(null);
 
-            //Define Offsets
-            _HWP_A.Offset = 42.5349; //with inverted direction
-            _HWP_B.Offset = 278.007; //with inverted direction
-            //_QWP_A.Offset = 3.147;
-            //_QWP_B.Offset = 2.119;
+            //Define rotation sense and offset
+            if (_HWP_A != null)
+            {
+                _HWP_A.InvertRotationSense = true;
+                _HWP_A.Offset = 42.5349; //with inverted direction
+
+            }
+
+            if (_HWP_B != null)
+            {
+                _HWP_B.InvertRotationSense = true;
+                _HWP_B.Offset = 278.007; //with inverted direction
+            }
+
             _QWP_A.Offset = 0;
             _QWP_B.Offset = 0;
+
+            //Connect timetagger
+            ServerTimeTagger.Connect(null);
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
      
@@ -143,7 +149,12 @@ namespace EQKDServer.Models
 
         public void MeasureDensityMatrix()
         {
-           
+            if(!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            {
+                WriteLog("Rotation stages not ready.");
+                return;
+            }
+
             DensMeas.MeasurePeakAreasAsync();
                         
         }
