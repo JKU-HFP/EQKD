@@ -116,6 +116,11 @@ namespace EQKDServer.Models
             _QWP_A = new KPRM1EStage(_loggerCallback);
             _QWP_B = new KPRM1EStage(_loggerCallback);
 
+            _QWP_A.Connect("27254310");
+
+            _QWP_B.Connect("27003707");
+            
+
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
 
