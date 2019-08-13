@@ -118,7 +118,7 @@ namespace EQKDServer.Models
 
             _QWP_A.Connect("27254310");
 
-            _QWP_B.Connect("27003707");
+            _QWP_B.Connect("27504148");
             
 
             _smcController = new SMC100Controller(_loggerCallback);
@@ -131,22 +131,19 @@ namespace EQKDServer.Models
             //Define rotation sense and offset
             if (_HWP_A != null)
             {
-                _HWP_A.InvertRotationSense = true;
-                _HWP_A.Offset = 42.5349; //with inverted direction
-
+                _HWP_A.Offset = 45.01; 
             }
 
             if (_HWP_B != null)
             {
-                _HWP_B.InvertRotationSense = true;
-                _HWP_B.Offset = 278.007; //with inverted direction
+                _HWP_B.Offset = 100.06;
             }
 
-            _QWP_A.Offset = 0;
-            _QWP_B.Offset = 0;
+            _QWP_A.Offset = 35.15;
+            _QWP_B.Offset = 63.84;
 
             //Connect timetagger
-            ServerTimeTagger.Connect(null);
+            ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
      

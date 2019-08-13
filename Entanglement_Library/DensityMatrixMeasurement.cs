@@ -168,6 +168,8 @@ namespace Entanglement_Library
 
             //Report
             OnDensityMatrixCompleted(new DensityMatrixCompletedEventArgs(_relMiddlePeakAreas));
+
+            WriteLog("Recording density matrix complete.");
         }
         
         public void CancelMeasurement()
@@ -182,6 +184,8 @@ namespace Entanglement_Library
             //Initialize photon buffer
             _tagger.StopCollectingTimeTags();
             _tagger.ClearTimeTagBuffer();
+
+            int index = 1;
 
             //measure
             foreach (var basis in _basisMeasurements)
@@ -208,7 +212,7 @@ namespace Entanglement_Library
                 //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
-                WriteLog("Collecting coincidences in configuration " + basis.BasisConfig[0] + ","  +basis.BasisConfig[1] + ","  +basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
+                WriteLog("Collecting coincidences in configuration Nr." + index + ": " + basis.BasisConfig[0] + ","  +basis.BasisConfig[1] + ","  +basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
 
                 //Start collecting timetags
                 _tagger.StartCollectingTimeTagsAsync();
@@ -229,6 +233,8 @@ namespace Entanglement_Library
 
                 //Report
                 OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y, basis.Peaks));
+
+                index++;
             }
 
             return true;
