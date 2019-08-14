@@ -152,6 +152,7 @@ namespace EQKDServer.Models
 
             //STATE CORRECTION
             StateCorrTimeTagger = new SITimeTagger(loggercallback);
+            StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
 
             StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
      
@@ -159,13 +160,19 @@ namespace EQKDServer.Models
 
         public void MeasureDensityMatrix()
         {
-            //if(!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
-            //{
-            //    WriteLog("Rotation stages not ready.");
-            //    return;
-            //}
+            if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            {
+                WriteLog("Rotation stages not ready.");
+                return;
+            }
 
             //DensMeas.MeasurePeakAreasAsync();
+
+            if(!StateCorrTimeTagger.CanCollect)
+            {
+                WriteLog("TimeTagger not ready");
+                return;
+            }
 
             StateCorr.StartOptimizationAsync();
 

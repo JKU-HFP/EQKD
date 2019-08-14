@@ -9,6 +9,7 @@ using Stage_Library;
 using System.Threading;
 using TimeTagger_Library;
 using System.Diagnostics;
+using Extensions_Library;
 
 namespace Entanglement_Library
 {
@@ -106,13 +107,13 @@ namespace Entanglement_Library
         public event EventHandler<BasisCompletedEventArgs> BasisCompleted;       
         private void OnBasisCompleted(BasisCompletedEventArgs e)
         {
-            BasisCompleted?.Invoke(this, e);
+            BasisCompleted?.Raise(this, e);
         }
 
         public event EventHandler<DensityMatrixCompletedEventArgs> DensityMatrixCompleted;
         private void OnDensityMatrixCompleted(DensityMatrixCompletedEventArgs e)
         {
-            DensityMatrixCompleted?.Invoke(this, e);
+            DensityMatrixCompleted?.Raise(this, e);
         }
 
 

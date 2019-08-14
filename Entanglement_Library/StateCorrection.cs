@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.1;
+        public double Accurracy { get; set; } = 10;
         public double[] MinPos { get; private set; }
 
         /// <summary>
@@ -33,13 +34,13 @@ namespace Entanglement_Library
         /// </summary>
         private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
         {
-            (0,1),(2,3)
+            (1,6),(2,5)
         };
 
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 1;
+        public int IntegrationTime { get; set; } = 5;
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -64,6 +65,7 @@ namespace Entanglement_Library
         {
             get => Math.Log(_initRange / Accurracy) / Math.Log(2) * Math.Pow(1.3*IntegrationTime * 2, 3);
         }
+        public object StopWatch { get; private set; }
 
         //#################################################
         //##  P R I V A T E S
@@ -110,25 +112,58 @@ namespace Entanglement_Library
         {
             _cts = new CancellationTokenSource();
 
+            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             bool result = await Task.Run(() => DoOptimize(_cts.Token));
-           
+
+            WriteLog($"State correction complete in {stopwatch.Elapsed}");
         }
 
         private bool DoOptimize(CancellationToken ct)
         {
+
+            Stopwatch stopwatch = new Stopwatch();
+
             //Make finer grid at first take to avoid false extremal points
-            int initNumPoints = 10;
+            int initNumPoints = 3;
+
+            WriteLog("-------------------------------------");
+            WriteLog($"Initial Optimization | n={initNumPoints} | range={_initRange}");
+
+            stopwatch.Restart();
 
             MinPos = GetOptimumPositions(new double[] { 0, 0, 0 }, initNumPoints, _initRange, ct);
 
+            stopwatch.Stop();
+
+            WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+
             //Bisect until Accuracy is reached
-            double Range = _initRange / initNumPoints;
-                              
-            while(Range<=Accurracy)
+            double Range = _initRange / (initNumPoints-1);
+
+            int iteration = 1;
+              
+            while(Range>=Accurracy)
             {
-                MinPos = GetOptimumPositions(MinPos, 3, Range, ct);
+                int n = 3;
+
+                WriteLog("-------------------------------------");
+                WriteLog($"Iteration {iteration} | n={n} | range={Range}");
+
+                stopwatch.Restart();
+
+                MinPos = GetOptimumPositions(MinPos, n, Range, ct);
                 if (ct.IsCancellationRequested) return false;
                 Range = Range / 2;
+
+                stopwatch.Stop();
+
+                WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+
+                iteration++;
             }
 
             //Move stages to optimum position
@@ -162,7 +197,10 @@ namespace Entanglement_Library
                 Generate.LinearSpaced(num_points, StartPos[2] - range / 2, StartPos[2] + range / 2),
             };
 
-            double cost, cost_last = 1.0;
+            double cost, cost_min = 1.0;
+            int iteration = 1;
+            int totalIterations = (int) Math.Pow(num_points, 3);
+
             (int i0, int i1, int i2) min_indices = (0, 0, 0);
             
             //Main loop
@@ -177,8 +215,8 @@ namespace Entanglement_Library
 
                         //Position rotation stages
                         double p0 = positions[0][i0];
-                        double p1 = positions[0][i1];
-                        double p2 = positions[0][i2];
+                        double p1 = positions[1][i1];
+                        double p2 = positions[2][i2];
 
                         Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p0));
                         Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p1));
@@ -188,12 +226,16 @@ namespace Entanglement_Library
 
                         //Register costfunction value
                         cost = GetCostFunction(ct);
-                        
-                        if(cost<cost_last) min_indices = (i0, i1, i2);
-                        
-                        cost_last = cost;
 
-                        WriteLog($"Position ({p0:F2},{p1:F2},{p2:F2}): {cost:F3}");
+                        if (cost < cost_min)
+                        {
+                            min_indices = (i0, i1, i2);
+                            cost_min = cost;
+                        }
+                                       
+                        WriteLog($"Position Nr.{iteration}/{totalIterations} :({p0:F2},{p1:F2},{p2:F2}): {cost:F3}");
+
+                        iteration++;
                     }
                 }                  
             }
@@ -210,7 +252,7 @@ namespace Entanglement_Library
         {
             ulong timewindow = 100000;
             Histogram hist = new Histogram(CorrConfig, timewindow);
-            Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 1000000);
+            Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
 
             //Collect timetags
             _tagger.ClearTimeTagBuffer();        
@@ -237,7 +279,7 @@ namespace Entanglement_Library
 
         private void WriteLog(string msg)
         {
-            _loggerCallback?.Invoke("Density Matrix Measurement: " + msg);
+            _loggerCallback?.Invoke("State correction: " + msg);
         }
     }
 

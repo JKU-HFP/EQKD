@@ -103,6 +103,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer= servermsg.EQKDServer;
                 _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
                 _EQKDServer.DensMeas.DensityMatrixCompleted += DensityMatrixComplete;
+
+                _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
                 //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
             });
 
@@ -134,7 +136,15 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //_clientChannelView.Title = "Client TimeTagger Stats";
             //_clientChannelView.Show();
         }
-                    
+
+        private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)
+        {
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+
+            CorrelationSectionsCollection.Clear();
+        }
+
         //Event Handler
         private void BasisComplete(object sender, BasisCompletedEventArgs e )
         {
@@ -143,18 +153,20 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CorrelationSectionsCollection.Clear();
 
-            foreach (Peak peak in e.Peaks)
-            {
-                var axisSection = new AxisSection
-                {
-                    Value = peak.MeanTime,
-                    SectionWidth = 1,
-                    Stroke = Brushes.Blue,
-                    StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection(new[] { 4d })
-                };
-                CorrelationSectionsCollection.Add(axisSection);
-            }
+            //Check Dispatcher Target
+
+            //foreach (Peak peak in e.Peaks)
+            //{
+            //    var axisSection = new AxisSection
+            //    {
+            //        Value = peak.MeanTime,
+            //        SectionWidth = 1,
+            //        Stroke = Brushes.Blue,
+            //        StrokeThickness = 1,
+            //        StrokeDashArray = new DoubleCollection(new[] { 4d })
+            //    };
+            //    CorrelationSectionsCollection.Add(axisSection);
+            //}
         }
 
         private void DensityMatrixComplete(object sender, DensityMatrixCompletedEventArgs e)
