@@ -19,6 +19,7 @@ using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
 using Entanglement_Library;
 using System.IO;
+using System.Windows.Media;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -76,6 +77,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
+        public SectionsCollection CorrelationSectionsCollection { get; set; }
 
         //Commands
         public RelayCommand<object> StartCollectingCommand { get; private set; }
@@ -108,6 +110,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             //Initialize Chart elements
             CorrelationCollection = new SeriesCollection();
+            CorrelationSectionsCollection = new SectionsCollection();
+
             _correlationChartValues = new ChartValues<ObservablePoint> { new ObservablePoint(-1000, 100), new ObservablePoint(1000, 100) };
             _correlationLineSeries = new LineSeries()
             {
@@ -136,6 +140,21 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         {
             _correlationChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+
+            CorrelationSectionsCollection.Clear();
+
+            foreach (Peak peak in e.Peaks)
+            {
+                var axisSection = new AxisSection
+                {
+                    Value = peak.MeanTime,
+                    SectionWidth = 1,
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection(new[] { 4d })
+                };
+                CorrelationSectionsCollection.Add(axisSection);
+            }
         }
 
         private void DensityMatrixComplete(object sender, DensityMatrixCompletedEventArgs e)
