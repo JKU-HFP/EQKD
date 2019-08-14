@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Extensions_Library;
 using MathNet.Numerics;
 using Stage_Library;
 using TimeTagger_Library;
@@ -86,13 +87,13 @@ namespace Entanglement_Library
         public event EventHandler<CostFunctionAquiredEventArgs> CostFunctionAquired;
         private void OnCostFunctionAquired(CostFunctionAquiredEventArgs e)
         {
-            CostFunctionAquired?.Invoke(this, e);  
+            CostFunctionAquired?.Raise(this, e);  
         }
 
         public event EventHandler<OptimizationCompleteEventArgs> OptimizationComplete;
         private void OnOptimizationComplete(OptimizationCompleteEventArgs e)
         {
-            OptimizationComplete?.Invoke(this, e);
+            OptimizationComplete?.Raise(this, e);
         }
 
         //#################################################
@@ -113,7 +114,7 @@ namespace Entanglement_Library
            
         }
 
-        public bool DoOptimize(CancellationToken ct)
+        private bool DoOptimize(CancellationToken ct)
         {
             //Make finer grid at first take to avoid false extremal points
             int initNumPoints = 10;
@@ -240,7 +241,7 @@ namespace Entanglement_Library
         }
     }
 
-    public class CostFunctionAquiredEventArgs
+    public class CostFunctionAquiredEventArgs : EventArgs
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
@@ -254,7 +255,7 @@ namespace Entanglement_Library
         }
     }
     
-    public class OptimizationCompleteEventArgs
+    public class OptimizationCompleteEventArgs : EventArgs
     {
 
     }
