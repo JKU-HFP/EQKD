@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -29,6 +30,10 @@ namespace Entanglement_Library
         public double Accurracy { get; set; } = 10;
         public double[] MinPos { get; private set; }
 
+        public int InitNumPoints { get; set; } = 3;
+        public double InitRange { get; set; } = 180;
+        public double[] InitPos { get; set; } = new double[] { 0, 0, 0 };
+
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
         /// </summary>
@@ -51,7 +56,12 @@ namespace Entanglement_Library
         /// Peak Integration Time Bin
         /// </summary>
         public ulong TimeBin { get; set; } = 1000;
-        
+
+        /// <summary>
+        /// Folder for logging state Correction data. No saving if string is empty
+        /// </summary>
+        public string LogFolder { get; set; } = "StateCorrection";
+
         /// <summary>
         /// T = ln(d/e)/ln(n-1) (t n)^3
         /// ------------------------------
@@ -63,7 +73,7 @@ namespace Entanglement_Library
         /// </summary>
         public double TotalTime
         {
-            get => Math.Log(_initRange / Accurracy) / Math.Log(2) * Math.Pow(1.3*IntegrationTime * 2, 3);
+            get => Math.Log(InitRange / Accurracy) / Math.Log(2) * Math.Pow(1.3*IntegrationTime * 2, 3);
         }
         public object StopWatch { get; private set; }
 
@@ -80,8 +90,11 @@ namespace Entanglement_Library
         private Action<string> _loggerCallback;
         private CancellationTokenSource _cts;
 
-        private double _initRange = 180;
+        private string _logFolder = "";
+        private string _currLogfile = "";
+        private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
 
+               
         //#################################################
         //##  E V E N T
         //#################################################
@@ -111,7 +124,12 @@ namespace Entanglement_Library
         public async Task StartOptimizationAsync()
         {
             _cts = new CancellationTokenSource();
-
+            
+            if(!String.IsNullOrEmpty(LogFolder))
+            {
+               _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("HH_mm_ss")).FullName;
+            }
+                 
             WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");
 
             Stopwatch stopwatch = new Stopwatch();
@@ -127,22 +145,20 @@ namespace Entanglement_Library
 
             Stopwatch stopwatch = new Stopwatch();
 
-            //Make finer grid at first take to avoid false extremal points
-            int initNumPoints = 3;
-
             WriteLog("-------------------------------------");
-            WriteLog($"Initial Optimization | n={initNumPoints} | range={_initRange}");
+            _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
+            WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}",true);
 
             stopwatch.Restart();
 
-            MinPos = GetOptimumPositions(new double[] { 0, 0, 0 }, initNumPoints, _initRange, ct);
+            MinPos = GetOptimumPositions(InitPos, InitNumPoints, InitRange, ct);
 
             stopwatch.Stop();
 
-            WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+            WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
 
             //Bisect until Accuracy is reached
-            double Range = _initRange / (initNumPoints-1);
+            double Range = InitRange / (InitNumPoints - 1);
 
             int iteration = 1;
               
@@ -151,8 +167,9 @@ namespace Entanglement_Library
                 int n = 3;
 
                 WriteLog("-------------------------------------");
-                WriteLog($"Iteration {iteration} | n={n} | range={Range}");
-
+                _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration}.txt");
+                WriteLog($"Iteration {iteration} | n={n} | range={Range}",true);
+                                             
                 stopwatch.Restart();
 
                 MinPos = GetOptimumPositions(MinPos, n, Range, ct);
@@ -161,7 +178,7 @@ namespace Entanglement_Library
 
                 stopwatch.Stop();
 
-                WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+                WriteLog($"Iteration {iteration} done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
 
                 iteration++;
             }
@@ -233,7 +250,7 @@ namespace Entanglement_Library
                             cost_min = cost;
                         }
                                        
-                        WriteLog($"Position Nr.{iteration}/{totalIterations} :({p0:F2},{p1:F2},{p2:F2}): {cost:F3}");
+                        WriteLog($"Position Nr.{iteration}/{totalIterations} :({p0:F2},{p1:F2},{p2:F2}): {cost:F3}",true);
 
                         iteration++;
                     }
@@ -241,6 +258,9 @@ namespace Entanglement_Library
             }
 
             opt_pos = new double[] { positions[0][min_indices.i0], positions[1][min_indices.i1], positions[2][min_indices.i2] };
+
+            WriteLog($"Minimum: {cost_min}",true);
+
             return opt_pos;
         }
         
@@ -277,10 +297,12 @@ namespace Entanglement_Library
             return cost;
         }
 
-        private void WriteLog(string msg)
+        private void WriteLog(string msg, bool doLog=false)
         {
             _loggerCallback?.Invoke("State correction: " + msg);
+            if(doLog && !String.IsNullOrEmpty(_currLogfile)) File.AppendAllLines(_currLogfile, new string[] { msg });
         }
+
     }
 
     public class CostFunctionAquiredEventArgs : EventArgs

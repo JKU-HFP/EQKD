@@ -145,14 +145,15 @@ namespace EQKDServer.Models
             _QWP_B.Offset = 63.84;
 
             //Connect timetagger
-            ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
+            //ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
 
 
             //STATE CORRECTION
             StateCorrTimeTagger = new SITimeTagger(loggercallback);
-            StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
+            //StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
+            StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728-13972, 16000- 13972, 14976-13972, 18304-13972, 0, 0, 0, 0, 0, 0, 0, 0 });
 
             StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
      
