@@ -27,25 +27,25 @@ namespace Entanglement_Library
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 10;
+        public double Accurracy { get; set; } = 0.5;
         public double[] MinPos { get; private set; }
 
         public int InitNumPoints { get; set; } = 3;
-        public double InitRange { get; set; } = 180;
-        public double[] InitPos { get; set; } = new double[] { 0, 0, 0 };
+        public double InitRange { get; set; } = 0.703125/2;
+        public double[] InitPos { get; set; } = new double[] { -84.0234375, 95.9765625, -16.171875 };
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
         /// </summary>
         private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
         {
-            (1,6),(2,5)
+            (1,8),(2,7)
         };
 
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 5;
+        public int IntegrationTime { get; set; } = 3;
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -73,7 +73,7 @@ namespace Entanglement_Library
         /// </summary>
         public double TotalTime
         {
-            get => Math.Log(InitRange / Accurracy) / Math.Log(2) * Math.Pow(1.3*IntegrationTime * 2, 3);
+            get => Math.Log(InitRange / Accurracy) / Math.Log(2) * Math.Pow(1+IntegrationTime * 2, 3); //1 + Time for axis movement
         }
         public object StopWatch { get; private set; }
 
@@ -167,7 +167,7 @@ namespace Entanglement_Library
                 int n = 3;
 
                 WriteLog("-------------------------------------");
-                _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration}.txt");
+                _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration:D3}.txt");
                 WriteLog($"Iteration {iteration} | n={n} | range={Range}",true);
                                              
                 stopwatch.Restart();
@@ -214,7 +214,7 @@ namespace Entanglement_Library
                 Generate.LinearSpaced(num_points, StartPos[2] - range / 2, StartPos[2] + range / 2),
             };
 
-            double cost, cost_min = 1.0;
+            (double val, double err) cost, cost_min = (1.0,0);
             int iteration = 1;
             int totalIterations = (int) Math.Pow(num_points, 3);
 
@@ -244,13 +244,14 @@ namespace Entanglement_Library
                         //Register costfunction value
                         cost = GetCostFunction(ct);
 
-                        if (cost < cost_min)
+                        //MAKE MORE ACCURATE BY ERROR
+                        if (cost.val+cost.err < cost_min.val-cost_min.err)
                         {
                             min_indices = (i0, i1, i2);
                             cost_min = cost;
                         }
                                        
-                        WriteLog($"Position Nr.{iteration}/{totalIterations} :({p0:F2},{p1:F2},{p2:F2}): {cost:F3}",true);
+                        WriteLog($"Position Nr.{iteration}/{totalIterations} :({p0:F2},{p1:F2},{p2:F2}): {cost.val:F4} ({cost.err:F4}, {100*cost.err/cost.val:F1}%)",true);
 
                         iteration++;
                     }
@@ -259,7 +260,7 @@ namespace Entanglement_Library
 
             opt_pos = new double[] { positions[0][min_indices.i0], positions[1][min_indices.i1], positions[2][min_indices.i2] };
 
-            WriteLog($"Minimum: {cost_min}",true);
+            WriteLog($"Minimum: {cost_min.val:F4}({cost_min.err:F4},  {100 * cost_min.err / cost_min.val:F1}%)",true);
 
             return opt_pos;
         }
@@ -268,7 +269,7 @@ namespace Entanglement_Library
         /// Returns relative middle peak area of combined histogram
         /// </summary>
         /// <returns></returns>
-        private double GetCostFunction(CancellationToken ct)
+        private (double val, double err) GetCostFunction(CancellationToken ct)
         {
             ulong timewindow = 100000;
             Histogram hist = new Histogram(CorrConfig, timewindow);
@@ -280,7 +281,7 @@ namespace Entanglement_Library
           
             for(int i=0; i<IntegrationTime; i++)
             {
-                if (ct.IsCancellationRequested) return 1.0;
+                if (ct.IsCancellationRequested) return (1.0,0);
                 Thread.Sleep(1000);
             }
 
@@ -290,7 +291,7 @@ namespace Entanglement_Library
           
             foreach(TimeTags tt in tts ) corr.AddCorrelations(tt,tt, TaggerOffset);
 
-            double cost = Histogram.GetRelativeMiddlePeakArea(hist.GetPeaks(6250, 0.1, true, TimeBin));
+            var cost = Histogram.GetRelativeMiddlePeakArea(hist.GetPeaks(6250, 0.1, true, TimeBin));
 
             OnCostFunctionAquired(new CostFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,cost));
 
@@ -309,9 +310,9 @@ namespace Entanglement_Library
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
-        public double Cost { get; private set; }
+        public (double val,double err) Cost { get; private set; }
 
-        public CostFunctionAquiredEventArgs(long[] histX, long[] histY, double cost)
+        public CostFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) cost)
         {
             HistogramX = histX;
             HistogramY = histY;

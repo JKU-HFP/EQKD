@@ -10,6 +10,7 @@ using System.Threading;
 using TimeTagger_Library;
 using System.Diagnostics;
 using Extensions_Library;
+using System.IO;
 
 namespace Entanglement_Library
 {
@@ -87,6 +88,11 @@ namespace Entanglement_Library
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;
 
+        /// <summary>
+        /// Folder for logging Density matrix Correction data. No saving if string is empty
+        /// </summary>
+        public string LogFolder { get; set; } = "DensityMatrix";
+
         //#################################################
         //##  P R I V A T E S 
         //#################################################
@@ -100,6 +106,10 @@ namespace Entanglement_Library
         private List<DMBasis> _basisMeasurements;
         private List<double> _relMiddlePeakAreas;
         private Action<string> _loggerCallback;
+
+        private string _logFolder = "";
+        private string _currLogfile = "";
+        private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
 
         //#################################################
         //##  E V E N T S
@@ -147,6 +157,12 @@ namespace Entanglement_Library
                 return;
             }
 
+            //Set Log folder
+            if (!String.IsNullOrEmpty(LogFolder))
+            {
+                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("HH_mm_ss")).FullName;
+            }
+
             //Create Basis elements
             _basisMeasurements = new List<DMBasis>();
             foreach (var basisConfig in basisConfigs)
@@ -168,7 +184,7 @@ namespace Entanglement_Library
             _relMiddlePeakAreas = new List<double>();
             foreach(var basis in _basisMeasurements)
             {
-                _relMiddlePeakAreas.Add(Histogram.GetRelativeMiddlePeakArea(basis.Peaks));
+                _relMiddlePeakAreas.Add(Histogram.GetRelativeMiddlePeakArea(basis.Peaks).val);
             }
 
             //Report
@@ -241,15 +257,23 @@ namespace Entanglement_Library
                 //Report
                 stopwatch.Stop();             
                 OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y, basis.Peaks));
+
+                if(writeLog)
+                {
+                    _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}.txt");
+                    File.WriteAllLines(_currLogfile, basis.CrossCorrHistogram.Histogram_X.Zip(basis.CrossCorrHistogram.Histogram_Y, (x, y) => x.ToString() + "\t" + y.ToString()).ToArray());
+                }
+
                 WriteLog($"Basis {index} completed in {stopwatch.Elapsed}");
                 index++;
             }
 
             return true;
         }
-        private void WriteLog(string msg)
+        private void WriteLog(string msg, bool doLog=false)
         {
             _loggerCallback?.Invoke("Density Matrix Measurement: "+msg);
+            if (doLog && !String.IsNullOrEmpty(_currLogfile)) File.AppendAllLines(_currLogfile, new string[] { msg });
         }
 
     }

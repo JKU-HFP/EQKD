@@ -55,7 +55,7 @@
                 <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
             </lvc:CartesianChart.AxisY>
             <lvc:CartesianChart.AxisX>
-                <lvc:Axis Title="Delay [ms]" Sections="{Binding CorrelationSectionsCollection}"></lvc:Axis>
+                <lvc:Axis Title="Delay [ms]" Sections="{Binding CorrelationSectionsCollection}" MinValue="-50" MaxValue="50"></lvc:Axis>
             </lvc:CartesianChart.AxisX>
         </lvc:CartesianChart>
 
