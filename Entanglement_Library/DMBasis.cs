@@ -17,6 +17,7 @@ namespace Entanglement_Library
         public double[] BasisConfig { get; set; }
         public Histogram CrossCorrHistogram { get; private set; }
         public List<Peak> Peaks { get; private set; }
+        public (double val, double err) RelPeakArea { get; set; }
 
         public DMBasis(double[] basisconfig, uint chanA, uint chanB, ulong timewindow)
         {

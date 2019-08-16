@@ -145,7 +145,7 @@ namespace EQKDServer.Models
             _QWP_B.Offset = 63.84;
 
             //Connect timetagger
-            //ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
+            ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
 
@@ -167,15 +167,15 @@ namespace EQKDServer.Models
                 return;
             }
 
-            //DensMeas.MeasurePeakAreasAsync();
+            DensMeas.MeasurePeakAreasAsync();
 
-            if(!StateCorrTimeTagger.CanCollect)
-            {
-                WriteLog("TimeTagger not ready");
-                return;
-            }
+            //if (!StateCorrTimeTagger.CanCollect)
+            //{
+            //    WriteLog("TimeTagger not ready");
+            //    return;
+            //}
 
-            StateCorr.StartOptimizationAsync();
+            //StateCorr.StartOptimizationAsync();
 
         }
 

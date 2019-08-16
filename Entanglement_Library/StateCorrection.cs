@@ -27,12 +27,12 @@ namespace Entanglement_Library
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.5;
+        public double Accurracy { get; set; } = 0.3;
         public double[] MinPos { get; private set; }
 
-        public int InitNumPoints { get; set; } = 3;
-        public double InitRange { get; set; } = 0.703125/2;
-        public double[] InitPos { get; set; } = new double[] { -84.0234375, 95.9765625, -16.171875 };
+        public int InitNumPoints { get; set; } = 6;
+        public double InitRange { get; set; } = 180;
+        public double[] InitPos { get; set; } = new double[] { 0,0,0 };
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
@@ -127,7 +127,7 @@ namespace Entanglement_Library
             
             if(!String.IsNullOrEmpty(LogFolder))
             {
-               _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("HH_mm_ss")).FullName;
+               _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss")).FullName;
             }
                  
             WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");
@@ -245,7 +245,7 @@ namespace Entanglement_Library
                         cost = GetCostFunction(ct);
 
                         //MAKE MORE ACCURATE BY ERROR
-                        if (cost.val+cost.err < cost_min.val-cost_min.err)
+                        if (cost.val+(cost.err/4) < cost_min.val-(cost_min.err/4))
                         {
                             min_indices = (i0, i1, i2);
                             cost_min = cost;

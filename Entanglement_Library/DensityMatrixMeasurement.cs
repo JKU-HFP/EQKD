@@ -83,7 +83,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 5;
+        public int IntegrationTime { get; set; } = 3;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;
@@ -104,7 +104,6 @@ namespace Entanglement_Library
 
         private CancellationTokenSource _cts;
         private List<DMBasis> _basisMeasurements;
-        private List<double> _relMiddlePeakAreas;
         private Action<string> _loggerCallback;
 
         private string _logFolder = "";
@@ -160,7 +159,7 @@ namespace Entanglement_Library
             //Set Log folder
             if (!String.IsNullOrEmpty(LogFolder))
             {
-                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("HH_mm_ss")).FullName;
+                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss")).FullName;
             }
 
             //Create Basis elements
@@ -181,15 +180,14 @@ namespace Entanglement_Library
 
             //Calculate relative Peak areas from Histograms
             WriteLog("Calculating relative peak areas");
-            _relMiddlePeakAreas = new List<double>();
-            foreach(var basis in _basisMeasurements)
-            {
-                _relMiddlePeakAreas.Add(Histogram.GetRelativeMiddlePeakArea(basis.Peaks).val);
-            }
 
             //Report
             stopwatch.Stop();    
-            OnDensityMatrixCompleted(new DensityMatrixCompletedEventArgs(_relMiddlePeakAreas));
+            OnDensityMatrixCompleted(new DensityMatrixCompletedEventArgs(_basisMeasurements.Select(p=> p.RelPeakArea).ToList()));
+
+            _currLogfile = Path.Combine(_logFolder, $"Relative_Peak_Areas.txt");
+            File.WriteAllLines(_currLogfile, _basisMeasurements.Select( p=> p.RelPeakArea.val.ToString()+"\t"+p.RelPeakArea.err.ToString()).ToArray());
+
             WriteLog($"Recording density matrix complete in {stopwatch.Elapsed}.");
         }
         
@@ -200,8 +198,6 @@ namespace Entanglement_Library
 
         private bool DoMeasureHistograms(CancellationToken ct)
         {
-            _relMiddlePeakAreas = new List<double>();
-
             //Initialize photon buffer
             _tagger.StopCollectingTimeTags();
             _tagger.ClearTimeTagBuffer();
@@ -254,6 +250,8 @@ namespace Entanglement_Library
                 List<TimeTags> tt = _tagger.GetAllTimeTags();
                 basis.CreateHistogram(tt,OffsetChanB);
 
+                basis.RelPeakArea = Histogram.GetRelativeMiddlePeakArea(basis.Peaks);
+
                 //Report
                 stopwatch.Stop();             
                 OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y, basis.Peaks));
@@ -264,7 +262,7 @@ namespace Entanglement_Library
                     File.WriteAllLines(_currLogfile, basis.CrossCorrHistogram.Histogram_X.Zip(basis.CrossCorrHistogram.Histogram_Y, (x, y) => x.ToString() + "\t" + y.ToString()).ToArray());
                 }
 
-                WriteLog($"Basis {index} completed in {stopwatch.Elapsed}");
+                WriteLog($"Basis {index} completed in {stopwatch.Elapsed} | Rel. peak area {basis.RelPeakArea.val:F4} ({basis.RelPeakArea.err:F4}, {100 * basis.RelPeakArea.err / basis.RelPeakArea.val:F1}%)");
                 index++;
             }
 
@@ -300,9 +298,9 @@ namespace Entanglement_Library
 
     public class DensityMatrixCompletedEventArgs : EventArgs
     {
-        public List<double> RelPeakAreas { get; private set; }
+        public List<(double val, double err)> RelPeakAreas { get; private set; }
 
-        public DensityMatrixCompletedEventArgs(List<double> relPeakAreas)
+        public DensityMatrixCompletedEventArgs(List<(double val, double err)> relPeakAreas)
         {
             RelPeakAreas = relPeakAreas;
         }

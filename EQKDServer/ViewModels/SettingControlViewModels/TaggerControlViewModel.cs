@@ -102,7 +102,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer= servermsg.EQKDServer;
                 _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
-                _EQKDServer.DensMeas.DensityMatrixCompleted += DensityMatrixComplete;
 
                 _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
                 //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
@@ -168,12 +167,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //    CorrelationSectionsCollection.Add(axisSection);
             //}
         }
-
-        private void DensityMatrixComplete(object sender, DensityMatrixCompletedEventArgs e)
-        {
-            File.WriteAllLines("DensityMatrix.txt", e.RelPeakAreas.Select( p=> p.ToString()).ToArray());
-        }
-
+        
         private void TimeTagsCollected(object sender, TimeTagsCollectedEventArgs e)
         {
             if(OverwriteChecked || _correlator==null)
