@@ -118,10 +118,13 @@ namespace EQKDServer.Models
             _QWP_Stokes.Connect("27003707");
             _QWP_Stokes.Offset = 19.2 + 90;
 
+
+
+            //STOKES VECTOR MEASUREMENT
+
             st = new Stokes(_loggerCallback, _QWP_Stokes);
             st.Connect();
-
-
+            
             //DENSITY MATRIX TEST
 
             //Instanciate and connect rotation Stages

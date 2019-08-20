@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using Extensions_Library;
 using Stage_Library;
 using System.IO;
+using System.Diagnostics;
 
 namespace Entanglement_Library
 {
@@ -18,7 +19,7 @@ namespace Entanglement_Library
         //#################################################
 
         public bool IsConnected { get; set; } = false;
-
+        public int Step { get; set; } = 2;
 
         //#################################################
         //##  P R I V A T E S
@@ -68,15 +69,13 @@ namespace Entanglement_Library
                 if (count == 0)
                 {
                     searchDevice.Dispose();
-                    WriteLog("No power meter could be found.");
+                    WriteLog("No Thorlabs power meter could be found.");
                     return;
                 }
 
                 _powermeter = new TLPM(firstPowermeterFound, false, false);  //  For valid Ressource_Name see NI-Visa documentation.
-
-                int err = _powermeter.measPower(out powerValue);
-        
-                WriteLog("powerValue.ToString()");
+                                        
+                WriteLog($"Powermeter connected: {firstPowermeterFound}");
 
                 IsConnected = true;
             }
@@ -104,20 +103,31 @@ namespace Entanglement_Library
 
             double power;
             int err = _powermeter.measPower(out power);
+
             return power;
         }
-
-
 
         public void GetStokes(string filename = "Stokes.txt")
         {
             File.WriteAllLines(filename, new string[] { $"Angle \t Power" });
+
+            Stopwatch stopwatch = new Stopwatch();
+      
+            WriteLog($"Starting Stokes measurement with Stepsize = {Step} ");
+
+            stopwatch.Start();
+
             //Scan 360 degree
-            for (int pos=0; pos<360; pos=pos+2)
+            for (int pos = 0; pos < 360; pos+=Step)
             {
                 _rotStage.Move_Absolute(pos);
-                File.AppendAllLines(filename, new string[] { $"{pos:F2}\t{GetPower()}" });
+                double power = GetPower();
+                WriteLog($"Pos.: {pos:F2} | Power: {power}");
+                File.AppendAllLines(filename, new string[] { $"{pos:F2}\t{power}" });
             }
+
+            stopwatch.Stop();
+            WriteLog($"Stokes measurement complete in {stopwatch.Elapsed}");
         }
 
         private void WriteLog(string message)
