@@ -75,6 +75,7 @@ namespace Entanglement_Library
                 _powermeter = new TLPM(firstPowermeterFound, false, false);  //  For valid Ressource_Name see NI-Visa documentation.
 
                 int err = _powermeter.measPower(out powerValue);
+        
                 WriteLog("powerValue.ToString()");
 
                 IsConnected = true;
@@ -106,8 +107,11 @@ namespace Entanglement_Library
             return power;
         }
 
+
+
         public void GetStokes(string filename = "Stokes.txt")
         {
+            File.WriteAllLines(filename, new string[] { $"Angle \t Power" });
             //Scan 360 degree
             for (int pos=0; pos<360; pos=pos+2)
             {

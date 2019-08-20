@@ -36,7 +36,7 @@ namespace EQKDServer.Models
         private long _taggersOffset_Latency;
         private long _taggersOffset_Drift;
 
-
+        Stokes st;
 
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -59,6 +59,7 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_A { get; private set; }
         public SMC100Stage _HWP_B { get; private set; }
         public KPRM1EStage _QWP_B { get; private set; }
+        public KPRM1EStage _QWP_Stokes { get; private set; }
 
         public SyncStatus SynchronizationStatus
         {
@@ -112,6 +113,15 @@ namespace EQKDServer.Models
 
             _sync_status = SyncStatus.Sync_Required;
 
+
+            _QWP_Stokes = new KPRM1EStage(_loggerCallback);
+            _QWP_Stokes.Connect("27003707");
+            _QWP_Stokes.Offset = 19.2 + 90;
+
+            st = new Stokes(_loggerCallback, _QWP_Stokes);
+            st.Connect();
+
+
             //DENSITY MATRIX TEST
 
             //Instanciate and connect rotation Stages
@@ -121,7 +131,7 @@ namespace EQKDServer.Models
             _QWP_A.Connect("27254310");
 
             _QWP_B.Connect("27504148");
-            
+
 
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
@@ -133,7 +143,7 @@ namespace EQKDServer.Models
             //Define rotation sense and offset
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 45.01; 
+                _HWP_A.Offset = 45.01;
             }
 
             if (_HWP_B != null)
@@ -145,7 +155,7 @@ namespace EQKDServer.Models
             _QWP_B.Offset = 63.84;
 
             //Connect timetagger
-            ServerTimeTagger.Connect(new List<long> { 0,38016,0,0 });
+            ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
 
             DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
 
@@ -153,21 +163,21 @@ namespace EQKDServer.Models
             //STATE CORRECTION
             StateCorrTimeTagger = new SITimeTagger(loggercallback);
             //StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
-            StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728-13972, 16000- 13972, 14976-13972, 18304-13972, 0, 0, 0, 0, 0, 0, 0, 0 });
+            StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
             StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
-     
+
         }
 
         public void MeasureDensityMatrix()
         {
-            if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
-            {
-                WriteLog("Rotation stages not ready.");
-                return;
-            }
+            //if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            //{
+            //    WriteLog("Rotation stages not ready.");
+            //    return;
+            //}
 
-            DensMeas.MeasurePeakAreasAsync();
+            ////DensMeas.MeasurePeakAreasAsync();
 
             //if (!StateCorrTimeTagger.CanCollect)
             //{
@@ -177,6 +187,8 @@ namespace EQKDServer.Models
 
             //StateCorr.StartOptimizationAsync();
 
+
+            st.GetStokes();
         }
 
 

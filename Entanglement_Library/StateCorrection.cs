@@ -27,25 +27,25 @@ namespace Entanglement_Library
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.3;
+        public double Accurracy { get; set; } = 0.9;
         public double[] MinPos { get; private set; }
 
-        public int InitNumPoints { get; set; } = 6;
-        public double InitRange { get; set; } = 180;
-        public double[] InitPos { get; set; } = new double[] { 0,0,0 };
+        public int InitNumPoints { get; set; } = 3;
+        public double InitRange { get; set; } = 20;
+        public double[] InitPos { get; set; } = new double[] { -18,-90,54 };
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
         /// </summary>
         private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
         {
-            (1,8),(2,7)
+            (1,6),(2,5),(4,7) //hv, vh, da
         };
 
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 3;
+        public int IntegrationTime { get; set; } = 5;
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -124,7 +124,7 @@ namespace Entanglement_Library
         public async Task StartOptimizationAsync()
         {
             _cts = new CancellationTokenSource();
-            
+
             if(!String.IsNullOrEmpty(LogFolder))
             {
                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss")).FullName;
