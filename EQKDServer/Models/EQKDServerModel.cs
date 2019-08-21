@@ -36,7 +36,7 @@ namespace EQKDServer.Models
         private long _taggersOffset_Latency;
         private long _taggersOffset_Drift;
 
-        Stokes st;
+      
 
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -45,6 +45,8 @@ namespace EQKDServer.Models
         public DensityMatrixMeasurement DensMeas;
         public StateCorrection StateCorr;
         public ITimeTagger StateCorrTimeTagger;
+
+        public Stokes stokes;
 
         //SecQNet Connection
         public SecQNetServer secQNetServer { get; private set; }
@@ -116,10 +118,12 @@ namespace EQKDServer.Models
 
             _QWP_Stokes = new KPRM1EStage(_loggerCallback);
             _QWP_Stokes.Connect("27003707");
-            _QWP_Stokes.Offset = 19.2 + 90;
+            //_QWP_Stokes.Offset = 109.2;
+            _QWP_Stokes.Offset = 109.2;
+            //_QWP_Stokes.InvertRotationSense = true;
 
-            st = new Stokes(_loggerCallback, _QWP_Stokes);
-            st.Connect();
+            stokes = new Stokes(_loggerCallback, _QWP_Stokes);
+            stokes.Connect();
 
 
             //DENSITY MATRIX TEST
@@ -171,24 +175,24 @@ namespace EQKDServer.Models
 
         public void MeasureDensityMatrix()
         {
-            //if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
-            //{
-            //    WriteLog("Rotation stages not ready.");
-            //    return;
-            //}
+            if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            {
+                WriteLog("Rotation stages not ready.");
+                return;
+            }
 
-            ////DensMeas.MeasurePeakAreasAsync();
+            //DensMeas.MeasurePeakAreasAsync();
 
-            //if (!StateCorrTimeTagger.CanCollect)
-            //{
-            //    WriteLog("TimeTagger not ready");
-            //    return;
-            //}
+            if (!StateCorrTimeTagger.CanCollect)
+            {
+                WriteLog("TimeTagger not ready");
+                return;
+            }
 
-            //StateCorr.StartOptimizationAsync();
+            StateCorr.StartOptimizationAsync();
 
 
-            st.GetStokes();
+            //stokes.GetStokesAsync();
         }
 
 

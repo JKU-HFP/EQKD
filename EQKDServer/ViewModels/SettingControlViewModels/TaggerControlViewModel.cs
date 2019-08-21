@@ -95,6 +95,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.ServerTimeTagger.StopCollectingTimeTags();
+
+                //TEST FOR STOKES VECTORS
+                _EQKDServer.stokes.SetZero();
+
             });
 
             //Handle Messages

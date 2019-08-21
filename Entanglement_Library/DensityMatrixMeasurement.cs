@@ -83,7 +83,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 3;
+        public int IntegrationTime { get; set; } = 10;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;
@@ -159,7 +159,7 @@ namespace Entanglement_Library
             //Set Log folder
             if (!String.IsNullOrEmpty(LogFolder))
             {
-                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss")).FullName;
+                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
 
             //Create Basis elements

@@ -59,8 +59,8 @@
             </lvc:CartesianChart.AxisX>
         </lvc:CartesianChart>
 
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Collecting" Command="{Binding StartCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Stop Collecting" Command="{Binding StopCollectingCommand}" />
+        <Button Grid.Row="3" Grid.Column="1" Content="Start Stokes" Command="{Binding StartCollectingCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Set Zero" Command="{Binding StopCollectingCommand}" />
 
        
 

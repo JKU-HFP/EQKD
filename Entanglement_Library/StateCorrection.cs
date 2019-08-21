@@ -30,16 +30,16 @@ namespace Entanglement_Library
         public double Accurracy { get; set; } = 0.9;
         public double[] MinPos { get; private set; }
 
-        public int InitNumPoints { get; set; } = 3;
-        public double InitRange { get; set; } = 20;
-        public double[] InitPos { get; set; } = new double[] { -18,-90,54 };
+        public int InitNumPoints { get; set; } = 6;
+        public double InitRange { get; set; } = 180;
+        public double[] InitPos { get; set; } = new double[] { 0,0,0 };
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
         /// </summary>
         private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
         {
-            (1,6),(2,5),(4,7) //hv, vh, da
+            (1,6),(2,5) //hv, vh
         };
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace Entanglement_Library
 
             if(!String.IsNullOrEmpty(LogFolder))
             {
-               _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss")).FullName;
+               _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
                  
             WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");

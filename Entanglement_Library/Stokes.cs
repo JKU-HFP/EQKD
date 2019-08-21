@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using Extensions_Library;
 using Stage_Library;
 using System.IO;
+using System.Diagnostics;
 
 namespace Entanglement_Library
 {
@@ -19,6 +20,7 @@ namespace Entanglement_Library
 
         public bool IsConnected { get; set; } = false;
 
+        public int Step { get; set; } = 2;
 
         //#################################################
         //##  P R I V A T E S
@@ -76,7 +78,7 @@ namespace Entanglement_Library
 
                 int err = _powermeter.measPower(out powerValue);
         
-                WriteLog("powerValue.ToString()");
+                WriteLog(powerValue.ToString());
 
                 IsConnected = true;
             }
@@ -104,20 +106,45 @@ namespace Entanglement_Library
 
             double power;
             int err = _powermeter.measPower(out power);
+
             return power;
+        }
+
+        public void SetZero()
+        {
+           // _powermeter.reinitSensor();
         }
 
 
 
-        public void GetStokes(string filename = "Stokes.txt")
+        public async Task GetStokesAsync(string filename = "Stokes.txt")
         {
+            if(!IsConnected)
+            {
+                WriteLog("Powermeter not ready");
+                return;
+            }
+
+            WriteLog($"Stokes measurement started with {Step} degree step width");
+
             File.WriteAllLines(filename, new string[] { $"Angle \t Power" });
             //Scan 360 degree
-            for (int pos=0; pos<360; pos=pos+2)
-            {
-                _rotStage.Move_Absolute(pos);
-                File.AppendAllLines(filename, new string[] { $"{pos:F2}\t{GetPower()}" });
-            }
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            await Task.Run(() =>
+           {
+               for (int pos = 0; pos < 360; pos += Step)
+               {
+                   _rotStage.Move_Absolute(pos);
+                   File.AppendAllLines(filename, new string[] { $"{pos:F2}\t{GetPower()}" });
+               }
+           });
+
+            stopwatch.Stop();
+            WriteLog($"Measurement completed in {stopwatch.Elapsed}");
+
         }
 
         private void WriteLog(string message)
