@@ -83,7 +83,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 10;
+        public int IntegrationTime { get; set; } = 30;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;
@@ -199,7 +199,6 @@ namespace Entanglement_Library
         private bool DoMeasureHistograms(CancellationToken ct)
         {
             //Initialize photon buffer
-            _tagger.StopCollectingTimeTags();
             _tagger.ClearTimeTagBuffer();
 
             Stopwatch stopwatch = new Stopwatch();

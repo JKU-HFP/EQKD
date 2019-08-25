@@ -27,25 +27,25 @@ namespace Entanglement_Library
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.9;
+        public double Accurracy { get; set; } = 0.4;
         public double[] MinPos { get; private set; }
 
-        public int InitNumPoints { get; set; } = 6;
-        public double InitRange { get; set; } = 180;
-        public double[] InitPos { get; set; } = new double[] { 0,0,0 };
+        public int InitNumPoints { get; set; } = 3;
+        public double InitRange { get; set; } = 2;
+        public double[] InitPos { get; set; } = new double[] { 23.2,-125.86,-37.97 };
+        
+        /// <summary>
+        /// Integration time in seconds
+        /// </summary>
+        public int IntegrationTime { get; set; } = 15;
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
         /// </summary>
         private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
         {
-            (1,6),(2,5) //hv, vh
+            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad
         };
-
-        /// <summary>
-        /// Integration time in seconds
-        /// </summary>
-        public int IntegrationTime { get; set; } = 5;
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers

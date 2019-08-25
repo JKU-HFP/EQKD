@@ -60,8 +60,10 @@ namespace EQKDServer.Models
         public SMC100Stage _HWP_A { get; private set; }
         public KPRM1EStage _QWP_A { get; private set; }
         public SMC100Stage _HWP_B { get; private set; }
+        public KPRM1EStage _HWP_C { get; private set; }
         public KPRM1EStage _QWP_B { get; private set; }
-        public KPRM1EStage _QWP_Stokes { get; private set; }
+        public KPRM1EStage _QWP_C { get; private set; }
+        public KPRM1EStage _QWP_D { get; private set; }
 
         public SyncStatus SynchronizationStatus
         {
@@ -116,35 +118,16 @@ namespace EQKDServer.Models
             _sync_status = SyncStatus.Sync_Required;
 
 
-            _QWP_Stokes = new KPRM1EStage(_loggerCallback);
-            _QWP_Stokes.Connect("27003707");
-            //_QWP_Stokes.Offset = 109.2;
-            _QWP_Stokes.Offset = 109.2;
-            //_QWP_Stokes.InvertRotationSense = true;
-
-            stokes = new Stokes(_loggerCallback, _QWP_Stokes);
-            stokes.Connect();
-
 
             //DENSITY MATRIX TEST
 
             //Instanciate and connect rotation Stages
-            _QWP_A = new KPRM1EStage(_loggerCallback);
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-
-            _QWP_A.Connect("27254310");
-
-            _QWP_B.Connect("27504148");
-
-
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
 
             _HWP_A = _smcController[1];
             _HWP_B = _smcController[2];
 
-
-            //Define rotation sense and offset
             if (_HWP_A != null)
             {
                 _HWP_A.Offset = 45.01;
@@ -155,41 +138,74 @@ namespace EQKDServer.Models
                 _HWP_B.Offset = 100.06;
             }
 
+           
+            _HWP_C = new KPRM1EStage(_loggerCallback);
+            _QWP_A = new KPRM1EStage(_loggerCallback);
+            _QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_C = new KPRM1EStage(_loggerCallback);
+            _QWP_D = new KPRM1EStage(_loggerCallback);
+
+            _HWP_C.Connect("27254524");
+            _QWP_A.Connect("27254310");
+            _QWP_B.Connect("27504148");
+            _QWP_C.Connect("27003707");
+            _QWP_D.Connect("27254574");
+
+            _HWP_C.Offset = 58.5;
             _QWP_A.Offset = 35.15;
             _QWP_B.Offset = 63.84;
+            _QWP_C.Offset = 27.3;
+            _QWP_D.Offset = 33.15;
 
+           
             //Connect timetagger
             ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
 
-            DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
 
 
-            //STATE CORRECTION
+            //INSTANTIATE MEASUREMENTS
+
+            stokes = new Stokes(_loggerCallback, _QWP_C);
+            stokes.Connect();
+
             StateCorrTimeTagger = new SITimeTagger(loggercallback);
             //StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
             StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
+
+            //DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback); //On Rotation plates
+            DensMeas = new DensityMatrixMeasurement(StateCorrTimeTagger, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //In Alice and Bob
+            DensMeas.ChannelA = 4;
+            DensMeas.ChannelB = 8;
+
+
             StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
+
+
+            _HWP_A.Move_Absolute(-45);
+            _QWP_C.Move_Absolute(-45);
+            _HWP_C.Move_Absolute(-45);
+            _QWP_D.Move_Absolute(-45);
 
         }
 
         public void MeasureDensityMatrix()
         {
-            if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
-            {
-                WriteLog("Rotation stages not ready.");
-                return;
-            }
+            //if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            //{
+            //    WriteLog("Rotation stages not ready.");
+            //    return;
+            //}
 
-            //DensMeas.MeasurePeakAreasAsync();
+            DensMeas.MeasurePeakAreasAsync();
 
-            if (!StateCorrTimeTagger.CanCollect)
-            {
-                WriteLog("TimeTagger not ready");
-                return;
-            }
+            //if (!StateCorrTimeTagger.CanCollect)
+            //{
+            //    WriteLog("TimeTagger not ready");
+            //    return;
+            //}
 
-            StateCorr.StartOptimizationAsync();
+            //StateCorr.StartOptimizationAsync();
 
 
             //stokes.GetStokesAsync();
