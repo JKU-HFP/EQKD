@@ -55,6 +55,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -69,6 +70,7 @@
     <Reference Include="Thorlabs.TLPM_64.Interop, Version=5.0.2846.231, Culture=neutral, PublicKeyToken=24abbf2df9147905, processorArchitecture=AMD64" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BitmapEncryption.cs" />
     <Compile Include="DMBasis.cs" />
     <Compile Include="DensityMatrixMeasurement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
