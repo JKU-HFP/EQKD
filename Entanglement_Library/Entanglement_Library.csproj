@@ -74,6 +74,7 @@
     <Compile Include="DMBasis.cs" />
     <Compile Include="DensityMatrixMeasurement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QuantumKey.cs" />
     <Compile Include="StateCorrection.cs" />
     <Compile Include="Stokes.cs" />
   </ItemGroup>

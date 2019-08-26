@@ -117,8 +117,6 @@ namespace EQKDServer.Models
 
             _sync_status = SyncStatus.Sync_Required;
 
-
-
             //DENSITY MATRIX TEST
 
             //Instanciate and connect rotation Stages
@@ -197,7 +195,7 @@ namespace EQKDServer.Models
             //    return;
             //}
 
-            DensMeas.MeasurePeakAreasAsync();
+            //DensMeas.MeasurePeakAreasAsync();
 
             //if (!StateCorrTimeTagger.CanCollect)
             //{
@@ -209,6 +207,7 @@ namespace EQKDServer.Models
 
 
             //stokes.GetStokesAsync();
+
         }
 
 
