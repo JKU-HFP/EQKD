@@ -11,16 +11,10 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
-            encrypt();
-
-            ;
-        }
-
-        public static async void encrypt()
-        {
             QuantumKey k = new QuantumKey(null);
             //await k.TestEncryptionAsync();
             k.CreateBMPs();
         }
+
     }
 }
