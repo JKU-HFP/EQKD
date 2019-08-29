@@ -182,7 +182,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                     new Histogram(new List<(byte cA, byte cB)>{ (102, 0) }, TimeWindow * 1000000000, (long)Resolution * 1000000)
                 };
 
-                _correlator = new Kurolator(corrconfig, TimeWindow * 1000000000, Resolution * 1000000);
+                _correlator = new Kurolator(corrconfig, TimeWindow * 1000000000);
             }
 
             TimeTags tt;

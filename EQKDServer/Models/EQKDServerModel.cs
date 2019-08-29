@@ -257,7 +257,7 @@ namespace EQKDServer.Models
                     new Histogram(new List<(byte cA, byte cB)>{ (0, 1) },100000)                  
                 };
 
-            testcorrs = new Kurolator(histograms, 30000, 256);
+            testcorrs = new Kurolator(histograms, 30000);
 
             _sync_status = SyncStatus.Mainsync_GetServerTimetags;
 
