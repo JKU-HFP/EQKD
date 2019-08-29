@@ -83,7 +83,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 30;
+        public int IntegrationTime { get; set; } = 5;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;

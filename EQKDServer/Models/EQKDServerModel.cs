@@ -47,6 +47,7 @@ namespace EQKDServer.Models
         public ITimeTagger StateCorrTimeTagger;
 
         public Stokes stokes;
+        public Synchronization sync;
 
         //SecQNet Connection
         public SecQNetServer secQNetServer { get; private set; }
@@ -171,20 +172,15 @@ namespace EQKDServer.Models
             StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
 
-            //DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback); //On Rotation plates
-            DensMeas = new DensityMatrixMeasurement(StateCorrTimeTagger, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //In Alice and Bob
+            DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback); //On Rotation plates
+            //DensMeas = new DensityMatrixMeasurement(StateCorrTimeTagger, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //In Alice and Bob
             DensMeas.ChannelA = 4;
             DensMeas.ChannelB = 8;
 
 
             StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
 
-
-            _HWP_A.Move_Absolute(-45);
-            _QWP_C.Move_Absolute(-45);
-            _HWP_C.Move_Absolute(-45);
-            _QWP_D.Move_Absolute(-45);
-
+            sync = new Synchronization(ServerTimeTagger, StateCorrTimeTagger, _loggerCallback);
         }
 
         public void MeasureDensityMatrix()
@@ -207,6 +203,7 @@ namespace EQKDServer.Models
 
 
             //stokes.GetStokesAsync();
+            sync.MeasureCorrelation();
 
         }
 
