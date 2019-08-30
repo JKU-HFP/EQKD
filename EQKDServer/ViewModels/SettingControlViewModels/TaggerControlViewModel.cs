@@ -135,7 +135,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.sync.Bin = Resolution;          
                 _EQKDServer.sync.ShotTime = ShotTime;
                 _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
-                _EQKDServer.sync.MeasureCorrelation();
+                _EQKDServer.sync.MeasureCorrelationAsync();
             });
 
             //Handle Messages

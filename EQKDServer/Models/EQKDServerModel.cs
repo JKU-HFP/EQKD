@@ -203,7 +203,7 @@ namespace EQKDServer.Models
 
 
             //stokes.GetStokesAsync();
-            sync.MeasureCorrelation();
+            sync.MeasureCorrelationAsync();
 
         }
 

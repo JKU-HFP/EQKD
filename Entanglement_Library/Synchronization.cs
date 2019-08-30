@@ -1,6 +1,7 @@
 ﻿using Extensions_Library;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -28,7 +29,7 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time in milli seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 2000;
+        public int IntegrationTime { get; set; } = 8000;
         public byte Chan_Tagger1 { get; set; } = 2;
         public byte Chan_Tagger2 { get; set; } = 1;
 
@@ -66,7 +67,7 @@ namespace Entanglement_Library
         //##  M E T H O D S 
         //#################################################
 
-        public void MeasureCorrelation()
+        public async void MeasureCorrelationAsync()
         {
 
             //Get timetags
@@ -84,40 +85,62 @@ namespace Entanglement_Library
 
             _tagger1.StopCollectingTimeTags();
             _tagger2.StopCollectingTimeTags();
-            
 
-            //Calculate correlations
-             Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
-            _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
+            WriteLog("Started synch");
+   
+        
 
-            bool first = true;
-            long offset = 0;
+            await Task.Run(() =>
+           {
+               Stopwatch sw = new Stopwatch();
+               sw.Start();
+
+               //Calculate correlations
+               Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
+               _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
+
+               bool first = true;
+               long offset = 0;
 
 
-            _tagger1.GetNextTimeTags(out TimeTags tt1);
-            _tagger2.GetNextTimeTags(out TimeTags tt2);
+               _tagger1.GetNextTimeTags(out TimeTags tt1);
+               _tagger2.GetNextTimeTags(out TimeTags tt2);
 
-            long starttime = tt1.time[0];
-            int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
-            byte[] reduced_chans = tt1.chan.Take(index).ToArray();
-            long[] reduced_times = tt1.time.Take(index).ToArray();
+               long starttime = tt1.time[0];
+               int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
+               byte[] reduced_chans = tt1.chan.Take(index).ToArray();
+               long[] reduced_times = tt1.time.Take(index).ToArray();
 
 
-            long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
-            TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
-            
+               long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
+               TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
 
-            if (first)
-            {
-                offset = (tt1.time[0] - tt2.time[0]);
-                first = false;
-            }
 
-            _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
+               if (first)
+               {
+                   offset = (tt1.time[0] - tt2.time[0]);
+                   first = false;
+               }
 
-            OnSyncComplete(new SyncCompleteEventArgs(hist.Histogram_X, hist.Histogram_Y));         
+               _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
+
+               List<Peak> peaks = hist.GetPeaks(min_peak_dist:1000000);
+               Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
+
+               sw.Stop();
+               WriteLog($"Sync complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM}");
+
+               OnSyncComplete(new SyncCompleteEventArgs(hist.Histogram_X, hist.Histogram_Y));
+
+           });
+
+
         }
-     
+
+        private void WriteLog(string msg)
+        {
+            _loggerCallback?.Invoke("Sync: " + msg);
+        }
     }
 
     public class SyncCompleteEventArgs : EventArgs
@@ -131,4 +154,5 @@ namespace Entanglement_Library
             HistogramY = histY;
         }
     }
+
 }
