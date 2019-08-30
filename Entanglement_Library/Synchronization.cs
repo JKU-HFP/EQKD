@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Extensions_Library;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,7 +20,9 @@ namespace Entanglement_Library
         /// <summary>
         /// Frequency in kHz
         /// </summary>
-        public int Frequency { get; set; } = 500;
+        public ulong Bin { get; set; } = 1000;
+        public ulong TimeWindow { get; set; } = 1000000;
+        public int PacketSize { get; set; } = 50000;
         /// <summary>
         /// Integration time in milli seconds
         /// </summary>
@@ -34,7 +37,17 @@ namespace Entanglement_Library
         private ITimeTagger _tagger1;
         private ITimeTagger _tagger2;
         private Kurolator _kurolator;
+
+        //#################################################
+        //##  E V E N T S 
+        //#################################################
+
+        public event EventHandler<SyncCompleteEventArgs> SyncComplete;
         
+        private void OnSyncComplete(SyncCompleteEventArgs e)
+        {
+            SyncComplete?.Raise(this, e);
+        }
 
         //#################################################
         //##  C O N S T R U C T O R
@@ -56,8 +69,8 @@ namespace Entanglement_Library
 
             //Get timetags
 
-            _tagger1.PacketSize = 100000;
-            _tagger2.PacketSize = 100000;
+            _tagger1.PacketSize = PacketSize;
+            _tagger2.PacketSize = PacketSize;
 
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
@@ -72,11 +85,8 @@ namespace Entanglement_Library
 
 
             //Calculate correlations
-            ulong timewindow = (ulong)(6*  10e6/ Frequency );
-            long bin = (long)( timewindow / 1000 );
-
-            Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, timewindow, bin);
-            _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, timewindow);
+             Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
+            _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
 
             bool first = true;
             long offset = 0;
@@ -92,9 +102,21 @@ namespace Entanglement_Library
             }
 
             _kurolator.AddCorrelations(tt1, tt2, offset);
-            
-                     
+
+            OnSyncComplete(new SyncCompleteEventArgs(hist.Histogram_X, hist.Histogram_Y));         
         }
      
+    }
+
+    public class SyncCompleteEventArgs : EventArgs
+    {
+        public long[] HistogramX { get; private set; }
+        public long[] HistogramY { get; private set; }
+
+        public SyncCompleteEventArgs(long[] histX, long[] histY)
+        {
+            HistogramX = histX;
+            HistogramY = histY;
+        }
     }
 }

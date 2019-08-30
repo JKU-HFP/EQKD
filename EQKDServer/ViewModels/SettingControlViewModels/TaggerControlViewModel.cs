@@ -73,7 +73,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 OnPropertyChanged("Resolution");
             }
         }
-               
+
+        private int _packetSize;
+        public int PacketSize
+        {
+            get { return _packetSize; }
+            set
+            {
+                _packetSize = value;
+                OnPropertyChanged("PacketSize");
+            }
+        }
+
+
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
@@ -94,11 +106,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             });
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.ServerTimeTagger.StopCollectingTimeTags();
-
-                //TEST FOR STOKES VECTORS
-                _EQKDServer.stokes.SetZero();
-
+                _EQKDServer.sync.TimeWindow = TimeWindow;
+                _EQKDServer.sync.Bin = Resolution;
+                _EQKDServer.sync.PacketSize = PacketSize;
+                _EQKDServer.sync.MeasureCorrelation();
             });
 
             //Handle Messages
@@ -108,6 +119,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
 
                 _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
+
+                _EQKDServer.sync.SyncComplete += SyncComplete;
                 //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
             });
 
@@ -138,6 +151,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //_clientChannelView.DataContext = _clientChannelViewModel;
             //_clientChannelView.Title = "Client TimeTagger Stats";
             //_clientChannelView.Show();
+        }
+
+        private void SyncComplete(object sender, SyncCompleteEventArgs e)
+        {
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+
+            CorrelationSectionsCollection.Clear();
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)

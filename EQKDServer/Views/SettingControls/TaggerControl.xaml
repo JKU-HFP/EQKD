@@ -35,15 +35,17 @@
 
         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical">
             <CheckBox Content="Overwrite" IsChecked="{Binding OverwriteChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
                 <TextBlock Text="Timewindow"/>
-                <TextBox Width="50" Text="{Binding TimeWindow}"/>
-                <TextBlock Text="ms"/>
+                <TextBox Width="100" Text="{Binding TimeWindow}"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
                 <TextBlock Text="Resolution"/>
-                <TextBox Width="50" Text="{Binding Resolution}"/>
-                <TextBlock Text="us"/>
+                <TextBox Width="100" Text="{Binding Resolution}"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Packet Size"/>
+                <TextBox Width="100" Text="{Binding PacketSize}"/>
             </StackPanel>
         </StackPanel>
 
@@ -60,7 +62,7 @@
         </lvc:CartesianChart>
 
         <Button Grid.Row="3" Grid.Column="1" Content="Start Stokes" Command="{Binding StartCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Set Zero" Command="{Binding StopCollectingCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Start Sync" Command="{Binding StopCollectingCommand}" />
 
        
 
