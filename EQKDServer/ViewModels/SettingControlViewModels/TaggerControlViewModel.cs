@@ -159,6 +159,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
 
             CorrelationSectionsCollection.Clear();
+
+            File.WriteAllLines("Sync.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)
