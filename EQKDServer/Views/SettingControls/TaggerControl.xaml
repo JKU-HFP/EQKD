@@ -44,8 +44,8 @@
                 <TextBox Width="100" Text="{Binding Resolution}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Packet Size"/>
-                <TextBox Width="100" Text="{Binding PacketSize}"/>
+                <TextBlock Text="Shot Time"/>
+                <TextBox Width="100" Text="{Binding ShotTime}"/>
             </StackPanel>
         </StackPanel>
 

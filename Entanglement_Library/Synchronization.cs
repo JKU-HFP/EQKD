@@ -22,7 +22,8 @@ namespace Entanglement_Library
         /// </summary>
         public ulong Bin { get; set; } = 1000;
         public ulong TimeWindow { get; set; } = 1000000;
-        public int PacketSize { get; set; } = 50000;
+        public int PacketSize { get; set; } = 100000;
+        public ulong ShotTime { get; set; } = 10000;
         /// <summary>
         /// Integration time in milli seconds
         /// </summary>
@@ -82,7 +83,7 @@ namespace Entanglement_Library
 
             _tagger1.StopCollectingTimeTags();
             _tagger2.StopCollectingTimeTags();
-
+            
 
             //Calculate correlations
              Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
@@ -95,13 +96,20 @@ namespace Entanglement_Library
             _tagger1.GetNextTimeTags(out TimeTags tt1);
             _tagger2.GetNextTimeTags(out TimeTags tt2);
 
+            long starttime = tt1.time[0];
+            int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
+            byte[] reduced_chans = tt1.chan.Take(index).ToArray();
+            long[] reduced_times = tt1.time.Take(index).ToArray();
+
+            TimeTags reduced_timetags = new TimeTags(reduced_chans, reduced_times);
+
             if (first)
             {
                 offset = tt1.time[0] - tt2.time[0];
                 first = false;
             }
 
-            _kurolator.AddCorrelations(tt1, tt2, offset);
+            _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
 
             OnSyncComplete(new SyncCompleteEventArgs(hist.Histogram_X, hist.Histogram_Y));         
         }

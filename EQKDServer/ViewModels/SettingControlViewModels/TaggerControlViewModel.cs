@@ -85,6 +85,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private ulong _shotTime;
+
+        public ulong ShotTime
+        {
+            get { return _shotTime; }
+            set
+            {
+                _shotTime = value;
+                OnPropertyChanged("ShotTime");
+
+            }
+        }
+
 
 
         //Charts
@@ -107,8 +120,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.sync.TimeWindow = TimeWindow;
-                _EQKDServer.sync.Bin = Resolution;
-                _EQKDServer.sync.PacketSize = PacketSize;
+                _EQKDServer.sync.Bin = Resolution;          
+                _EQKDServer.sync.ShotTime = ShotTime;
                 _EQKDServer.sync.MeasureCorrelation();
             });
 
