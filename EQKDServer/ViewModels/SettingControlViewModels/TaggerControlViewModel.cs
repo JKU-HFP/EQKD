@@ -63,7 +63,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private ulong _resolution;
+        private ulong _resolution = 10000;
         public ulong Resolution
         {
             get { return _resolution; }
@@ -85,7 +85,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private ulong _shotTime;
+        private ulong _shotTime = 100000000000;
 
         public ulong ShotTime
         {
@@ -95,6 +95,18 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _shotTime = value;
                 OnPropertyChanged("ShotTime");
 
+            }
+        }
+
+        private double _linearDriftCoefficient;
+
+        public double LinearDriftCoefficient
+        {
+            get { return _linearDriftCoefficient; }
+            set
+            {
+                _linearDriftCoefficient = value;
+                OnPropertyChanged("LinearDriftCoefficient");
             }
         }
 
@@ -122,6 +134,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.sync.TimeWindow = TimeWindow;
                 _EQKDServer.sync.Bin = Resolution;          
                 _EQKDServer.sync.ShotTime = ShotTime;
+                _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
                 _EQKDServer.sync.MeasureCorrelation();
             });
 
@@ -151,7 +164,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
-            
+
+            TimeWindow = 10000000;
+            Resolution = 10000;
+            ShotTime = 100000000000;
+            LinearDriftCoefficient = 0;
 
             //_serverChannelView = new TimeTaggerChannelView();
             //_serverChannelViewModel = new ChannelViewModel();

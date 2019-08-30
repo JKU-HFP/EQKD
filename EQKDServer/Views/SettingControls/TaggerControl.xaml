@@ -47,6 +47,10 @@
                 <TextBlock Text="Shot Time"/>
                 <TextBox Width="100" Text="{Binding ShotTime}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Linear Drift Coeff."/>
+                <TextBox Width="100" Text="{Binding LinearDriftCoefficient}"/>
+            </StackPanel>
         </StackPanel>
 
 

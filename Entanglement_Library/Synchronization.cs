@@ -24,6 +24,7 @@ namespace Entanglement_Library
         public ulong TimeWindow { get; set; } = 1000000;
         public int PacketSize { get; set; } = 100000;
         public ulong ShotTime { get; set; } = 10000;
+        public double LinearDriftCoefficient { get; set; } = 0;
         /// <summary>
         /// Integration time in milli seconds
         /// </summary>
@@ -101,11 +102,14 @@ namespace Entanglement_Library
             byte[] reduced_chans = tt1.chan.Take(index).ToArray();
             long[] reduced_times = tt1.time.Take(index).ToArray();
 
-            TimeTags reduced_timetags = new TimeTags(reduced_chans, reduced_times);
+
+            long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
+            TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
+            
 
             if (first)
             {
-                offset = tt1.time[0] - tt2.time[0];
+                offset = (tt1.time[0] - tt2.time[0]);
                 first = false;
             }
 
