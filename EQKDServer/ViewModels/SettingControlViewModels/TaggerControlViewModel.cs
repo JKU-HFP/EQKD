@@ -110,6 +110,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private double _pVal;
+
+        public double PVal
+        {
+            get { return _pVal; }
+            set
+            {
+                _pVal = value;
+                OnPropertyChanged("PVal");
+            }
+        }
+
+
 
 
         //Charts
@@ -119,6 +132,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //Commands
         public RelayCommand<object> StartCollectingCommand { get; private set; }
         public RelayCommand<object> StopCollectingCommand { get; private set; }
+        public RelayCommand<object> CancelCommand { get; private set; }
 
         //Contructor
         public TaggerControlViewModel()
@@ -135,7 +149,12 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.sync.Bin = Resolution;          
                 _EQKDServer.sync.ShotTime = ShotTime;
                 _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
+                _EQKDServer.sync.PVal = PVal;
                 _EQKDServer.sync.MeasureCorrelationAsync();
+            });
+            CancelCommand = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.sync.Cancel();
             });
 
             //Handle Messages
@@ -161,6 +180,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 Title = "Sync correlations",
                 Values = _correlationChartValues,
+                PointGeometrySize = 0.0
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
@@ -169,6 +189,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             Resolution = 10000;
             ShotTime = 100000000000;
             LinearDriftCoefficient = 0;
+            PVal = 0;
 
             //_serverChannelView = new TimeTaggerChannelView();
             //_serverChannelViewModel = new ChannelViewModel();
@@ -190,7 +211,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CorrelationSectionsCollection.Clear();
 
-            File.WriteAllLines("Sync.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
+            LinearDriftCoefficient = e.CurrentLinearDriftCoeff;
+
+            Directory.CreateDirectory("Sync");
+            File.WriteAllLines($"Sync_{DateTime.Now:yy_MM_dd_hh_mm_ss}.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
+            File.AppendAllLines("Sync.txt", new string[] { $"{DateTime.Now:yy_MM_dd_hh_mm_ss},{e.CurrentLinearDriftCoeff}" });            
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)

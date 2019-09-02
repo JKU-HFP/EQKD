@@ -26,10 +26,11 @@ namespace Entanglement_Library
         public int PacketSize { get; set; } = 100000;
         public ulong ShotTime { get; set; } = 10000;
         public double LinearDriftCoefficient { get; set; } = 0;
+        public double PVal { get; set; } = 0;
         /// <summary>
         /// Integration time in milli seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 8000;
+        public int IntegrationTime { get; set; } = 10000;
         public byte Chan_Tagger1 { get; set; } = 2;
         public byte Chan_Tagger2 { get; set; } = 1;
 
@@ -40,6 +41,7 @@ namespace Entanglement_Library
         private ITimeTagger _tagger1;
         private ITimeTagger _tagger2;
         private Kurolator _kurolator;
+        private CancellationTokenSource _cts; 
 
         //#################################################
         //##  E V E N T S 
@@ -69,72 +71,98 @@ namespace Entanglement_Library
 
         public async void MeasureCorrelationAsync()
         {
+            _cts = new CancellationTokenSource();
 
-            //Get timetags
+            bool first = true;
+            long offset = 0;
+            long init_middlepeakpos = 0;
+            double init_middlepeakFWHM = 0;
 
-            _tagger1.PacketSize = PacketSize;
-            _tagger2.PacketSize = PacketSize;
-
-            _tagger1.ClearTimeTagBuffer();
-            _tagger2.ClearTimeTagBuffer();
-
-            _tagger1.StartCollectingTimeTagsAsync();
-            _tagger2.StartCollectingTimeTagsAsync();
-
-            Thread.Sleep(IntegrationTime);
-
-            _tagger1.StopCollectingTimeTags();
-            _tagger2.StopCollectingTimeTags();
-
-            WriteLog("Started synch");
-   
-        
-
-            await Task.Run(() =>
+            await Task.Run( () =>
            {
-               Stopwatch sw = new Stopwatch();
-               sw.Start();
 
-               //Calculate correlations
-               Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
-               _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
-
-               bool first = true;
-               long offset = 0;
-
-
-               _tagger1.GetNextTimeTags(out TimeTags tt1);
-               _tagger2.GetNextTimeTags(out TimeTags tt2);
-
-               long starttime = tt1.time[0];
-               int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
-               byte[] reduced_chans = tt1.chan.Take(index).ToArray();
-               long[] reduced_times = tt1.time.Take(index).ToArray();
-
-
-               long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
-               TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
-
-
-               if (first)
+               while (!_cts.Token.IsCancellationRequested)
                {
-                   offset = (tt1.time[0] - tt2.time[0]);
-                   first = false;
+
+                   //Get timetags
+                   WriteLog("Collecting timetags");
+
+                   _tagger1.PacketSize = PacketSize;
+                   _tagger2.PacketSize = PacketSize;
+
+                   _tagger1.ClearTimeTagBuffer();
+                   _tagger2.ClearTimeTagBuffer();
+
+                   _tagger1.StartCollectingTimeTagsAsync();
+                   _tagger2.StartCollectingTimeTagsAsync();
+
+                   Thread.Sleep(IntegrationTime);
+
+                   _tagger1.StopCollectingTimeTags();
+                   _tagger2.StopCollectingTimeTags();
+
+                   WriteLog("Start sync");
+
+                   Stopwatch sw = new Stopwatch();
+                   sw.Start();
+
+                   //Calculate correlations
+                   Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
+                   _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
+
+
+                   _tagger1.GetNextTimeTags(out TimeTags tt1);
+                   _tagger2.GetNextTimeTags(out TimeTags tt2);
+
+                   long starttime = tt1.time[0];
+                   int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
+                   byte[] reduced_chans = tt1.chan.Take(index).ToArray();
+                   long[] reduced_times = tt1.time.Take(index).ToArray();
+
+
+                   long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
+                   TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
+
+
+                   if (first)
+                   {
+                       offset = (tt1.time[0] - tt2.time[0]);
+                       first = false;
+                   }
+
+                   _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
+
+                   
+                   //Analyse middle peak
+                   List<Peak> peaks = hist.GetPeaks(min_peak_dist: 1000000);
+                   Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
+
+                   if (first)
+                   {
+                       init_middlepeakpos = MiddlePeak.MeanTime;
+                       init_middlepeakFWHM = MiddlePeak.FWHM;
+                   }
+
+                   //Calculate new linear drift coefficient
+                   LinearDriftCoefficient = LinearDriftCoefficient + (PVal * (init_middlepeakpos - MiddlePeak.MeanTime));
+
+
+                   sw.Stop();
+                   WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM}");
+
+                   OnSyncComplete(new SyncCompleteEventArgs() { HistogramX = hist.Histogram_X, HistogramY = hist.Histogram_Y, CurrentLinearDriftCoeff = LinearDriftCoefficient });
                }
 
-               _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
-
-               List<Peak> peaks = hist.GetPeaks(min_peak_dist:1000000);
-               Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
-
-               sw.Stop();
-               WriteLog($"Sync complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM}");
-
-               OnSyncComplete(new SyncCompleteEventArgs(hist.Histogram_X, hist.Histogram_Y));
+               WriteLog("Sync stopped");
 
            });
 
 
+        }
+
+        public void Cancel()
+        {
+            _cts.Cancel();
         }
 
         private void WriteLog(string msg)
@@ -145,13 +173,13 @@ namespace Entanglement_Library
 
     public class SyncCompleteEventArgs : EventArgs
     {
-        public long[] HistogramX { get; private set; }
-        public long[] HistogramY { get; private set; }
+        public long[] HistogramX { get; set; }
+        public long[] HistogramY { get; set; }
+        public double CurrentLinearDriftCoeff { get; set; };
 
-        public SyncCompleteEventArgs(long[] histX, long[] histY)
+        public SyncCompleteEventArgs()
         {
-            HistogramX = histX;
-            HistogramY = histY;
+
         }
     }
 
