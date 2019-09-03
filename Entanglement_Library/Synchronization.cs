@@ -83,7 +83,6 @@ namespace Entanglement_Library
 
                while (!_cts.Token.IsCancellationRequested)
                {
-
                    //Get timetags
                    WriteLog("Collecting timetags");
 
@@ -123,15 +122,8 @@ namespace Entanglement_Library
                    long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
                    TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
 
-
-                   if (first)
-                   {
-                       offset = (tt1.time[0] - tt2.time[0]);
-                       first = false;
-                   }
-
+                   offset = (tt1.time[0] - tt2.time[0]);
                    _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
-
                    
                    //Analyse middle peak
                    List<Peak> peaks = hist.GetPeaks(min_peak_dist: 1000000);
@@ -141,16 +133,26 @@ namespace Entanglement_Library
                    {
                        init_middlepeakpos = MiddlePeak.MeanTime;
                        init_middlepeakFWHM = MiddlePeak.FWHM;
+                       first = false;
                    }
 
                    //Calculate new linear drift coefficient
-                   LinearDriftCoefficient = LinearDriftCoefficient + (PVal * (init_middlepeakpos - MiddlePeak.MeanTime));
-
+                   double optimum_FWHM = 3000;
+                   double FWHM_P = MiddlePeak.FWHM - optimum_FWHM > 0 ? (MiddlePeak.FWHM - optimum_FWHM) : 0;
+                   LinearDriftCoefficient = LinearDriftCoefficient + (PVal * Math.Sign(init_middlepeakpos - MiddlePeak.MeanTime)*FWHM_P*1E-12);
+                   
 
                    sw.Stop();
-                   WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM}");
+                   WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
 
-                   OnSyncComplete(new SyncCompleteEventArgs() { HistogramX = hist.Histogram_X, HistogramY = hist.Histogram_Y, CurrentLinearDriftCoeff = LinearDriftCoefficient });
+                    OnSyncComplete(new SyncCompleteEventArgs()
+                    {
+                        HistogramX = hist.Histogram_X,
+                        HistogramY = hist.Histogram_Y,
+                        CurrentLinearDriftCoeff = LinearDriftCoefficient,
+                        FWHM = MiddlePeak.FWHM,
+                        MeanTime = MiddlePeak.MeanTime
+                   });
                }
 
                WriteLog("Sync stopped");
@@ -176,6 +178,8 @@ namespace Entanglement_Library
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
         public double CurrentLinearDriftCoeff { get; set; }
+        public double FWHM { get; set; }
+        public double MeanTime { get; set; }
 
         public SyncCompleteEventArgs()
         {
