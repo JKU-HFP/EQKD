@@ -175,7 +175,7 @@ namespace Entanglement_Library
     {
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
-        public double CurrentLinearDriftCoeff { get; set; };
+        public double CurrentLinearDriftCoeff { get; set; }
 
         public SyncCompleteEventArgs()
         {

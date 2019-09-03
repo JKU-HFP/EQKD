@@ -26,52 +26,52 @@ namespace Entanglement_Library
             // HWP_A, QWP_A, HWP_B, QWP_B
 
             //Hx
-            new double[] {0,0,0,0}, //xH
-            new double[] {0,0,45,0}, //xV
-            new double[] {0,0,22.5,0}, //xD
-            new double[] {0,0,-22.5,0}, //xA
-            new double[] {0,0,0,45}, //xR
-            new double[] {0,0,0,-45}, //xL
+            new double[] {45,0, 45, 0}, //xH
+            new double[] {45,0,0,0}, //xV
+            new double[] {45,0,22.5,45}, //xD
+            new double[] {45,0,-22.5,0}, //xA
+            new double[] {45,0,22.5,0}, //xR
+            new double[] {45,0,22.5, 90}, //xL
 
             //Vx
-            new double[] {45,0,0,0}, //xH
-            new double[] {45,0,45,0}, //xV
-            new double[] {45,0,22.5,0}, //xD
-            new double[] {45,0,-22.5,0}, //xA
-            new double[] {45,0,0,45}, //xR
-            new double[] {45,0,0,-45}, //xL
+            new double[] {0,0, 45, 0}, //xH
+            new double[] {0,0,0,0}, //xV
+            new double[] {0,0,22.5,0}, //xD
+            new double[] {0,0,-22.5,45}, //xA
+            new double[] {0,0,22.5,0}, //xR
+            new double[] {0,0,22.5, 90}, //xL
 
             //Dx
-            new double[] {22.5,0,0,0}, //xH
-            new double[] {22.5, 0,45,0}, //xV
-            new double[] {22.5, 0,22.5,0}, //xD
-            new double[] {22.5, 0,-22.5,0}, //xA
-            new double[] {22.5, 0,0,45}, //xR
-            new double[] {22.5, 0,0,-45}, //xL
+            new double[] {22.5,45, 45, 0}, //xH
+            new double[] {22.5,45,0,0}, //xV
+            new double[] {22.5,45,22.5,45}, //xD
+            new double[] {22.5,45,-22.5,45}, //xA
+            new double[] {22.5,45,22.5,0}, //xR
+            new double[] {22.5,45,22.5, 90}, //xL
 
             //Ax
-            new double[] {-22.5,0,0,0}, //xH
-            new double[] {-22.5, 0,45,0}, //xV
-            new double[] {-22.5, 0,22.5,0}, //xD
-            new double[] {-22.5, 0,-22.5,0}, //xA
-            new double[] {-22.5, 0,0,45}, //xR
-            new double[] {-22.5, 0,0,-45}, //xL
+            new double[] {-22.5,45, 45, 0}, //xH
+            new double[] {-22.5,45,0,0}, //xV
+            new double[] {-22.5,45,22.5,45}, //xD
+            new double[] {-22.5,45,-22.5,45}, //xA
+            new double[] {-22.5,45,22.5,0}, //xR
+            new double[] {-22.5,45,22.5, 90}, //xL
 
             //Rx
-            new double[] {0,45,0,0}, //xH
-            new double[] {0,45, 45,0}, //xV
-            new double[] {0,45,22.5,0}, //xD
-            new double[] {0,45,-22.5,0}, //xA
-            new double[] {0,45,0,45}, //xR
-            new double[] {0,45,0,-45}, //xL
+            new double[] {22.5,0, 45, 0}, //xH
+            new double[] {22.5,0,0,0}, //xV
+            new double[] {22.5, 0, 22.5,45}, //xD
+            new double[] {22.5, 0, -22.5,45}, //xA
+            new double[] {22.5, 0,22.5,0}, //xR
+            new double[] {22.5, 0, 22.5, 90}, //xL
 
             //Lx
-            new double[] {0,-45,0,0}, //xH
-            new double[] {0,-45, 45,0}, //xV
-            new double[] {0,-45,22.5,0}, //xD
-            new double[] {0,-45,-22.5,0}, //xA
-            new double[] {0,-45,0,45}, //xR
-            new double[] {0,-45,0,-45}, //xL
+            new double[] { 22.5, 90 , 45, 0}, //xH
+            new double[] { 22.5, 90, 0,0}, //xV
+            new double[] { 22.5, 90, 22.5,45}, //xD
+            new double[] { 22.5, 90, -22.5,45}, //xA
+            new double[] { 22.5, 90, 22.5,0}, //xR
+            new double[] { 22.5, 90, 22.5, 90}, //xL
         };
         
 
