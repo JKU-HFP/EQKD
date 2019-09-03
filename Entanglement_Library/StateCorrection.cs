@@ -291,7 +291,8 @@ namespace Entanglement_Library
           
             foreach(TimeTags tt in tts ) corr.AddCorrelations(tt,tt, TaggerOffset);
 
-            var cost = Histogram.GetRelativeMiddlePeakArea(hist.GetPeaks(6250, 0.1, true, TimeBin));
+            hist.GetPeaks(6250, 0.1, true, TimeBin);
+            var cost = hist.GetRelativeMiddlePeakArea();
 
             OnCostFunctionAquired(new CostFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,cost));
 

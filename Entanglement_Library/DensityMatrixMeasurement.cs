@@ -249,7 +249,7 @@ namespace Entanglement_Library
                 List<TimeTags> tt = _tagger.GetAllTimeTags();
                 basis.CreateHistogram(tt,OffsetChanB);
 
-                basis.RelPeakArea = Histogram.GetRelativeMiddlePeakArea(basis.Peaks);
+                basis.RelPeakArea = basis.CrossCorrHistogram.GetRelativeMiddlePeakArea();
 
                 //Report
                 stopwatch.Stop();             
