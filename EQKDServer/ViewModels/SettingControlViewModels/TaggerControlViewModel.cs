@@ -185,11 +185,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CorrelationCollection.Add(_correlationLineSeries);
 
 
-            TimeWindow = 10000000;
-            Resolution = 10000;
-            ShotTime = 100000000000;
-            LinearDriftCoefficient = 0;
-            PVal = 0;
+            TimeWindow = 100000;
+            Resolution = 100;
+            ShotTime = 5000000000000;
+            LinearDriftCoefficient = 5.52E-5;
+            PVal = -8;
 
             //_serverChannelView = new TimeTaggerChannelView();
             //_serverChannelViewModel = new ChannelViewModel();
@@ -214,8 +214,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             LinearDriftCoefficient = e.CurrentLinearDriftCoeff;
 
             Directory.CreateDirectory("Sync");
-            File.WriteAllLines($"Sync_{DateTime.Now:yy_MM_dd_hh_mm_ss}.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
-            File.AppendAllLines("Sync.txt", new string[] { $"{DateTime.Now:yy_MM_dd_hh_mm_ss},{e.CurrentLinearDriftCoeff}" });            
+            File.WriteAllLines($"Sync//Sync_{DateTime.Now:yy_MM_dd_HH_mm_ss}.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
+            File.AppendAllLines("Sync//Sync.txt", new string[] { $"{DateTime.Now:yy_MM_dd_HH_mm_ss},{e.CurrentLinearDriftCoeff},{e.FWHM},{e.MeanTime}" });            
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)

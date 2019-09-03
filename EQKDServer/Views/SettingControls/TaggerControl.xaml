@@ -29,6 +29,7 @@
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="100" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
@@ -51,10 +52,14 @@
                 <TextBlock Text="Linear Drift Coeff."/>
                 <TextBox Width="100" Text="{Binding LinearDriftCoefficient}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Controller PVal"/>
+                <TextBox Width="100" Text="{Binding PVal}"/>
+            </StackPanel>
         </StackPanel>
 
 
-        <lvc:CartesianChart Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+        <lvc:CartesianChart Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3"
                             DisableAnimations="True"
                             Series="{Binding CorrelationCollection}">
             <lvc:CartesianChart.AxisY>
@@ -67,8 +72,8 @@
 
         <Button Grid.Row="3" Grid.Column="1" Content="Start Stokes" Command="{Binding StartCollectingCommand}" />
         <Button Grid.Row="3" Grid.Column="2" Content="Start Sync" Command="{Binding StopCollectingCommand}" />
+        <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
 
-       
 
     </Grid>
 </UserControl>
