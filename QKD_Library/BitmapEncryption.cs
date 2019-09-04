@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     static class BitmapEncryption
     {

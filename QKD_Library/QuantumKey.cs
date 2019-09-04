@@ -12,7 +12,7 @@ using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     public class QuantumKey
     {

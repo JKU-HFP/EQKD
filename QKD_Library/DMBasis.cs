@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     internal class DMBasis
     {

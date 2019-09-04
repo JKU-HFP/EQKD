@@ -204,13 +204,13 @@
     <Resource Include="Views\Pics\Network_16x.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Entanglement_Library\Entanglement_Library.csproj">
-      <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
-      <Name>Entanglement_Library</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
       <Project>{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}</Project>
       <Name>Extensions_Library</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
+      <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
+      <Name>QKD_Library</Name>
     </ProjectReference>
     <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
       <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>

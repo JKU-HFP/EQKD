@@ -10,7 +10,7 @@ using Stage_Library;
 using System.IO;
 using System.Diagnostics;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     public class Stokes
     {

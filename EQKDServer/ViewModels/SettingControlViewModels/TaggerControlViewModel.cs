@@ -17,7 +17,7 @@ using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
-using Entanglement_Library;
+using QKD_Library;
 using System.IO;
 using System.Windows.Media;
 

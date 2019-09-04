@@ -12,7 +12,7 @@ using System.Diagnostics;
 using Extensions_Library;
 using System.IO;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     public class DensityMatrixMeasurement
     {

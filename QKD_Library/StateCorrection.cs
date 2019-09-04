@@ -13,7 +13,7 @@ using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     /// <summary>
     /// Entangled state correction with three rotation Plates and one Timetagger

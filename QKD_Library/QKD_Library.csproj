@@ -7,8 +7,8 @@
     <ProjectGuid>{DF65E344-A52A-4D85-AB5D-8509ABC3A9E5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Entanglement_Library</RootNamespace>
-    <AssemblyName>Entanglement_Library</AssemblyName>
+    <RootNamespace>QKD_Library</RootNamespace>
+    <AssemblyName>QKD_Library</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
