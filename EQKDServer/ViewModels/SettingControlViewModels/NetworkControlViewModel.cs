@@ -63,8 +63,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private void StartListeningToNetwork(object o)
         {
-            _EQKDServer.secQNetServer.ConnectAsync(SecQNetServer.GetIP4Address(), Port);
-            ServerIPAddress = _EQKDServer.secQNetServer.ServerIP.ToString();
+            _EQKDServer.SecQNetServer.ConnectAsync(SecQNetServer.GetIP4Address(), Port);
+            ServerIPAddress = _EQKDServer.SecQNetServer.ServerIP.ToString();
         }
               
         private void Synchronize(object o)
@@ -74,11 +74,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private bool CanSynchrononize(object o)
         {
-            if (_EQKDServer == null) return false;
-            else return ((_EQKDServer.SynchronizationStatus == EQKDServerModel.SyncStatus.Sync_Required ||
-                         _EQKDServer.SynchronizationStatus == EQKDServerModel.SyncStatus.Sync_Finished) &&
-                          _EQKDServer.ServerTimeTagger != null &&
-                         _EQKDServer.secQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
+            return ( _EQKDServer.ServerTimeTagger.CanCollect &&
+                     _EQKDServer.ClientTimeTagger.CanCollect &&
+                     _EQKDServer.SecQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
 
         }
 

@@ -141,32 +141,24 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             StartCollectingCommand = new RelayCommand<object>( (o) =>
             {
                 //_EQKDServer.ServerTimeTagger.StartCollectingTimeTagsAsync();
-                _EQKDServer.MeasureDensityMatrix();
+                //_EQKDServer.MeasureDensityMatrix();
             });
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.sync.ClockSyncTimeWindow = TimeWindow;
-                _EQKDServer.sync.TimeBin = Resolution;          
-                _EQKDServer.sync.ShotTime = ShotTime;
-                _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
-                _EQKDServer.sync.PVal = PVal;
-                _EQKDServer.sync.MeasureCorrelationAsync();
+
             });
             CancelCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.sync.Cancel();
+  
             });
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
             {
                 _EQKDServer= servermsg.EQKDServer;
-                _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
+                //_EQKDServer.DensMeas.BasisCompleted += BasisComplete;
 
                 _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
-
-                _EQKDServer.sync.SyncClocksComplete += SyncComplete;
-                //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
             });
 
            
@@ -202,20 +194,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //_clientChannelView.DataContext = _clientChannelViewModel;
             //_clientChannelView.Title = "Client TimeTagger Stats";
             //_clientChannelView.Show();
-        }
-
-        private void SyncComplete(object sender, SyncClocksCompleteEventArgs e)
-        {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
-
-            CorrelationSectionsCollection.Clear();
-
-            LinearDriftCoefficient = e.CurrentLinearDriftCoeff;
-
-            Directory.CreateDirectory("Sync");
-            File.WriteAllLines($"Sync//Sync_{DateTime.Now:yy_MM_dd_HH_mm_ss}.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
-            File.AppendAllLines("Sync//Sync.txt", new string[] { $"{DateTime.Now:yy_MM_dd_HH_mm_ss},{e.CurrentLinearDriftCoeff},{e.FWHM},{e.MeanTime}" });            
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)

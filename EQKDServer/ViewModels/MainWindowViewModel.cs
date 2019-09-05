@@ -26,6 +26,7 @@ using System.Windows.Input;
 using EQKDServer.Models;
 using TimeTaggerWPF_Library;
 using TimeTagger_Library.Correlation;
+using QKD_Library;
 
 namespace EQKDServer.ViewModels
 {
@@ -41,8 +42,8 @@ namespace EQKDServer.ViewModels
         private LineSeries _correlationLineSeries;
         private List<Peak> _peaks;
 
-        private ChartValues<double> _clientTagsReceiveRateChartValues;
-        private LineSeries _clientTagsReceiveRateLineSeries;
+        private ChartValues<double> _linearDriftCompChartValues;
+        private LineSeries _linearDriftCompLineSeries;
 
         //PROPERTIES
         private string _messages;
@@ -146,40 +147,16 @@ namespace EQKDServer.ViewModels
             }
         }
 
-        private int _clientTagsReceiveRate;
-        public int ClientTagsReceiveRate
-        {
-            get { return _clientTagsReceiveRate; }
-            set
-            {
-                _clientTagsReceiveRate = value;
-                OnPropertyChanged("ClientTagsReceiveRate");
-            }
-        }
-
-        private string _meanClientTagsReceiveRate;
-        public string MeanClientTagsReceiveRate
-        {
-            get { return _meanClientTagsReceiveRate; }
-            set
-            {
-                _meanClientTagsReceiveRate = value;
-                OnPropertyChanged("MeanClientTagsReceiveRate");
-            }
-        }
-
+    
         //Charts
-        public SeriesCollection ClientTagsReceiveRateCollection { get; set; }
-        public Func<double,string> RateFormatter { get; set; } = value => (value / 1000).ToString("F2") + "k";
-
+        public SeriesCollection LinearDriftCompCollection { get; set; }
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; } = new SectionsCollection();
         public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
 
         //COMMANDS
         public RelayCommand<object> WindowLoadedCommand { get; private set; }
-        public RelayCommand<ChartPoint> CorrelationDataClickCommand { get; private set; }
-        
+        public RelayCommand<object> WindowClosingCommand { get; private set; }
         public RelayCommand<object> Settings_ServerTagger_Command { get; private set; }
         public RelayCommand<object> Settings_ClientTagger_Command { get; private set; }
 
@@ -188,16 +165,15 @@ namespace EQKDServer.ViewModels
         {
             //Create EKQDServer
             EQKDServer = new EQKDServerModel(LogMessage);
-            EQKDServer.SyncFinished += SecQNetSyncFinished;
-            EQKDServer.secQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
-            EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
+            EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
+            EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
                     
             //Route Relay Commands
             WindowLoadedCommand = new RelayCommand<object>(OnMainWindowLoaded);
-            CorrelationDataClickCommand = new RelayCommand<ChartPoint>(CorrelationDataClicked);
+            WindowClosingCommand = new RelayCommand<object>(OnMainWindowClosing);
 
             Settings_ServerTagger_Command = new RelayCommand<object>(On_Settings_ServerTagger_Command);
             Settings_ClientTagger_Command = new RelayCommand<object>(On_Settings_ClientTagger_Command);
@@ -208,9 +184,9 @@ namespace EQKDServer.ViewModels
             ServerBufferStatus = 0;
             ClientBufferSize = 1000;
             ClientBufferStatus = 0;
-         
+
             //Initialize Chart elements
-            ClientTagsReceiveRateCollection = new SeriesCollection();           
+            LinearDriftCompCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
 
             Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler((sender, e) =>
@@ -219,7 +195,7 @@ namespace EQKDServer.ViewModels
                e.Handled = true;
            });
         }
-
+        
 
         private void LogMessage(string mess)
         {
@@ -238,29 +214,34 @@ namespace EQKDServer.ViewModels
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
-            _clientTagsReceiveRateChartValues = new ChartValues<double>() { 100000, 200000 };
-            _clientTagsReceiveRateLineSeries = new LineSeries()
+            _linearDriftCompChartValues = new ChartValues<double>() { 100000, 200000 };
+            _linearDriftCompLineSeries = new LineSeries()
             {
-                Title = "TimeTags receiving rate",
-                Values = _clientTagsReceiveRateChartValues,
+                Title = "Linear Clock Drift compensation factor",
+                Values = _linearDriftCompChartValues,
             };
-            ClientTagsReceiveRateCollection.Add(_clientTagsReceiveRateLineSeries);
+            LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
 
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(EQKDServer));
 
             LogMessage("Application started");
         }
 
+        private void OnMainWindowClosing(object obj)
+        {
+            EQKDServer.SaveServerConfig();
+        }
+
         private void On_Settings_ServerTagger_Command(object o)
         {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ServerTagger", LogMessage) { SecQNetServer = EQKDServer.secQNetServer};
+            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ServerTagger", LogMessage) { SecQNetServer = EQKDServer.SecQNetServer};
 
             EQKDServer.ServerTimeTagger = timeTaggerFactory.Modify(EQKDServer.ServerTimeTagger, new Views.TimeTaggerModifyView());
         }
 
         private void On_Settings_ClientTagger_Command(object o)
         {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger", LogMessage) { SecQNetServer = EQKDServer.secQNetServer };
+            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger", LogMessage) { SecQNetServer = EQKDServer.SecQNetServer };
 
             EQKDServer.ClientTimeTagger = timeTaggerFactory.Modify(EQKDServer.ClientTimeTagger, new Views.TimeTaggerModifyView());
         }
@@ -277,7 +258,7 @@ namespace EQKDServer.ViewModels
                     break;
                 case SecQNetServer.ConnectionStatus.Listening:
                     NetworkConnected = false;
-                    NetworkStatus = "Listening on local Socket " + EQKDServer.secQNetServer.ServerIP +":"+ EQKDServer.secQNetServer.Port.ToString();
+                    NetworkStatus = "Listening on local Socket " + EQKDServer.SecQNetServer.ServerIP +":"+ EQKDServer.SecQNetServer.Port.ToString();
                     break;
                 case SecQNetServer.ConnectionStatus.ClientConnected:
                     NetworkConnected = true;
@@ -290,53 +271,52 @@ namespace EQKDServer.ViewModels
             }
         }
 
-        private void SecQNetSyncFinished(object sender, SyncFinishedEventArgs e)
+        private void SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
         {
+
+            //-------------------------
+            // Correlation Chart
+            //-------------------------
 
             CorrelationSectionsCollection.Clear();
             CorrelationVisualElementsCollection.Clear();
 
             _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X, Y))));
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X, Y))));
 
-            _peaks = e.Peaks;
-
-            foreach (Peak peak in _peaks)
+            var axisSection = new AxisSection
             {
-                var axisSection = new AxisSection
-                {
-                    Value = peak.MeanTime,
-                    SectionWidth = 1,
-                    Stroke = peak.MeanTime == e.MinPeak.MeanTime ? Brushes.Red : Brushes.Blue,
-                    StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection(new[] { 4d })
-                };
-                CorrelationSectionsCollection.Add(axisSection);
-            }
+                Value = e.SyncRes.MeanTime,
+                SectionWidth = 1,
+                Stroke = Brushes.Red,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection(new[] { 4d })
+            };
+            CorrelationSectionsCollection.Add(axisSection);
+
+            var b = new Border();
+            TextBox tb = new TextBox()
+            {
+                Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
+                       "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
+            };
+            b.Child = tb;
+            VisualElement ve = new VisualElement()
+            {
+                X = e.SyncRes.MeanTime,
+                Y = 0,
+                UIElement = b
+            };
+            CorrelationVisualElementsCollection.Add(ve);
+
+            //-------------------------
+            // Linear Drift Comp Chart
+            //-------------------------
+                       
+            if (_linearDriftCompChartValues.Count >= 100) _linearDriftCompChartValues.RemoveAt(0);
+            _linearDriftCompChartValues.Add(e.SyncRes.CurrentLinearDriftCoeff);              
         }
 
-        private void CorrelationDataClicked(ChartPoint chartp)
-        {
-            Peak tmp_peak = _peaks?.Where(p => Math.Abs(p.MeanTime - chartp.X) < p.FWHM / 10.0).FirstOrDefault();
-
-            if (tmp_peak != null)
-            {
-                var b = new Border();
-                TextBox tb = new TextBox()
-                {
-                    Text = "Rel: " + tmp_peak.Height_Relative.ToString("F2") + "\n" +
-                           "FWHM: " + tmp_peak.FWHM.ToString("F2"),
-                };
-                b.Child = tb;
-                VisualElement ve = new VisualElement()
-                {
-                    X = tmp_peak.MeanTime,
-                    Y = tmp_peak.Height_Absolute,
-                    UIElement = b
-                };
-                CorrelationVisualElementsCollection.Add(ve);
-            }
-        }
 
         private void TimeTagsReceived(object sender, TimeTagsReceivedEventArgs e)
         {
@@ -348,26 +328,6 @@ namespace EQKDServer.ViewModels
 
             ClientBufferSize = e.BufferSize;
             ClientBufferStatus = e.BufferStatus;
-
-            //Update Rate Chart
-            if (_rateUpdateCounter >= _rateUpdateCounterLimit - 1)
-            {
-                double rate = 1000.0 * e.PacketSize * _rateUpdateCounterLimit / (double)((DateTime.Now - _lastTimeTagsReveivedTime).Milliseconds);
-                _lastTimeTagsReveivedTime = DateTime.Now;
-
-                if (_clientTagsReceiveRateChartValues.Count >= 100) _clientTagsReceiveRateChartValues.RemoveAt(0);
-                if (!double.IsNaN(rate) && !double.IsInfinity(rate))
-                {
-                    _clientTagsReceiveRateChartValues.Add(rate);
-                    MeanClientTagsReceiveRate = RateFormatter(_clientTagsReceiveRateChartValues.Average());
-                }
-
-                _rateUpdateCounter = 0;
-            }
-            else
-            {
-                _rateUpdateCounter++;
-            }
         }
 
         #endregion

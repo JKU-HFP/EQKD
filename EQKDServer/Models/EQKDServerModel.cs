@@ -16,6 +16,7 @@ using Stage_Library.Thorlabs;
 using Stage_Library.NewPort;
 using QKD_Library;
 using System.IO;
+using System.Xml.Serialization;
 
 namespace EQKDServer.Models
 {
@@ -27,30 +28,20 @@ namespace EQKDServer.Models
         //-----------------------------------
 
         private Action<string> _loggerCallback;
-        
-        //Synchronization
-        private CancellationTokenSource _sync_cts;
-        private SyncStatus _sync_status;
-        Kurolator testcorrs;
-        private long _taggersOffset_Main;
-        private long _taggersOffset_Latency;
-        private long _taggersOffset_Drift;
-
-      
+        private ServerSettings _currentServerSettings = new ServerSettings();
+        string _serverSettings_XMLFilename = "ServerSettings.xml";
 
         //-----------------------------------
         //----  P R O P E R T I E S
         //-----------------------------------
 
-        public DensityMatrixMeasurement DensMeas;
-        public StateCorrection StateCorr;
-        public ITimeTagger StateCorrTimeTagger;
 
-        public Stokes stokes;
-        public Synchronization sync;
+        //Synchronization and State correction
+        public Synchronization TaggerSynchronization;
+        public StateCorrection StateCorr;
 
         //SecQNet Connection
-        public SecQNetServer secQNetServer { get; private set; }
+        public SecQNetServer SecQNetServer { get; private set; }
 
         //Time Tagger
         public ITimeTagger ServerTimeTagger { get; set; }
@@ -66,302 +57,196 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_C { get; private set; }
         public KPRM1EStage _QWP_D { get; private set; }
 
-        public SyncStatus SynchronizationStatus
-        {
-            get { return _sync_status; }
-        }
-
-        public int NumSyncSteps { get; set; } = 20;
-
-        //-----------------------------------
-        //----  E N U M E R A T O R S
-        //-----------------------------------
-
-        public enum SyncStatus
-        {
-            Sync_Required,
-            Mainsync_GetServerTimetags,
-            Mainsync_GetClientTimetags,
-            Corr_GetServerTimeTags,
-            Corr_GetClientTimeTags,
-            Correlate,
-            Finalize,
-            Sync_Finished
-        };
-
+               
         //-----------------------------------
         //----  E V E N T S
         //-----------------------------------
-        
-        public event EventHandler<SyncFinishedEventArgs> SyncFinished;
 
-        private void OnSyncFinished(SyncFinishedEventArgs e)
-        {
-            SyncFinished?.Raise(this, e);
-        }
-        
 
-        //Constructor
+        //-----------------------------------
+        //---- C O N S T R U C T O R
+        //-----------------------------------
         public EQKDServerModel(Action<string> loggercallback)
         {
             _loggerCallback = loggercallback;
-            secQNetServer = new SecQNetServer(_loggerCallback);
 
-            //TimeTaggerFactory servertaggerFactory = new TimeTaggerFactory("ServerTagger", _loggerCallback) { SecQNetServer = secQNetServer};
-            //ServerTimeTagger = servertaggerFactory.GetDefaultTimeTagger();
-            //TimeTaggerFactory clienttaggerFactory = new TimeTaggerFactory("ClientTagger", _loggerCallback) { SecQNetServer = secQNetServer };
-            //ClientTimeTagger = clienttaggerFactory.GetDefaultTimeTagger();
+            SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
             ServerTimeTagger = new HydraHarp(_loggerCallback);
-            ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = secQNetServer };    
+            ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = SecQNetServer };    
 
-            _sync_status = SyncStatus.Sync_Required;
+            ////Instanciate and connect rotation Stages
+            //_smcController = new SMC100Controller(_loggerCallback);
+            //_smcController.Connect("COM4");
 
-            //DENSITY MATRIX TEST
+            //_HWP_A = _smcController[1];
+            //_HWP_B = _smcController[2];
 
-            //Instanciate and connect rotation Stages
-            _smcController = new SMC100Controller(_loggerCallback);
-            _smcController.Connect("COM4");
+            //if (_HWP_A != null)
+            //{
+            //    _HWP_A.Offset = 45.01;
+            //}
 
-            _HWP_A = _smcController[1];
-            _HWP_B = _smcController[2];
-
-            if (_HWP_A != null)
-            {
-                _HWP_A.Offset = 45.01;
-            }
-
-            if (_HWP_B != null)
-            {
-                _HWP_B.Offset = 100.06;
-            }
+            //if (_HWP_B != null)
+            //{
+            //    _HWP_B.Offset = 100.06;
+            //}
 
            
-            _HWP_C = new KPRM1EStage(_loggerCallback);
-            _QWP_A = new KPRM1EStage(_loggerCallback);
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-            _QWP_C = new KPRM1EStage(_loggerCallback);
-            _QWP_D = new KPRM1EStage(_loggerCallback);
+            //_HWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_A = new KPRM1EStage(_loggerCallback);
+            //_QWP_B = new KPRM1EStage(_loggerCallback);
+            //_QWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_D = new KPRM1EStage(_loggerCallback);
 
-            _HWP_C.Connect("27254524");
-            _QWP_A.Connect("27254310");
-            _QWP_B.Connect("27504148");
-            _QWP_C.Connect("27003707");
-            _QWP_D.Connect("27254574");
+            //_HWP_C.Connect("27254524");
+            //_QWP_A.Connect("27254310");
+            //_QWP_B.Connect("27504148");
+            //_QWP_C.Connect("27003707");
+            //_QWP_D.Connect("27254574");
 
-            _HWP_C.Offset = 58.5;
-            _QWP_A.Offset = 35.15;
-            _QWP_B.Offset = 63.84;
-            _QWP_C.Offset = 27.3;
-            _QWP_D.Offset = 33.15;
+            //_HWP_C.Offset = 58.5;
+            //_QWP_A.Offset = 35.15;
+            //_QWP_B.Offset = 63.84;
+            //_QWP_C.Offset = 27.3;
+            //_QWP_D.Offset = 33.15;
 
            
             //Connect timetagger
             ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
 
+            //StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
+            TaggerSynchronization = new Synchronization(_loggerCallback);
+            StateCorr = new StateCorrection(ClientTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
 
-            //INSTANTIATE MEASUREMENTS
-
-            stokes = new Stokes(_loggerCallback, _QWP_C);
-            stokes.Connect();
-
-            StateCorrTimeTagger = new SITimeTagger(loggercallback);
-            //StateCorrTimeTagger.Connect(new List<long> { 0, 0, 0, 0, 9728, 16000, 14976, 18304 , 0, 0, 0, 0, 0, 0, 0, 0 });
-            StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
-
-
-            DensMeas = new DensityMatrixMeasurement(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback); //On Rotation plates
-            //DensMeas = new DensityMatrixMeasurement(StateCorrTimeTagger, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //In Alice and Bob
-            DensMeas.ChannelA = 4;
-            DensMeas.ChannelB = 8;
-
-
-            StateCorr = new StateCorrection(StateCorrTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
-
-            sync = new Synchronization(ServerTimeTagger, StateCorrTimeTagger, _loggerCallback);
+            ReadServerConfig();
         }
-
-        public void MeasureDensityMatrix()
-        {
-            //if (!_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
-            //{
-            //    WriteLog("Rotation stages not ready.");
-            //    return;
-            //}
-
-            //DensMeas.MeasurePeakAreasAsync();
-
-            //if (!StateCorrTimeTagger.CanCollect)
-            //{
-            //    WriteLog("TimeTagger not ready");
-            //    return;
-            //}
-
-            //StateCorr.StartOptimizationAsync();
-
-
-            //stokes.GetStokesAsync();
-            sync.MeasureCorrelationAsync();
-
-        }
-
-
+               
+        //--------------------------------------
+        //----  M E T H O D S
+        //--------------------------------------
+                
         public async Task StartSynchronizeAsync()
         {
-            System.Diagnostics.Stopwatch stw = new System.Diagnostics.Stopwatch();
+            //Configure Timetaggers
+            int packetsize = 1000000;
+            ServerTimeTagger.PacketSize = packetsize;
+            ClientTimeTagger.PacketSize = packetsize;
 
-            stw.Start();
+            await Task.Run( () =>
+           {
+               //Collect Timetags
+               ServerTimeTagger.ClearTimeTagBuffer();
+               ClientTimeTagger.ClearTimeTagBuffer();
 
-            _sync_cts = new CancellationTokenSource();
-            WriteLog("Synchronization started.");
+               ServerTimeTagger.StartCollectingTimeTagsAsync();
+               ClientTimeTagger.StartCollectingTimeTagsAsync();
 
-            //var scheduler = TaskScheduler.FromCurrentSynchronizationContext();
-            //bool synchronisation_finished = await Task.Factory.StartNew( () => { }).ContinueWith( r => DoSynchronize(_sync_cts.Token), scheduler);
+               TimeTags ttAlice;
+               TimeTags ttBob;
 
-            bool synchronisation_finished = await Task<bool>.Run(() => DoSynchronize(_sync_cts.Token));
+               while (true)
+               {
+                   while (!ServerTimeTagger.GetNextTimeTags(out ttAlice)) Thread.Sleep(10);
+                   while (!ClientTimeTagger.GetNextTimeTags(out ttBob)) Thread.Sleep(10);
 
-            var peaks = testcorrs[0].GetPeaks(6250, 0.1, true);
-            Peak MinPeak = peaks.Where(p => p.Height_Relative == peaks.Min(pp => pp.Height_Relative)).FirstOrDefault();
-            _taggersOffset_Latency = MinPeak.MeanTime;
+                   SyncClockResults syncClockres = TaggerSynchronization.SyncClocksAsync(ttAlice, ttBob).GetAwaiter().GetResult();
 
-            OnSyncFinished(new SyncFinishedEventArgs(testcorrs[0].Histogram_X, testcorrs[0].Histogram_Y, peaks, MinPeak, _taggersOffset_Latency));
+                   var syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
 
-            stw.Stop();
+                   if (syncClockres.IsClocksSync && syncCorrres.IsCorrSync) break;
+               }
 
+           });
 
-            if (synchronisation_finished)
-            {
-                WriteLog($"Synchronization finished with {NumSyncSteps} steps, {ServerTimeTagger.PacketSize} packetsize, in {stw.Elapsed}");
-            }
-            else if (_sync_cts.Token.IsCancellationRequested) WriteLog("Synchronization cancelled by request.");
-            else WriteLog("Synchronization cancelled due to error");
-
-        }
-
-        private bool DoSynchronize(CancellationToken _sync_ct)
-        {
-            int sync_steps = 0;
-            bool retval = true;
-
-            TimeTags server_tt = new TimeTags();
-            TimeTags client_tt = new TimeTags();
-
-            //Configure Correlation Channels
-            List<CorrelationGroup> histograms = new List<CorrelationGroup>
-                {
-                    new Histogram(new List<(byte cA, byte cB)>{ (0, 1) },100000)                  
-                };
-
-            testcorrs = new Kurolator(histograms, 30000);
-
-            _sync_status = SyncStatus.Mainsync_GetServerTimetags;
-
-            //Clear buffers and start Start Timetaggers
-            ServerTimeTagger.ClearTimeTagBuffer();
-            ClientTimeTagger.ClearTimeTagBuffer();
-            ServerTimeTagger.StartCollectingTimeTagsAsync();
-            ClientTimeTagger.StartCollectingTimeTagsAsync();
-            
-            //Main state machine
-            while (_sync_status != SyncStatus.Sync_Finished)
-            {
-                if (_sync_ct.IsCancellationRequested || secQNetServer.connectionStatus != SecQNetServer.ConnectionStatus.ClientConnected)
-                {
-                    retval = false;
-                    break;
-                }
-
-                switch (_sync_status)
-                {
-                    case SyncStatus.Mainsync_GetServerTimetags:
-                        if (ServerTimeTagger.GetNextTimeTags(out server_tt)) _sync_status = SyncStatus.Mainsync_GetClientTimetags;
-                        break;
-
-                    case SyncStatus.Mainsync_GetClientTimetags:
-                        if (ClientTimeTagger.GetNextTimeTags(out client_tt))
-                        {
-                            _taggersOffset_Main = server_tt.time[0] - client_tt.time[0];
-                            _sync_status = SyncStatus.Correlate;
-                        }
-                        break;
-
-                    case SyncStatus.Corr_GetServerTimeTags:
-                        if (ServerTimeTagger.GetNextTimeTags(out server_tt)) _sync_status = SyncStatus.Correlate;
-                        break;
-
-                    case SyncStatus.Corr_GetClientTimeTags:
-                        if (ClientTimeTagger.GetNextTimeTags(out client_tt)) _sync_status = SyncStatus.Correlate;
-                        break;
-
-                    case SyncStatus.Correlate:
-                        long total_offset = _taggersOffset_Main + _taggersOffset_Latency + _taggersOffset_Drift;
-
-                        Kurolator.CorrResult corrResult = testcorrs.AddCorrelations(server_tt, client_tt, total_offset);
-
-                        if (corrResult == Kurolator.CorrResult.PartnerBehind)
-                        {
-                            _sync_status = SyncStatus.Corr_GetClientTimeTags;
-                            sync_steps++;
-                        }
-                        else
-                        {
-                            _sync_status = SyncStatus.Corr_GetServerTimeTags;
-
-                        }
-
-                        if (sync_steps >= NumSyncSteps) _sync_status = SyncStatus.Finalize;
-
-                        break;
-
-                    case SyncStatus.Finalize:
-                        _sync_status = SyncStatus.Sync_Finished;
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            //Stop collecting timetags
-            StopAllTimeTaggers();
-
-            return retval;
-        }
-
-        private void StopAllTimeTaggers()
-        {
             ServerTimeTagger.StopCollectingTimeTags();
             ClientTimeTagger.StopCollectingTimeTags();
         }
 
-        public void StopSynchronize()
+
+       public void ReadServerConfig()
+       {
+            ServerSettings _readSettings = ReadConfigXMLFile(_serverSettings_XMLFilename);
+            if (_readSettings == null)
+            {
+                WriteLog($"Could not read Configuration file '{_serverSettings_XMLFilename}'");
+                return;
+            }
+
+            _currentServerSettings = _readSettings;
+
+            //Set configs
+            TaggerSynchronization.LinearDriftCoefficient = _currentServerSettings.LinearDriftCoefficient;
+       }
+
+        private ServerSettings ReadConfigXMLFile(string filename)
         {
-            _sync_cts.Cancel();
+            ServerSettings tmp_settings = null;
+
+            if (!File.Exists(filename)) return tmp_settings;
+
+            try
+            {
+                FileStream fs = new FileStream(filename, FileMode.OpenOrCreate);
+                TextReader tr = new StreamReader(fs);
+                XmlSerializer xmls = new XmlSerializer(typeof(ServerSettings));
+
+                tmp_settings = (ServerSettings)xmls.Deserialize(tr);
+
+                tr.Close();
+            }
+            catch (InvalidOperationException ex) //Thrown by Serialize
+            {
+                throw new InvalidOperationException("Catched InvalidOperationException: " + ex.Message, ex.InnerException);
+            }
+            catch (IOException ex) //Thrown by FileStream
+            {
+                throw new InvalidOperationException("Catched IOException: " + ex.Message, ex.InnerException);
+            }
+
+            return tmp_settings;
         }
 
-       private void WriteLog(string message)
+        public void SaveServerConfig()
+        {
+            //Get Config Data
+            _currentServerSettings.LinearDriftCoefficient = TaggerSynchronization.LinearDriftCoefficient;
+
+            //Write Config file
+            SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);
+        }
+
+        private bool SaveConfigXMLFile(ServerSettings settings, string filename)
+        {
+            try
+            {
+                TextWriter tw = new StreamWriter(filename);
+                XmlSerializer xmls = new XmlSerializer(settings.GetType());
+
+                xmls.Serialize(tw, _currentServerSettings);
+
+                tw.Close();
+            }
+            catch (InvalidOperationException ex) //Thrown by Serialize
+            {
+                throw new InvalidOperationException("Catched InvalidOperationException: " + ex.Message, ex.InnerException);
+            }
+            catch (IOException ex) //Thrown by FileStream
+            {
+                throw new InvalidOperationException("Catched IOException: " + ex.Message, ex.InnerException);
+            }
+
+            WriteLog("TimeTagger factory options saved in '" + filename + "'.");
+
+            return true;
+        }
+
+        private void WriteLog(string message)
         {
             _loggerCallback?.Invoke("EQKD Server: " + message);
         }
     }
 
-    public class SyncFinishedEventArgs : EventArgs
-    {
-        public readonly long[] HistogramX;
-        public readonly long[] HistogramY;
-        public readonly List<Peak> Peaks;
-        public readonly Peak MinPeak;
-        public readonly long TimeTaggers_LatencyOffset;
-
-        public SyncFinishedEventArgs(long[] histx, long[] histy, List<Peak> peaks, Peak minpeak, long tt_latencyoffset)
-        {
-            HistogramX = histx;
-            HistogramY = histy;
-            Peaks = peaks;
-            MinPeak = minpeak;
-            TimeTaggers_LatencyOffset = tt_latencyoffset;
-        }
-
-    }
 }

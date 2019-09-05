@@ -109,8 +109,7 @@
                         Zoom="None"
                         Series="{Binding Path=CorrelationCollection}"
                         AnimationsSpeed="00:00:00.1"
-                        VisualElements="{Binding CorrelationVisualElementsCollection}"
-                        DataClickCommand="{Binding CorrelationDataClickCommand}">
+                        VisualElements="{Binding CorrelationVisualElementsCollection}">
                 <lvc:CartesianChart.AxisY>
                     <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
                 </lvc:CartesianChart.AxisY>
@@ -119,20 +118,16 @@
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
 
-            <!-- Network performance-->
+            <!-- Linear Drift Compensation -->
             <lvc:CartesianChart Grid.Row="1"
                         Zoom="None"
-                        Series="{Binding ClientTagsReceiveRateCollection}"
+                        Series="{Binding LinearDriftCompCollection}"
                         AnimationsSpeed="00:00:00.01">
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis LabelFormatter="{Binding RateFormatter}" />
+                    <lvc:Axis Title="Linear Drift Coeff." />
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
         </Grid>
 
-        <StackPanel Grid.Row="5" Grid.Column="3" Orientation="Horizontal">
-            <TextBlock Text="Average:" />
-            <TextBlock Text="{Binding MeanClientTagsReceiveRate}" />
-        </StackPanel>
     </Grid>
 </UserControl>

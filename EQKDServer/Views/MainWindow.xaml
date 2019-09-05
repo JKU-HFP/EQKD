@@ -34,6 +34,9 @@
         <intr:EventTrigger EventName="Loaded">
             <intr:InvokeCommandAction Command="{Binding WindowLoadedCommand}"/>
         </intr:EventTrigger>
+        <intr:EventTrigger EventName="Closing">
+            <intr:InvokeCommandAction Command="{Binding WindowClosingCommand}"/>
+        </intr:EventTrigger>
     </intr:Interaction.Triggers>
 
     <Grid Background="{DynamicResource WindowBackColor}">
@@ -44,7 +47,7 @@
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
             <RowDefinition Height="20" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="150" />
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -95,8 +98,19 @@
                 </TabItem.Header>
                 <scv:TaggerControl/>
             </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Vertical">
+                        <Image Height="16" Source="Pics/Tagger_16x.png"/>
+                        <Label Foreground="White" Content="PolCorrection"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <scv:PolCorrectionControl/>
+            </TabItem>
         </TabControl>
 
+        <GridSplitter Grid.Row="4" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
+        
         <!-- MESSAGE AREA -->
 
         <TextBox Grid.Row="6" Grid.Column="1"
