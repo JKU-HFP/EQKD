@@ -145,8 +145,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             });
             StopCollectingCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.sync.TimeWindow = TimeWindow;
-                _EQKDServer.sync.Bin = Resolution;          
+                _EQKDServer.sync.ClockSyncTimeWindow = TimeWindow;
+                _EQKDServer.sync.TimeBin = Resolution;          
                 _EQKDServer.sync.ShotTime = ShotTime;
                 _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
                 _EQKDServer.sync.PVal = PVal;
@@ -165,7 +165,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
                 _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
 
-                _EQKDServer.sync.SyncComplete += SyncComplete;
+                _EQKDServer.sync.SyncClocksComplete += SyncComplete;
                 //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
             });
 
@@ -204,7 +204,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //_clientChannelView.Show();
         }
 
-        private void SyncComplete(object sender, SyncCompleteEventArgs e)
+        private void SyncComplete(object sender, SyncClocksCompleteEventArgs e)
         {
             _correlationChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));

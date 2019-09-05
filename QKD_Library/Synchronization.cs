@@ -18,153 +18,192 @@ namespace QKD_Library
         //##  P R O P E R T I E S
         //#################################################
 
-        /// <summary>
-        /// Frequency in kHz
-        /// </summary>
-        public ulong Bin { get; set; } = 1000;
-        public ulong TimeWindow { get; set; } = 1000000;
-        public int PacketSize { get; set; } = 100000;
-        public ulong ShotTime { get; set; } = 10000;
+        public ulong TimeBin { get; set; } = 1000;
+        public ulong ClockSyncTimeWindow { get; set; } = 1000000;
+        public long GlobalClockOffset { get; set; } = 0;
         public double LinearDriftCoefficient { get; set; } = 0;
+        public double FWHM_Tolerance { get; set; } = 4000;
         public double PVal { get; set; } = 0;
-        /// <summary>
-        /// Integration time in milli seconds
-        /// </summary>
-        public int IntegrationTime { get; set; } = 10000;
-        public byte Chan_Tagger1 { get; set; } = 2;
+        public ulong ExcitationPeriod { get; set; } = 12500;
+        public byte Chan_Tagger1 { get; set; } = 0;
         public byte Chan_Tagger2 { get; set; } = 1;
+
+        /// <summary>
+        /// Offset by relative fiber distance of Alice and Bob
+        /// </summary>
+        public long FiberOffset { get; set; } = 0;
+        public ulong CorrSyncTimeWindow { get; set; } = 1000000;
+        public long CorrPeakOffset_Tolerance { get; set; } = 2000;
 
         //#################################################
         //##  P R I V A T E S
         //#################################################
+
         private Action<string> _loggerCallback;
-        private ITimeTagger _tagger1;
-        private ITimeTagger _tagger2;
         private Kurolator _kurolator;
-        private CancellationTokenSource _cts; 
+
+        private bool _firstClockSyncIteration = true;
+        private long _init_middlepeakpos = 0;
 
         //#################################################
         //##  E V E N T S 
         //#################################################
 
-        public event EventHandler<SyncCompleteEventArgs> SyncComplete;
+        public event EventHandler<SyncClocksCompleteEventArgs> SyncClocksComplete;
         
-        private void OnSyncComplete(SyncCompleteEventArgs e)
+        private void OnSyncClocksComplete(SyncClocksCompleteEventArgs e)
         {
-            SyncComplete?.Raise(this, e);
+            SyncClocksComplete?.Raise(this, e);
+        }
+
+        public event EventHandler<SyncCorrResults> SyncCorrComplete;
+
+        private void OnSyncCorrComplete(SyncCorrCompleteEventArgs e)
+        {
+            SyncCorrComplete?.Raise(this, e);
         }
 
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
 
-        public Synchronization(ITimeTagger tagger1, ITimeTagger tagger2, Action<string> loggerCallback)
+        public Synchronization(Action<string> loggerCallback)
         {
             _loggerCallback = loggerCallback;
-            _tagger1 = tagger1;
-            _tagger2 = tagger2;
         }
 
         //#################################################
         //##  M E T H O D S 
         //#################################################
-
-        public async void MeasureCorrelationAsync()
+        public void Reset()
         {
-            _cts = new CancellationTokenSource();
-
-            bool first = true;
-            long offset = 0;
-            long init_middlepeakpos = 0;
-            double init_middlepeakFWHM = 0;
-
-            await Task.Run( () =>
-           {
-
-               while (!_cts.Token.IsCancellationRequested)
-               {
-                   //Get timetags
-                   WriteLog("Collecting timetags");
-
-                   _tagger1.PacketSize = PacketSize;
-                   _tagger2.PacketSize = PacketSize;
-
-                   _tagger1.ClearTimeTagBuffer();
-                   _tagger2.ClearTimeTagBuffer();
-
-                   _tagger1.StartCollectingTimeTagsAsync();
-                   _tagger2.StartCollectingTimeTagsAsync();
-
-                   Thread.Sleep(IntegrationTime);
-
-                   _tagger1.StopCollectingTimeTags();
-                   _tagger2.StopCollectingTimeTags();
-
-                   WriteLog("Start sync");
-
-                   Stopwatch sw = new Stopwatch();
-                   sw.Start();
-
-                   //Calculate correlations
-                   Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, TimeWindow, (long)Bin);
-                   _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, TimeWindow);
-
-
-                   _tagger1.GetNextTimeTags(out TimeTags tt1);
-                   _tagger2.GetNextTimeTags(out TimeTags tt2);
-
-                   long starttime = tt1.time[0];
-                   int index = tt1.time.TakeWhile(t => t - starttime < (long)ShotTime).Count();
-                   byte[] reduced_chans = tt1.chan.Take(index).ToArray();
-                   long[] reduced_times = tt1.time.Take(index).ToArray();
-
-
-                   long[] compensated_times = reduced_times.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
-                   TimeTags reduced_timetags = new TimeTags(reduced_chans, compensated_times);
-
-                   offset = (tt1.time[0] - tt2.time[0]);
-                   _kurolator.AddCorrelations(reduced_timetags, tt2, offset);
-                   
-                   //Analyse middle peak
-                   List<Peak> peaks = hist.GetPeaks(min_peak_dist: 1000000);
-                   Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
-
-                   if (first)
-                   {
-                       init_middlepeakpos = MiddlePeak.MeanTime;
-                       init_middlepeakFWHM = MiddlePeak.FWHM;
-                       first = false;
-                   }
-
-                   //Calculate new linear drift coefficient
-                   double optimum_FWHM = 3000;
-                   double FWHM_P = MiddlePeak.FWHM - optimum_FWHM > 0 ? (MiddlePeak.FWHM - optimum_FWHM) : 0;
-                   LinearDriftCoefficient = LinearDriftCoefficient + (PVal * Math.Sign(init_middlepeakpos - MiddlePeak.MeanTime)*FWHM_P*1E-12);
-                   
-
-                   sw.Stop();
-                   WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
-
-                    OnSyncComplete(new SyncCompleteEventArgs()
-                    {
-                        HistogramX = hist.Histogram_X,
-                        HistogramY = hist.Histogram_Y,
-                        CurrentLinearDriftCoeff = LinearDriftCoefficient,
-                        FWHM = MiddlePeak.FWHM,
-                        MeanTime = MiddlePeak.MeanTime
-                   });
-               }
-
-               WriteLog("Sync stopped");
-
-           });
-
-
+            _firstClockSyncIteration = true;
         }
 
-        public void Cancel()
+        public async Task<SyncClockResults> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
         {
-            _cts.Cancel();
+            Stopwatch sw = new Stopwatch();
+
+            SyncClockResults syncres = await Task<SyncClockResults>.Run(() =>
+            {                           
+                //Initialize
+                WriteLog("Start synchronizing clocks");
+                                
+                sw.Start();
+
+                Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, ClockSyncTimeWindow, (long)TimeBin);
+                _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
+
+                //Compensate Bobs tags for linear drift timerange
+                long starttime = ttBob.time[0];
+                long[] comp_times = ttBob.time.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
+                TimeTags ttBob_comp = new TimeTags(ttBob.chan, comp_times);
+
+                GlobalClockOffset = (ttBob.time[0] - ttAlice.time[0]);
+                _kurolator.AddCorrelations(ttAlice, ttBob_comp, GlobalClockOffset + FiberOffset);
+
+
+                //------------------------
+                // Analyse peaks
+                //------------------------
+
+                bool peaksFound = false;
+                bool clockInSync = false;
+               
+                List<Peak> peaks = hist.GetPeaks(peakBinning:2000);
+                Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
+
+                //Number of peaks plausible?
+                int numExpectedPeaks = (int)(ClockSyncTimeWindow / ExcitationPeriod);    
+                if (peaks.Count >= numExpectedPeaks && peaks.Count < numExpectedPeaks + 2)
+                {
+                    peaksFound = true;
+                    if (_firstClockSyncIteration)
+                    {
+                        _init_middlepeakpos = MiddlePeak.MeanTime;
+                        _firstClockSyncIteration = false;
+                    }
+                    else
+                    {
+                        //Calculate new linear drift coefficient
+                        double optimum_FWHM = 3000;
+                        double FWHM_P = MiddlePeak.FWHM - optimum_FWHM > 0 ? (MiddlePeak.FWHM - optimum_FWHM) : 0;
+                        LinearDriftCoefficient = LinearDriftCoefficient + (PVal * Math.Sign(_init_middlepeakpos - MiddlePeak.MeanTime) * FWHM_P * 1E-12);
+
+                        //Sync quality ok?   
+                        if (peaks.Count >= numExpectedPeaks && peaks.Count < numExpectedPeaks + 2)
+                        {
+                            if (MiddlePeak.FWHM <= FWHM_Tolerance) clockInSync = true;
+                        }
+                    }
+                }
+
+                sw.Stop();
+
+                WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
+
+                return new SyncClockResults()
+                {
+                    HistogramX = hist.Histogram_X,
+                    HistogramY = hist.Histogram_Y,
+                    CurrentLinearDriftCoeff = LinearDriftCoefficient,
+                    FWHM = MiddlePeak.FWHM,
+                    MeanTime = MiddlePeak.MeanTime,
+                    PeaksFound = peaksFound,
+                    IsClocksSync = clockInSync,
+                    CompTimeTags_Bob = ttBob_comp                  
+                };
+
+            });
+
+            OnSyncClocksComplete(new SyncClocksCompleteEventArgs(syncres));
+
+            return syncres;
+        }
+
+        public async Task<SyncCorrResults> SyncCorrelationAsync(TimeTags ttAlice, TimeTags ttBob)
+        {
+
+            SyncCorrResults syncRes = await Task<SyncCorrResults>.Run( () => 
+            {
+                Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, CorrSyncTimeWindow, (long)TimeBin);
+                _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, CorrSyncTimeWindow);
+
+                _kurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + FiberOffset);
+
+                //Find correlated peak
+                List<Peak> peaks = hist.GetPeaks(peakBinning:2000);
+                double av_area = peaks.Select(p => p.Area).Average();
+                double av_area_err = Math.Sqrt(av_area);
+
+                //Find peak most outside outside the average
+                Peak CorrPeak = peaks.Where(p => Math.Abs(p.Area-av_area) == peaks.Select(a => Math.Abs(a.Area-av_area)).Min()).FirstOrDefault();
+
+                //Is peak area statistically significant?
+                bool isCorrSync = false;
+                bool corrPeakFound = false;
+
+                if (Math.Abs(CorrPeak.Area - av_area) > 2*av_area_err)
+                {
+                    corrPeakFound = true;
+                    if (Math.Abs(CorrPeak.MeanTime) < CorrPeakOffset_Tolerance) isCorrSync = true;
+
+                    FiberOffset += CorrPeak.MeanTime;
+                }
+
+                return new SyncCorrResults()
+                {
+                    HistogramX = hist.Histogram_X,
+                    HistogramY = hist.Histogram_Y,
+                    CorrPeakPos = CorrPeak.MeanTime,
+                    CorrPeakFound = corrPeakFound,
+                    IsCorrSync = isCorrSync
+                };
+            });
+
+            OnSyncCorrComplete(new SyncCorrCompleteEventArgs(syncRes));
+
+            return syncRes;
         }
 
         private void WriteLog(string msg)
@@ -173,18 +212,41 @@ namespace QKD_Library
         }
     }
 
-    public class SyncCompleteEventArgs : EventArgs
+    public class SyncClocksCompleteEventArgs : EventArgs
+    {
+        public SyncClockResults SyncRes { get; private set;} 
+        public SyncClocksCompleteEventArgs(SyncClockResults syncRes)
+        {
+            SyncRes = syncRes;
+        }
+    }
+    
+    public class SyncClockResults
     {
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
         public double CurrentLinearDriftCoeff { get; set; }
         public double FWHM { get; set; }
         public double MeanTime { get; set; }
-
-        public SyncCompleteEventArgs()
-        {
-
-        }
+        public bool PeaksFound { get; set; }
+        public bool IsClocksSync { get; set; }
+        public TimeTags CompTimeTags_Bob { get; set; }
     }
 
+    public class SyncCorrCompleteEventArgs : EventArgs
+    {
+        public SyncCorrResults SyncRes { get; private set; }
+        public SyncCorrCompleteEventArgs(SyncCorrResults syncRes)
+        {
+            SyncRes = syncRes;
+        }
+    }
+    public class SyncCorrResults
+    {
+        public long[] HistogramX { get; set; }
+        public long[] HistogramY { get; set; }
+        public long CorrPeakPos { get; set; }
+        public bool CorrPeakFound { get; set; }
+        public bool IsCorrSync { get; set; }
+    }
 }
