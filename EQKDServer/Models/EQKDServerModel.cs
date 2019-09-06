@@ -1,22 +1,16 @@
-﻿using Extensions_Library;
+﻿using QKD_Library;
 using SecQNet;
+using Stage_Library;
+using Stage_Library.NewPort;
+using Stage_Library.Thorlabs;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using TimeTagger_Library;
-using TimeTagger_Library.Correlation;
-using TimeTagger_Library.TimeTagger;
-using TimeTaggerWPF_Library;
-using Stage_Library;
-using Stage_Library.Thorlabs;
-using Stage_Library.NewPort;
-using QKD_Library;
-using System.IO;
 using System.Xml.Serialization;
+using TimeTagger_Library;
+using TimeTagger_Library.TimeTagger;
 
 namespace EQKDServer.Models
 {
@@ -30,6 +24,7 @@ namespace EQKDServer.Models
         private Action<string> _loggerCallback;
         private ServerSettings _currentServerSettings = new ServerSettings();
         string _serverSettings_XMLFilename = "ServerSettings.xml";
+        CancellationTokenSource _cts;
 
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -46,7 +41,7 @@ namespace EQKDServer.Models
         //Time Tagger
         public ITimeTagger ServerTimeTagger { get; set; }
         public ITimeTagger ClientTimeTagger { get; set; }
-        
+
         //Rotation Stages
         public SMC100Controller _smcController { get; private set; }
         public SMC100Stage _HWP_A { get; private set; }
@@ -57,7 +52,7 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_C { get; private set; }
         public KPRM1EStage _QWP_D { get; private set; }
 
-               
+
         //-----------------------------------
         //----  E V E N T S
         //-----------------------------------
@@ -74,7 +69,7 @@ namespace EQKDServer.Models
 
             //Instanciate TimeTaggers
             ServerTimeTagger = new HydraHarp(_loggerCallback);
-            ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = SecQNetServer };    
+            ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = SecQNetServer };
 
             ////Instanciate and connect rotation Stages
             //_smcController = new SMC100Controller(_loggerCallback);
@@ -93,7 +88,7 @@ namespace EQKDServer.Models
             //    _HWP_B.Offset = 100.06;
             //}
 
-           
+
             //_HWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_A = new KPRM1EStage(_loggerCallback);
             //_QWP_B = new KPRM1EStage(_loggerCallback);
@@ -112,7 +107,7 @@ namespace EQKDServer.Models
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
 
-           
+
             //Connect timetagger
             ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
 
@@ -123,51 +118,68 @@ namespace EQKDServer.Models
 
             ReadServerConfig();
         }
-               
+
         //--------------------------------------
         //----  M E T H O D S
         //--------------------------------------
-                
+
         public async Task StartSynchronizeAsync()
         {
+
+            _cts = new CancellationTokenSource();
+
             //Configure Timetaggers
             int packetsize = 1000000;
             ServerTimeTagger.PacketSize = packetsize;
             ClientTimeTagger.PacketSize = packetsize;
 
-            await Task.Run( () =>
-           {
-               //Collect Timetags
-               ServerTimeTagger.ClearTimeTagBuffer();
-               ClientTimeTagger.ClearTimeTagBuffer();
+            //Configure Synchronisation
+            TaggerSynchronization.LinearDriftCoefficient = 5.52E-5;
+            TaggerSynchronization.PVal = 0.0;
 
-               ServerTimeTagger.StartCollectingTimeTagsAsync();
-               ClientTimeTagger.StartCollectingTimeTagsAsync();
+            WriteLog("Synchronisation started");
 
-               TimeTags ttAlice;
-               TimeTags ttBob;
+            await Task.Run(() =>
+          {
+              while (!_cts.Token.IsCancellationRequested)
+              {
+                  //Collect Timetags
+                  ServerTimeTagger.ClearTimeTagBuffer();
+                  ClientTimeTagger.ClearTimeTagBuffer();
 
-               while (true)
-               {
-                   while (!ServerTimeTagger.GetNextTimeTags(out ttAlice)) Thread.Sleep(10);
-                   while (!ClientTimeTagger.GetNextTimeTags(out ttBob)) Thread.Sleep(10);
+                  ServerTimeTagger.StartCollectingTimeTagsAsync();
+                  ClientTimeTagger.StartCollectingTimeTagsAsync();
 
-                   SyncClockResults syncClockres = TaggerSynchronization.SyncClocksAsync(ttAlice, ttBob).GetAwaiter().GetResult();
+                  TimeTags ttAlice;
+                  TimeTags ttBob;
 
-                   var syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
 
-                   if (syncClockres.IsClocksSync && syncCorrres.IsCorrSync) break;
-               }
+                  while (!ServerTimeTagger.GetNextTimeTags(out ttAlice)) Thread.Sleep(10);
+                  while (!ClientTimeTagger.GetNextTimeTags(out ttBob)) Thread.Sleep(10);
 
-           });
+                  ServerTimeTagger.StopCollectingTimeTags();
+                  ClientTimeTagger.StopCollectingTimeTags();
 
-            ServerTimeTagger.StopCollectingTimeTags();
-            ClientTimeTagger.StopCollectingTimeTags();
+                  SyncClockResults syncClockres = TaggerSynchronization.SyncClocksAsync(ttAlice, ttBob).GetAwaiter().GetResult();
+
+                  var syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
+
+                  if (syncClockres.IsClocksSync && syncCorrres.IsCorrSync) break;
+              }
+
+          });
+
+            WriteLog("Synchronisation Stopped");
+        }
+
+        public void StopSynchronize()
+        {
+            _cts?.Cancel();
         }
 
 
-       public void ReadServerConfig()
-       {
+        public void ReadServerConfig()
+        {
             ServerSettings _readSettings = ReadConfigXMLFile(_serverSettings_XMLFilename);
             if (_readSettings == null)
             {
@@ -179,7 +191,7 @@ namespace EQKDServer.Models
 
             //Set configs
             TaggerSynchronization.LinearDriftCoefficient = _currentServerSettings.LinearDriftCoefficient;
-       }
+        }
 
         private ServerSettings ReadConfigXMLFile(string filename)
         {

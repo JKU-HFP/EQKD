@@ -45,6 +45,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //Commands
         public RelayCommand<object> StartListeningToNetworkCommand { get; private set; }
         public RelayCommand<object> SynchronizeCommand { get; private set; }
+        public RelayCommand<object> CancelCommand { get; private set; }
 
         //Contructor
         public NetworkControlViewModel()
@@ -57,6 +58,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //Route Commands
             StartListeningToNetworkCommand = new RelayCommand<object>(StartListeningToNetwork);
             SynchronizeCommand = new RelayCommand<object>(Synchronize,CanSynchrononize);
+            CancelCommand = new RelayCommand<object>((o) => _EQKDServer.StopSynchronize());
 
             Port = 4242;
         }      
