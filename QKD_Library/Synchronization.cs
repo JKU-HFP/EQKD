@@ -19,7 +19,7 @@ namespace QKD_Library
         //#################################################
 
         public ulong TimeBin { get; set; } = 1000;
-        public ulong ClockSyncTimeWindow { get; set; } = 1000000;
+        public ulong ClockSyncTimeWindow { get; set; } = 100000;
         public long GlobalClockOffset { get; set; } = 0;
         public double LinearDriftCoefficient { get; set; } = 0;
         public double FWHM_Tolerance { get; set; } = 4000;
@@ -99,7 +99,7 @@ namespace QKD_Library
                 long[] comp_times = ttBob.time.Select(t => (long)(t + (t - starttime) * LinearDriftCoefficient)).ToArray();
                 TimeTags ttBob_comp = new TimeTags(ttBob.chan, comp_times);
 
-                GlobalClockOffset = (ttBob.time[0] - ttAlice.time[0]);
+                GlobalClockOffset = (ttAlice.time[0] - ttBob.time[0]);
                 _kurolator.AddCorrelations(ttAlice, ttBob_comp, GlobalClockOffset + FiberOffset);
 
 
@@ -140,7 +140,10 @@ namespace QKD_Library
 
                 sw.Stop();
 
-                WriteLog($"Sync cycle complete in {sw.Elapsed} | FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
+                if (MiddlePeak == null) MiddlePeak = new Peak() { }; //Define empty peak
+
+                TimeSpan packettimespan = new TimeSpan(0, 0, (int)((ttAlice.time[ttAlice.time.Length - 1] - ttAlice.time[0]) / 1E12));
+                WriteLog($"Sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
 
                 return new SyncClockResults()
                 {

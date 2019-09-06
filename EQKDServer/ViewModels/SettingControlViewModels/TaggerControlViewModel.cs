@@ -130,26 +130,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public SectionsCollection CorrelationSectionsCollection { get; set; }
 
         //Commands
-        public RelayCommand<object> StartCollectingCommand { get; private set; }
-        public RelayCommand<object> StopCollectingCommand { get; private set; }
+        public RelayCommand<object> StartSyncCommand { get; private set; }
         public RelayCommand<object> CancelCommand { get; private set; }
 
         //Contructor
         public TaggerControlViewModel()
         {
             //Map RelayCommmands
-            StartCollectingCommand = new RelayCommand<object>( (o) =>
-            {
-                //_EQKDServer.ServerTimeTagger.StartCollectingTimeTagsAsync();
-                //_EQKDServer.MeasureDensityMatrix();
-            });
-            StopCollectingCommand = new RelayCommand<object>((o) =>
-            {
 
-            });
+            StartSyncCommand = new RelayCommand<object>(Synchronize, CanSynchrononize);
+
             CancelCommand = new RelayCommand<object>((o) =>
             {
-  
+                _EQKDServer.StopSynchronize();  
             });
 
             //Handle Messages
@@ -178,9 +171,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
 
             TimeWindow = 100000;
-            Resolution = 100;
-            ShotTime = 5000000000000;
-            LinearDriftCoefficient = 5.52E-5;
+            Resolution = 500;
+            ShotTime = 100000000000;
+            LinearDriftCoefficient = -5.5535E-5;
             PVal = -8;
 
 
@@ -248,6 +241,24 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //{
             //    _clientChannelViewModel.ChanDiag[i].CountRate = e.Countrate[i];
             //}
+        }
+
+        private void Synchronize(object o)
+        {
+            _EQKDServer.TaggerSynchronization.TimeBin = Resolution;
+            _EQKDServer.TaggerSynchronization.ClockSyncTimeWindow = TimeWindow;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoefficient = LinearDriftCoefficient;
+
+            _EQKDServer.StartSynchronizeAsync((int)(ShotTime / 5E5 ));
+        }
+
+        private bool CanSynchrononize(object o)
+        {
+            return (_EQKDServer != null &&
+                     _EQKDServer.ServerTimeTagger.CanCollect &&
+                     _EQKDServer.ClientTimeTagger.CanCollect &&
+                     _EQKDServer.SecQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
+
         }
                
     }

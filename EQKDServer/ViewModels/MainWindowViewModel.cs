@@ -157,7 +157,30 @@ namespace EQKDServer.ViewModels
             }
         }
 
-    
+        private double _corrChartXMin = -10000;
+        public double CorrChartXMin
+        {
+            get { return _corrChartXMin; }
+            set
+            {
+                _corrChartXMin = value;
+                OnPropertyChanged("CorrChartXMin");
+            }
+        }
+
+        private double _corrChartXMax = 10000;
+        public double CorrChartXMax
+        {
+            get { return _corrChartXMax; }
+            set
+            {
+                _corrChartXMax = value;
+                OnPropertyChanged("CorrChartXMax");
+            }
+        }
+
+
+
         //Charts
         public SeriesCollection LinearDriftCompCollection { get; set; }
         public SeriesCollection CorrelationCollection { get; set; }
@@ -198,7 +221,7 @@ namespace EQKDServer.ViewModels
             ServerBufferStatus = 0;
             ClientBufferSize = 1000;
             ClientBufferStatus = 0;
-
+            
             //Initialize Chart elements
             LinearDriftCompCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
@@ -232,7 +255,9 @@ namespace EQKDServer.ViewModels
             _correlationLineSeries = new LineSeries()
             {
                 Title = "Sync correlations",
-                Values = _correlationChartValues,
+                PointGeometrySize = 0,
+                Values = _correlationChartValues
+                
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
@@ -240,6 +265,7 @@ namespace EQKDServer.ViewModels
             _linearDriftCompLineSeries = new LineSeries()
             {
                 Title = "Linear Clock Drift compensation factor",
+                PointGeometrySize = 0,
                 Values = _linearDriftCompChartValues,
             };
             LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
@@ -304,32 +330,35 @@ namespace EQKDServer.ViewModels
             CorrelationVisualElementsCollection.Clear();
 
             _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X, Y))));
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
 
-            var axisSection = new AxisSection
-            {
-                Value = e.SyncRes.MeanTime,
-                SectionWidth = 1,
-                Stroke = Brushes.Red,
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection(new[] { 4d })
-            };
-            CorrelationSectionsCollection.Add(axisSection);
+            CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
+            CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
 
-            var b = new Border();
-            TextBox tb = new TextBox()
-            {
-                Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
-                       "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
-            };
-            b.Child = tb;
-            VisualElement ve = new VisualElement()
-            {
-                X = e.SyncRes.MeanTime,
-                Y = 0,
-                UIElement = b
-            };
-            CorrelationVisualElementsCollection.Add(ve);
+            //var axisSection = new AxisSection
+            //{
+            //    Value = e.SyncRes.MeanTime,
+            //    SectionWidth = 1,
+            //    Stroke = Brushes.Red,
+            //    StrokeThickness = 1,
+            //    StrokeDashArray = new DoubleCollection(new[] { 4d })
+            //};
+            //CorrelationSectionsCollection.Add(axisSection);
+
+            //var b = new Border();
+            //TextBox tb = new TextBox()
+            //{
+            //    Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
+            //           "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
+            //};
+            //b.Child = tb;
+            //VisualElement ve = new VisualElement()
+            //{
+            //    X = e.SyncRes.MeanTime,
+            //    Y = 0,
+            //    UIElement = b
+            //};
+            //CorrelationVisualElementsCollection.Add(ve);
 
             //-------------------------
             // Linear Drift Comp Chart

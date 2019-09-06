@@ -69,10 +69,9 @@
                 <lvc:Axis Title="Delay [ms]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
             </lvc:CartesianChart.AxisX>
         </lvc:CartesianChart>
-
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Stokes" Command="{Binding StartCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Start Sync" Command="{Binding StopCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+     
+        <Button Grid.Row="3" Grid.Column="1" Content="Start Sync" Command="{Binding StartSyncCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
 
 
     </Grid>

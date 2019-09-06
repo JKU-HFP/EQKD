@@ -24,6 +24,7 @@ namespace SecQNet
         private ConnectionStatus _connStatus = ConnectionStatus.NotConnected;
 
         //Properties
+        public bool IsConnected { get => connectionStatus == ConnectionStatus.ClientConnected; }
         public ConnectionStatus connectionStatus
         {
             get { return _connStatus; }

@@ -69,7 +69,7 @@ namespace EQKDServer.Models
 
             //Instanciate TimeTaggers
             ServerTimeTagger = new HydraHarp(_loggerCallback);
-            ClientTimeTagger = new NetworkTagger(_loggerCallback) { secQNetServer = SecQNetServer };
+            ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             ////Instanciate and connect rotation Stages
             //_smcController = new SMC100Controller(_loggerCallback);
@@ -123,19 +123,19 @@ namespace EQKDServer.Models
         //----  M E T H O D S
         //--------------------------------------
 
-        public async Task StartSynchronizeAsync()
+        public async Task StartSynchronizeAsync(int packetsize=1000)
         {
 
             _cts = new CancellationTokenSource();
 
             //Configure Timetaggers
-            int packetsize = 1000000;
             ServerTimeTagger.PacketSize = packetsize;
             ClientTimeTagger.PacketSize = packetsize;
 
             //Configure Synchronisation
-            TaggerSynchronization.LinearDriftCoefficient = 5.52E-5;
             TaggerSynchronization.PVal = 0.0;
+            TaggerSynchronization.Chan_Tagger1 = 2;
+            TaggerSynchronization.Chan_Tagger2 = 2;
 
             WriteLog("Synchronisation started");
 
@@ -162,9 +162,11 @@ namespace EQKDServer.Models
 
                   SyncClockResults syncClockres = TaggerSynchronization.SyncClocksAsync(ttAlice, ttBob).GetAwaiter().GetResult();
 
-                  var syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
-
-                  if (syncClockres.IsClocksSync && syncCorrres.IsCorrSync) break;
+                  if(syncClockres.IsClocksSync)
+                  {
+                      SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
+                      if (syncCorrres.IsCorrSync) break;
+                  }                                  
               }
 
           });
