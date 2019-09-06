@@ -17,10 +17,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
 
         public ObservableCollection<ChannelDiagnosis> ChanDiag { get; set; }
 
-        public ChannelViewModel() : this(null)
-        {
+        public ChannelViewModel() : this(null) { }
 
-        }
         public ChannelViewModel(EQKDServerModel eqkdserver)
         {
             _EQKDServer = eqkdserver;
@@ -38,7 +36,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
         private void OnRefreshTimerClick(object sender, EventArgs e)
         {
             List<int> tagger_Countrate = _EQKDServer.ServerTimeTagger.GetCountrate();
-            for(int i = 0; i < ChanDiag.Count; i++) ChanDiag[i].CountRate = tagger_Countrate[i];
+
+            if (tagger_Countrate.Count < ChanDiag.Count) return;
+
+            for (int i = 0; i < ChanDiag.Count; i++) ChanDiag[i].CountRate = tagger_Countrate[i];
         }
 
         //Events

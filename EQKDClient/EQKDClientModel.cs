@@ -29,12 +29,9 @@ namespace EQKDClient
             _loggerCallback = loggercallback;
             //TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger",WriteLog);
             //TimeTagger = timeTaggerFactory.GetDefaultTimeTagger();
-            TimeTagger = new SimulatedTagger(_loggerCallback)
-            {
-                FileName = "",
-                BufferSize = 1000,
-                PacketSize = 1000
-            };
+            TimeTagger = new SITimeTagger(_loggerCallback);
+            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+
             secQNetClient = new SecQClient(_loggerCallback);
         }
 
