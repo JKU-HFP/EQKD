@@ -66,6 +66,9 @@
                 <MenuItem Header="Server Timetagger" Command="{Binding Settings_ServerTagger_Command}"/>
                 <MenuItem Header="Client Timetagger" Command="{Binding Settings_ClientTagger_Command}"/>
             </MenuItem>
+            <MenuItem Header="Diagnosis">
+                <MenuItem Header="TimeTagger Countrates" Command="{Binding OpenCountrateWindowCommand}"/>
+            </MenuItem>
         </Menu>
 
         <!-- STATS WINDOW -->

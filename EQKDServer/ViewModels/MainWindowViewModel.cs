@@ -27,13 +27,18 @@ using EQKDServer.Models;
 using TimeTaggerWPF_Library;
 using TimeTagger_Library.Correlation;
 using QKD_Library;
+using EQKDServer.Views.SettingControls;
+using EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels;
 
 namespace EQKDServer.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        //PRIVATE FIELDS
-        private EQKDServerModel EQKDServer;
+        //#################################################
+        //##  P R I V A T E S
+        //#################################################
+
+        private EQKDServerModel _EQKDServer;
         private int _rateUpdateCounter = 0;
         private int _rateUpdateCounterLimit = 1;
         private DateTime _lastTimeTagsReveivedTime = DateTime.Now;
@@ -45,7 +50,12 @@ namespace EQKDServer.ViewModels
         private ChartValues<double> _linearDriftCompChartValues;
         private LineSeries _linearDriftCompLineSeries;
 
-        //PROPERTIES
+        private TimeTaggerChannelView _channelView;
+        private ChannelViewModel _channelViewModel;
+
+        //#################################################
+        //## P R O P E R T I E S
+        //#################################################
         private string _messages;
         public string Messages
         {
@@ -159,14 +169,17 @@ namespace EQKDServer.ViewModels
         public RelayCommand<object> WindowClosingCommand { get; private set; }
         public RelayCommand<object> Settings_ServerTagger_Command { get; private set; }
         public RelayCommand<object> Settings_ClientTagger_Command { get; private set; }
+        public RelayCommand<object> OpenCountrateWindowCommand { get; private set; }
 
-        //Contructor
+        //#################################################
+        //##  C O N S T R U C T O R 
+        //#################################################
         public MainWindowViewModel()
         {
             //Create EKQDServer
-            EQKDServer = new EQKDServerModel(LogMessage);
-            EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
-            EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
+            _EQKDServer = new EQKDServerModel(LogMessage);
+            _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
+            _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
@@ -177,6 +190,7 @@ namespace EQKDServer.ViewModels
 
             Settings_ServerTagger_Command = new RelayCommand<object>(On_Settings_ServerTagger_Command);
             Settings_ClientTagger_Command = new RelayCommand<object>(On_Settings_ClientTagger_Command);
+            OpenCountrateWindowCommand = new RelayCommand<object>(On_OpenCountrateWindowCommand);
 
             NetworkConnected = false;
             NetworkStatus = "Not connected";
@@ -195,7 +209,15 @@ namespace EQKDServer.ViewModels
                e.Handled = true;
            });
         }
-        
+
+        private void On_OpenCountrateWindowCommand(object obj)
+        {
+            _channelView = new TimeTaggerChannelView();
+            if(_channelViewModel==null) _channelViewModel = new ChannelViewModel(_EQKDServer);
+            _channelView.DataContext = _channelViewModel;
+            _channelView.Title = "TimeTagger Stats";
+            _channelView.Show();
+        }
 
         private void LogMessage(string mess)
         {
@@ -222,28 +244,28 @@ namespace EQKDServer.ViewModels
             };
             LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
 
-            Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(EQKDServer));
+            Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
             LogMessage("Application started");
         }
 
         private void OnMainWindowClosing(object obj)
         {
-            EQKDServer.SaveServerConfig();
+            _EQKDServer.SaveServerConfig();
         }
 
         private void On_Settings_ServerTagger_Command(object o)
         {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ServerTagger", LogMessage) { SecQNetServer = EQKDServer.SecQNetServer};
+            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ServerTagger", LogMessage) { SecQNetServer = _EQKDServer.SecQNetServer};
 
-            EQKDServer.ServerTimeTagger = timeTaggerFactory.Modify(EQKDServer.ServerTimeTagger, new Views.TimeTaggerModifyView());
+            _EQKDServer.ServerTimeTagger = timeTaggerFactory.Modify(_EQKDServer.ServerTimeTagger, new Views.TimeTaggerModifyView());
         }
 
         private void On_Settings_ClientTagger_Command(object o)
         {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger", LogMessage) { SecQNetServer = EQKDServer.SecQNetServer };
+            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger", LogMessage) { SecQNetServer = _EQKDServer.SecQNetServer };
 
-            EQKDServer.ClientTimeTagger = timeTaggerFactory.Modify(EQKDServer.ClientTimeTagger, new Views.TimeTaggerModifyView());
+            _EQKDServer.ClientTimeTagger = timeTaggerFactory.Modify(_EQKDServer.ClientTimeTagger, new Views.TimeTaggerModifyView());
         }
 
         #region ChartEventhandler
@@ -258,7 +280,7 @@ namespace EQKDServer.ViewModels
                     break;
                 case SecQNetServer.ConnectionStatus.Listening:
                     NetworkConnected = false;
-                    NetworkStatus = "Listening on local Socket " + EQKDServer.SecQNetServer.ServerIP +":"+ EQKDServer.SecQNetServer.Port.ToString();
+                    NetworkStatus = "Listening on local Socket " + _EQKDServer.SecQNetServer.ServerIP +":"+ _EQKDServer.SecQNetServer.Port.ToString();
                     break;
                 case SecQNetServer.ConnectionStatus.ClientConnected:
                     NetworkConnected = true;
@@ -320,11 +342,11 @@ namespace EQKDServer.ViewModels
 
         private void TimeTagsReceived(object sender, TimeTagsReceivedEventArgs e)
         {
-            ServerBufferSize = EQKDServer.ServerTimeTagger.BufferSize;
-            ServerBufferStatus = EQKDServer.ServerTimeTagger.BufferFillStatus;
+            ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+            ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
 
-            ReceivedClientTagsBufferSize = EQKDServer.ServerTimeTagger.BufferSize;
-            ReceivedClientTagsBufferStatus = EQKDServer.ServerTimeTagger.BufferFillStatus;
+            ReceivedClientTagsBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+            ReceivedClientTagsBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
 
             ClientBufferSize = e.BufferSize;
             ClientBufferStatus = e.BufferStatus;

@@ -74,7 +74,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private bool CanSynchrononize(object o)
         {
-            return ( _EQKDServer.ServerTimeTagger.CanCollect &&
+            return ( _EQKDServer!=null &&
+                     _EQKDServer.ServerTimeTagger.CanCollect &&
                      _EQKDServer.ClientTimeTagger.CanCollect &&
                      _EQKDServer.SecQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
 

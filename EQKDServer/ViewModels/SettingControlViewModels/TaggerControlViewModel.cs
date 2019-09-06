@@ -183,17 +183,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             LinearDriftCoefficient = 5.52E-5;
             PVal = -8;
 
-            //_serverChannelView = new TimeTaggerChannelView();
-            //_serverChannelViewModel = new ChannelViewModel();
-            //_serverChannelView.DataContext = _serverChannelViewModel;
-            //_serverChannelView.Title = "Server TimeTagger Stats";
-            //_serverChannelView.Show();
 
-            //_clientChannelView = new TimeTaggerChannelView();
-            //_clientChannelViewModel = new ChannelViewModel();
-            //_clientChannelView.DataContext = _clientChannelViewModel;
-            //_clientChannelView.Title = "Client TimeTagger Stats";
-            //_clientChannelView.Show();
         }
 
         private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)
