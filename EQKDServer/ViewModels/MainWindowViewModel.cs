@@ -226,11 +226,22 @@ namespace EQKDServer.ViewModels
             LinearDriftCompCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
 
-            Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler((sender, e) =>
-           {
-               LogMessage(e.Exception.Message);
-               e.Handled = true;
-           });
+            //Exception Handling
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                Exception ex = e.ExceptionObject as Exception ?? new Exception($"AppDomainUnhandledException: Unknown exception: {e.ExceptionObject}");
+                MessageBox.Show(ex.Message, "Unhandled CurrentDomain exeption", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            Dispatcher.CurrentDispatcher.UnhandledException += (sender, e) =>
+            {
+                MessageBox.Show(e.Exception.Message, "Unhandled UI Dispatcher exception", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                MessageBox.Show(e.Exception.Message + "\nInner Exception: " + e.Exception.InnerException.Message, "Unhandled TaskScheduler exception", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
         }
 
         private void On_OpenCountrateWindowCommand(object obj)
