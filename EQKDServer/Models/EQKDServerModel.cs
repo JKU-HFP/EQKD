@@ -1,4 +1,5 @@
-﻿using QKD_Library;
+﻿using Extensions_Library;
+using QKD_Library;
 using SecQNet;
 using Stage_Library;
 using Stage_Library.NewPort;
@@ -36,6 +37,7 @@ namespace EQKDServer.Models
         public StateCorrection StateCorr;
 
         //SecQNet Connection
+        public int PacketSize { get; set; } = 100000;
         public SecQNetServer SecQNetServer { get; private set; }
 
         //Time Tagger
@@ -56,6 +58,12 @@ namespace EQKDServer.Models
         //-----------------------------------
         //----  E V E N T S
         //-----------------------------------
+
+        public event EventHandler<ServerConfigReadEventArgs> ServerConfigRead;
+        private void OnServerConfigRead(ServerConfigReadEventArgs e)
+        {
+            ServerConfigRead?.Raise(this, e);
+        }
 
 
         //-----------------------------------
@@ -123,14 +131,13 @@ namespace EQKDServer.Models
         //----  M E T H O D S
         //--------------------------------------
 
-        public async Task StartSynchronizeAsync(int packetsize=1000)
+        public async Task StartSynchronizeAsync()
         {
-
             _cts = new CancellationTokenSource();
 
             //Configure Timetaggers
-            ServerTimeTagger.PacketSize = packetsize;
-            ClientTimeTagger.PacketSize = packetsize;
+            ServerTimeTagger.PacketSize = PacketSize;
+            ClientTimeTagger.PacketSize = PacketSize;
 
             //Configure Synchronisation
             TaggerSynchronization.PVal = 0.0;
@@ -185,14 +192,14 @@ namespace EQKDServer.Models
             ServerSettings _readSettings = ReadConfigXMLFile(_serverSettings_XMLFilename);
             if (_readSettings == null)
             {
-                WriteLog($"Could not read Configuration file '{_serverSettings_XMLFilename}'");
-                return;
+                WriteLog($"Could not read Configuration file '{_serverSettings_XMLFilename}', using default settings");
             }
 
-            _currentServerSettings = _readSettings;
+            _currentServerSettings = _readSettings ?? new ServerSettings();
 
             //Set configs
-            TaggerSynchronization.LinearDriftCoefficient = _currentServerSettings.LinearDriftCoefficient;
+            OnServerConfigRead(new ServerConfigReadEventArgs(_currentServerSettings));
+
         }
 
         private ServerSettings ReadConfigXMLFile(string filename)
@@ -226,7 +233,12 @@ namespace EQKDServer.Models
         public void SaveServerConfig()
         {
             //Get Config Data
+            _currentServerSettings.PacketSize = PacketSize;
+
             _currentServerSettings.LinearDriftCoefficient = TaggerSynchronization.LinearDriftCoefficient;
+            _currentServerSettings.TimeWindow = TaggerSynchronization.ClockSyncTimeWindow;
+            _currentServerSettings.TimeBin = TaggerSynchronization.TimeBin;
+            _currentServerSettings.PVal = TaggerSynchronization.PVal;
 
             //Write Config file
             SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);
@@ -260,6 +272,19 @@ namespace EQKDServer.Models
         private void WriteLog(string message)
         {
             _loggerCallback?.Invoke("EQKD Server: " + message);
+        }
+    }
+
+//##############################
+// E V E N T   A R G U M E N T S
+//##############################
+    public class ServerConfigReadEventArgs : EventArgs
+    {
+        public ServerSettings StartConfig { get; private set; }
+
+        public ServerConfigReadEventArgs(ServerSettings _config)
+        {
+            StartConfig = _config;
         }
     }
 

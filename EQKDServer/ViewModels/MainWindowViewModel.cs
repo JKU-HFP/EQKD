@@ -190,8 +190,8 @@ namespace EQKDServer.ViewModels
         //COMMANDS
         public RelayCommand<object> WindowLoadedCommand { get; private set; }
         public RelayCommand<object> WindowClosingCommand { get; private set; }
-        public RelayCommand<object> Settings_ServerTagger_Command { get; private set; }
-        public RelayCommand<object> Settings_ClientTagger_Command { get; private set; }
+        public RelayCommand<object> SaveSettingsCommand { get; private set; }
+        public RelayCommand<object> ReloadSettingsCommand { get; private set; }
         public RelayCommand<object> OpenCountrateWindowCommand { get; private set; }
 
         //#################################################
@@ -211,8 +211,8 @@ namespace EQKDServer.ViewModels
             WindowLoadedCommand = new RelayCommand<object>(OnMainWindowLoaded);
             WindowClosingCommand = new RelayCommand<object>(OnMainWindowClosing);
 
-            Settings_ServerTagger_Command = new RelayCommand<object>(On_Settings_ServerTagger_Command);
-            Settings_ClientTagger_Command = new RelayCommand<object>(On_Settings_ClientTagger_Command);
+            SaveSettingsCommand = new RelayCommand<object>((o) => _EQKDServer.SaveServerConfig());
+            ReloadSettingsCommand = new RelayCommand<object>((o) => _EQKDServer.ReadServerConfig());
             OpenCountrateWindowCommand = new RelayCommand<object>(On_OpenCountrateWindowCommand);
 
             NetworkConnected = false;
@@ -291,22 +291,7 @@ namespace EQKDServer.ViewModels
             _EQKDServer.SaveServerConfig();
         }
 
-        private void On_Settings_ServerTagger_Command(object o)
-        {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ServerTagger", LogMessage) { SecQNetServer = _EQKDServer.SecQNetServer};
-
-            _EQKDServer.ServerTimeTagger = timeTaggerFactory.Modify(_EQKDServer.ServerTimeTagger, new Views.TimeTaggerModifyView());
-        }
-
-        private void On_Settings_ClientTagger_Command(object o)
-        {
-            TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger", LogMessage) { SecQNetServer = _EQKDServer.SecQNetServer };
-
-            _EQKDServer.ClientTimeTagger = timeTaggerFactory.Modify(_EQKDServer.ClientTimeTagger, new Views.TimeTaggerModifyView());
-        }
-
         #region ChartEventhandler
-
         private void SecQNetConnectionStatusChanged(object sender, ServerConnStatChangedEventArgs e)
         {
             switch (e.connectionStatus)
@@ -332,7 +317,6 @@ namespace EQKDServer.ViewModels
 
         private void SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
         {
-
             //-------------------------
             // Correlation Chart
             //-------------------------
@@ -346,35 +330,35 @@ namespace EQKDServer.ViewModels
             CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
             CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
 
-            //var axisSection = new AxisSection
-            //{
-            //    Value = e.SyncRes.MeanTime,
-            //    SectionWidth = 1,
-            //    Stroke = Brushes.Red,
-            //    StrokeThickness = 1,
-            //    StrokeDashArray = new DoubleCollection(new[] { 4d })
-            //};
-            //CorrelationSectionsCollection.Add(axisSection);
+            var axisSection = new AxisSection
+            {
+                Value = e.SyncRes.MeanTime,
+                SectionWidth = 1,
+                Stroke = Brushes.Red,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection(new[] { 4d })
+            };
+            CorrelationSectionsCollection.Add(axisSection);
 
-            //var b = new Border();
-            //TextBox tb = new TextBox()
-            //{
-            //    Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
-            //           "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
-            //};
-            //b.Child = tb;
-            //VisualElement ve = new VisualElement()
-            //{
-            //    X = e.SyncRes.MeanTime,
-            //    Y = 0,
-            //    UIElement = b
-            //};
-            //CorrelationVisualElementsCollection.Add(ve);
+            var b = new Border();
+            TextBox tb = new TextBox()
+            {
+                Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
+                       "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
+            };
+            b.Child = tb;
+            VisualElement ve = new VisualElement()
+            {
+                X = e.SyncRes.MeanTime,
+                Y = 0,
+                UIElement = b
+            };
+            CorrelationVisualElementsCollection.Add(ve);
 
             //-------------------------
             // Linear Drift Comp Chart
             //-------------------------
-                       
+
             if (_linearDriftCompChartValues.Count >= 100) _linearDriftCompChartValues.RemoveAt(0);
             _linearDriftCompChartValues.Add(e.SyncRes.CurrentLinearDriftCoeff);              
         }

@@ -45,8 +45,8 @@
                 <TextBox Width="100" Text="{Binding Resolution}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Shot Time"/>
-                <TextBox Width="100" Text="{Binding ShotTime}"/>
+                <TextBlock Text="Packet Size"/>
+                <TextBox Width="100" Text="{Binding PacketSize}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Linear Drift Coeff."/>

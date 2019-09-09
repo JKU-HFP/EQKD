@@ -58,13 +58,9 @@
 
         <!-- MENU BAR -->
         <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Height="Auto" Margin="0,0,-0.4,19.6" Grid.RowSpan="2">
-            <MenuItem Header="File">
-                <MenuItem Header="Load Config" />
-                <MenuItem Header="Save Config" />
-            </MenuItem>
             <MenuItem Header="Settings">
-                <MenuItem Header="Server Timetagger" Command="{Binding Settings_ServerTagger_Command}"/>
-                <MenuItem Header="Client Timetagger" Command="{Binding Settings_ClientTagger_Command}"/>
+                <MenuItem Header="Save Server Settings" Command="{Binding SaveSettingsCommand}"/>
+                <MenuItem Header="Reload Server Settings" Command="{Binding ReloadSettingsCommand}"/>
             </MenuItem>
             <MenuItem Header="Diagnosis">
                 <MenuItem Header="TimeTagger Countrates" Command="{Binding OpenCountrateWindowCommand}"/>

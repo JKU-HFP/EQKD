@@ -40,37 +40,4 @@ namespace EQKDServer.Models
         }
     }
 
-    //public class RelayCommand : ICommand
-    //{
-    //    private Action<object> _execute;
-    //    private Predicate<object> _canExcecute;
-
-    //    public event EventHandler CanExecuteChanged
-    //    {
-    //        add { CommandManager.RequerySuggested += value; }
-    //        remove { CommandManager.RequerySuggested -= value; }
-    //    }
-
-    //    public RelayCommand(Action<object> excec, Predicate<object> canExec)
-    //    {
-    //        _execute = excec;
-    //        _canExcecute = canExec;
-    //    }
-
-    //    public RelayCommand(Action<object> act) : this(act, null)
-    //    {
-
-    //    }
-
-    //    public bool CanExecute(object parameter)
-    //    {
-    //        return _canExcecute == null ? true : _canExcecute(parameter);
-    //    }
-
-    //    public void Execute(object parameter)
-    //    {
-    //        _execute.Invoke(parameter);
-    //    }
-    //}
-
 }
