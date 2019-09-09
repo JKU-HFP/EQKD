@@ -283,12 +283,13 @@ namespace EQKDServer.ViewModels
 
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
+
             LogMessage("Application started");
         }
 
         private void OnMainWindowClosing(object obj)
         {
-            _EQKDServer.SaveServerConfig();
+
         }
 
         #region ChartEventhandler
@@ -330,30 +331,40 @@ namespace EQKDServer.ViewModels
             CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
             CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
 
-            var axisSection = new AxisSection
+                            
+            foreach(Peak p in e.SyncRes.Peaks)
             {
-                Value = e.SyncRes.MeanTime,
-                SectionWidth = 1,
-                Stroke = Brushes.Red,
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection(new[] { 4d })
-            };
-            CorrelationSectionsCollection.Add(axisSection);
+                var axisSection = new AxisSection
+                {
+                    Value = p.MeanTime/1000.0,
+                    SectionWidth = 0.1,
+                    Stroke = Brushes.Red,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection(new[] { 4d })
+                };
+                CorrelationSectionsCollection.Add(axisSection);
+            }
 
-            var b = new Border();
-            TextBox tb = new TextBox()
+
+            if(e.SyncRes.MiddlePeak!=null)
             {
-                Text = "Pos: " + e.SyncRes.MeanTime.ToString() + "\n" +
-                       "FWHM: " + e.SyncRes.FWHM.ToString("F2"),
-            };
-            b.Child = tb;
-            VisualElement ve = new VisualElement()
-            {
-                X = e.SyncRes.MeanTime,
-                Y = 0,
-                UIElement = b
-            };
-            CorrelationVisualElementsCollection.Add(ve);
+                var b = new Border();
+                TextBox tb = new TextBox()
+                {
+                    Text = "Pos: " + e.SyncRes.MiddlePeak.MeanTime.ToString() + "\n" +
+                           "FWHM: " + e.SyncRes.MiddlePeak.MeanTime.ToString("F2")+ "\n" +
+                           "InSync: " + (e.SyncRes.IsClocksSync ? "true" : "false")
+                };
+                b.Child = tb;
+                VisualElement ve = new VisualElement()
+                {
+                    X = e.SyncRes.MiddlePeak.MeanTime/1000.0,
+                    Y = e.SyncRes.MiddlePeak.Height_Absolute,
+                    UIElement = b
+                };
+                CorrelationVisualElementsCollection.Add(ve);
+            }
+
 
             //-------------------------
             // Linear Drift Comp Chart

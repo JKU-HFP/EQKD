@@ -14,7 +14,7 @@ namespace EQKDServer.Models
         // Clock Synchronization
         //-----------------------
         public double LinearDriftCoefficient { get; set; } = 0.0;
-        public ulong TimeWindow { get; set} = 100000;
+        public ulong TimeWindow { get; set; } = 100000;
         public ulong TimeBin { get; set; } = 500;
         public double PVal { get; set; } = 0;
     }

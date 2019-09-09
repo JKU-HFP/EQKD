@@ -35,6 +35,7 @@ namespace EQKDServer.Models
         //Synchronization and State correction
         public Synchronization TaggerSynchronization;
         public StateCorrection StateCorr;
+        public bool IsSyncActive { get; private set; } = false;
 
         //SecQNet Connection
         public int PacketSize { get; set; } = 100000;
@@ -76,7 +77,7 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback);
+            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 200 };
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             ////Instanciate and connect rotation Stages
@@ -133,6 +134,8 @@ namespace EQKDServer.Models
 
         public async Task StartSynchronizeAsync()
         {
+            if (IsSyncActive) return;
+
             _cts = new CancellationTokenSource();
 
             //Configure Timetaggers
@@ -142,9 +145,11 @@ namespace EQKDServer.Models
             //Configure Synchronisation
             TaggerSynchronization.PVal = 0.0;
             TaggerSynchronization.Chan_Tagger1 = 2;
-            TaggerSynchronization.Chan_Tagger2 = 2;
+            TaggerSynchronization.Chan_Tagger2 = 7;
 
             WriteLog("Synchronisation started");
+
+            IsSyncActive = true;
 
             await Task.Run(() =>
           {
@@ -159,7 +164,6 @@ namespace EQKDServer.Models
 
                   TimeTags ttAlice;
                   TimeTags ttBob;
-
 
                   while (!ServerTimeTagger.GetNextTimeTags(out ttAlice)) Thread.Sleep(10);
                   while (!ClientTimeTagger.GetNextTimeTags(out ttBob)) Thread.Sleep(10);
@@ -176,14 +180,18 @@ namespace EQKDServer.Models
                   }                                  
               }
 
+              ServerTimeTagger.StopCollectingTimeTags();
+              ClientTimeTagger.StopCollectingTimeTags();
           });
+
+            IsSyncActive = false;
 
             WriteLog("Synchronisation Stopped");
         }
 
         public void StopSynchronize()
         {
-            _cts?.Cancel();
+           if(IsSyncActive) _cts?.Cancel();
         }
 
 

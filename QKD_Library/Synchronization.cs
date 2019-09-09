@@ -114,7 +114,7 @@ namespace QKD_Library
                 Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
 
                 //Number of peaks plausible?
-                int numExpectedPeaks = (int)(ClockSyncTimeWindow / ExcitationPeriod);    
+                int numExpectedPeaks = (int)(2*ClockSyncTimeWindow / ExcitationPeriod);    
                 if (peaks.Count >= numExpectedPeaks && peaks.Count < numExpectedPeaks + 2)
                 {
                     peaksFound = true;
@@ -142,7 +142,15 @@ namespace QKD_Library
 
                 if (MiddlePeak == null) MiddlePeak = new Peak() { }; //Define empty peak
 
-                TimeSpan packettimespan = new TimeSpan(0, 0, (int)((ttAlice.time[ttAlice.time.Length - 1] - ttAlice.time[0]) / 1E12));
+                var alice_first = ttAlice.time[0];
+                var alice_last = ttAlice.time[ttAlice.time.Length - 1];
+                var bob_first = ttBob_comp.time[0];
+                var bob_last = ttBob_comp.time[ttBob_comp.time.Length - 1];
+                var alice_diff = alice_last - alice_first;
+                var bob_diff = bob_last - bob_first;
+
+                TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff,bob_diff) * 1E-9));
+                //TimeSpan packettimespan = new TimeSpan(0, 0, (int)((ttAlice.time[ttAlice.time.Length - 1] - ttAlice.time[0]) / 1E12));
                 WriteLog($"Sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| FWHM: {MiddlePeak.FWHM:F2} | Pos: {MiddlePeak.MeanTime:F2} | new DriftCoeff {LinearDriftCoefficient}");
 
                 return new SyncClockResults()
@@ -150,8 +158,8 @@ namespace QKD_Library
                     HistogramX = hist.Histogram_X,
                     HistogramY = hist.Histogram_Y,
                     CurrentLinearDriftCoeff = LinearDriftCoefficient,
-                    FWHM = MiddlePeak.FWHM,
-                    MeanTime = MiddlePeak.MeanTime,
+                    Peaks = peaks,
+                    MiddlePeak = MiddlePeak,
                     PeaksFound = peaksFound,
                     IsClocksSync = clockInSync,
                     CompTimeTags_Bob = ttBob_comp                  
@@ -229,8 +237,8 @@ namespace QKD_Library
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
         public double CurrentLinearDriftCoeff { get; set; }
-        public double FWHM { get; set; }
-        public double MeanTime { get; set; }
+        public List<Peak> Peaks { get; set; }    
+        public Peak MiddlePeak { get; set; }
         public bool PeaksFound { get; set; }
         public bool IsClocksSync { get; set; }
         public TimeTags CompTimeTags_Bob { get; set; }
