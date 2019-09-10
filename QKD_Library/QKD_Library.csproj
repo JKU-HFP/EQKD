@@ -81,6 +81,7 @@
     <Compile Include="StateCorrection.cs" />
     <Compile Include="Stokes.cs" />
     <Compile Include="Synchronization.cs" />
+    <Compile Include="SyncResults.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">

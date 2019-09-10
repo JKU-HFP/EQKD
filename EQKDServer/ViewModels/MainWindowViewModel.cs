@@ -45,6 +45,8 @@ namespace EQKDServer.ViewModels
 
         ChartValues<ObservablePoint> _correlationChartValues;
         private LineSeries _correlationLineSeries;
+        ChartValues<ObservablePoint> _fittingChartValues;
+        private LineSeries _fittingLineSeries;
         private List<Peak> _peaks;
 
         private ChartValues<double> _linearDriftCompChartValues;
@@ -53,6 +55,7 @@ namespace EQKDServer.ViewModels
         private TimeTaggerChannelView _channelView;
         private ChannelViewModel _channelViewModel;
 
+        #region Propterties
         //#################################################
         //## P R O P E R T I E S
         //#################################################
@@ -178,7 +181,7 @@ namespace EQKDServer.ViewModels
                 OnPropertyChanged("CorrChartXMax");
             }
         }
-
+        #endregion
 
 
         //Charts
@@ -272,6 +275,16 @@ namespace EQKDServer.ViewModels
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
+            _fittingChartValues = new ChartValues<ObservablePoint> { new ObservablePoint(-1000, 100), new ObservablePoint(1000, 100) };
+            _fittingLineSeries = new LineSeries()
+            {
+                Title = "Sync correlations",
+                PointGeometrySize = 0,
+                Values = _fittingChartValues
+
+            };
+            CorrelationCollection.Add(_fittingLineSeries);
+
             _linearDriftCompChartValues = new ChartValues<double>() { 100000, 200000 };
             _linearDriftCompLineSeries = new LineSeries()
             {
@@ -328,6 +341,9 @@ namespace EQKDServer.ViewModels
             _correlationChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
 
+            _fittingChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
             CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
             CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
 
@@ -352,7 +368,7 @@ namespace EQKDServer.ViewModels
                 TextBox tb = new TextBox()
                 {
                     Text = "Pos: " + e.SyncRes.MiddlePeak.MeanTime.ToString() + "\n" +
-                           "FWHM: " + e.SyncRes.MiddlePeak.MeanTime.ToString("F2")+ "\n" +
+                           $"FWHM: {e.SyncRes.Sigma.val:F2}({e.SyncRes.Sigma.err:F2})"+ "\n" +
                            "InSync: " + (e.SyncRes.IsClocksSync ? "true" : "false")
                 };
                 b.Child = tb;
@@ -371,7 +387,7 @@ namespace EQKDServer.ViewModels
             //-------------------------
 
             if (_linearDriftCompChartValues.Count >= 100) _linearDriftCompChartValues.RemoveAt(0);
-            _linearDriftCompChartValues.Add(e.SyncRes.CurrentLinearDriftCoeff);              
+            _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);              
         }
 
 
