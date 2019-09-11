@@ -24,6 +24,9 @@ namespace QKD_Library
         //#################################################
 
         public ulong TimeBin { get; set; } = 1000;
+
+        //Clock Synchronisation
+
         public ulong ClockSyncTimeWindow { get; set; } = 100000;
         public long GlobalClockOffset { get; set; } = 0;
 
@@ -36,6 +39,9 @@ namespace QKD_Library
         public ulong ExcitationPeriod { get; set; } = 12500;
         public byte Chan_Tagger1 { get; set; } = 0;
         public byte Chan_Tagger2 { get; set; } = 1;
+
+        
+        //Correlation Synchronization
 
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
@@ -213,15 +219,15 @@ namespace QKD_Library
                 //Find best fit
                 double min_sigma = driftCompResults.Where(d => d.IsFitSuccessful).Select(d => d.Sigma.val).Min();
                 DriftCompResult opt_driftResults = driftCompResults.Where(d => d.Sigma.val == min_sigma).FirstOrDefault();
-
-                //Define new Drift Coefficient
-                LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
-
+                               
                 //Write statistics
                 sw.Stop();
 
                 WriteLog($"Sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| Fitted FWHM: {opt_driftResults.Sigma.val:F2}({opt_driftResults.Sigma.err:F2})" +
-                         $" | Pos: {opt_driftResults.MiddlePeak.MeanTime:F2} | Fitted pos: {opt_driftResults.FittedMeanTime:F2} | new DriftCoeff {opt_driftResults.LinearDriftCoeff}");
+                         $" | Pos: {opt_driftResults.MiddlePeak.MeanTime:F2} | Fitted pos: {opt_driftResults.FittedMeanTime:F2} | new DriftCoeff {opt_driftResults.LinearDriftCoeff}({LinearDriftCoefficient-opt_driftResults.LinearDriftCoeff})");
+
+                //Define new Drift Coefficient
+                LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
 
                 return new SyncClockResults()
                 {

@@ -136,7 +136,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 //_EQKDServer.DensMeas.BasisCompleted += BasisComplete;
 
                 //Register Events
-                _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
+                _EQKDServer.StateCorr.LossFunctionAquired += CostFunctionAquired;
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
             });
 
@@ -170,7 +170,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             PVal = e.StartConfig.PVal;
         }
 
-        private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)
+        private void CostFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
             _correlationChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));

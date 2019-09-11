@@ -12,6 +12,9 @@ using Stage_Library;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
+using MathNet.Numerics.Optimization;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace QKD_Library
 {
@@ -28,16 +31,20 @@ namespace QKD_Library
         /// Desired accuracy in degree
         /// </summary>
         public double Accurracy { get; set; } = 0.4;
+        /// <summary>
+        /// Maximum iteration for nonlinear Solver
+        /// </summary>
+        public int MaxIterations { get; set; } = 5000;
         public double[] MinPos { get; private set; }
 
         public int InitNumPoints { get; set; } = 3;
-        public double InitRange { get; set; } = 2;
-        public double[] InitPos { get; set; } = new double[] { 23.2,-125.86,-37.97 };
+        public double InitRange { get; set; } = 180;
+        public double[] InitPos { get; set; } = new double[] {0,0,0};
         
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 15;
+        public int IntegrationTime { get; set; } = 10;
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
@@ -99,10 +106,10 @@ namespace QKD_Library
         //##  E V E N T
         //#################################################
 
-        public event EventHandler<CostFunctionAquiredEventArgs> CostFunctionAquired;
-        private void OnCostFunctionAquired(CostFunctionAquiredEventArgs e)
+        public event EventHandler<LossFunctionAquiredEventArgs> LossFunctionAquired;
+        private void OnLossFunctionAquired(LossFunctionAquiredEventArgs e)
         {
-            CostFunctionAquired?.Raise(this, e);  
+            LossFunctionAquired?.Raise(this, e);  
         }
 
         public event EventHandler<OptimizationCompleteEventArgs> OptimizationComplete;
@@ -135,13 +142,14 @@ namespace QKD_Library
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            bool result = await Task.Run(() => DoOptimize(_cts.Token));
+            await Task.Run(() => DoOptimize(_cts.Token));
 
             WriteLog($"State correction complete in {stopwatch.Elapsed}");
         }
 
-        private bool DoOptimize(CancellationToken ct)
+        private void DoOptimize(CancellationToken ct)
         {
+            //Initial Optimization for initial guess;
 
             Stopwatch stopwatch = new Stopwatch();
 
@@ -149,7 +157,7 @@ namespace QKD_Library
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
             WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}",true);
 
-            stopwatch.Restart();
+            stopwatch.Start();
 
             MinPos = GetOptimumPositions(InitPos, InitNumPoints, InitRange, ct);
 
@@ -157,38 +165,59 @@ namespace QKD_Library
 
             WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
 
-            //Bisect until Accuracy is reached
-            double Range = InitRange / (InitNumPoints - 1);
 
-            int iteration = 1;
-              
-            while(Range>=Accurracy)
+            //Nelder Mead Sigleton Minimization
+
+            _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
+            stopwatch.Restart();
+
+            WriteLog($"Starting Nelder Mead Singleton Minimization with MaxIterations = {MaxIterations}, Convergence Criterium = {Accurracy}", true);
+
+            Func<Vector<double>,double> loss_func = (Vector<double> p) =>
             {
-                int n = 3;
+                Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
+                Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
+                Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[1]));
 
-                WriteLog("-------------------------------------");
-                _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration:D3}.txt");
-                WriteLog($"Iteration {iteration} | n={n} | range={Range}",true);
-                                             
-                stopwatch.Restart();
+                Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
 
-                MinPos = GetOptimumPositions(MinPos, n, Range, ct);
-                if (ct.IsCancellationRequested) return false;
-                Range = Range / 2;
+                var loss = GetLossFunction();
 
-                stopwatch.Stop();
+                WriteLog($"Position Nr.:({p[0]:F2},{p[1]:F2},{p[2]:F2}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
 
-                WriteLog($"Iteration {iteration} done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
+                return loss.val;
+            };
 
-                iteration++;
-            }
+            IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
+            Vector<double> init_guess = new DenseVector(MinPos);         
+            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, 1000);
+            MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess);
 
-            //Move stages to optimum position
-            _rotationStages[0].Move_Absolute(MinPos[0]);
-            _rotationStages[1].Move_Absolute(MinPos[1]);
-            _rotationStages[2].Move_Absolute(MinPos[2]);
+            stopwatch.Stop();
 
-            return true;
+            switch(solver_result.ReasonForExit)
+            {
+                case ExitCondition.Converged:
+                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed}",true);
+
+                    MinPos = solver_result.MinimizingPoint.ToArray();
+
+                    WriteLog($"Moving to optimum position ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+
+                    //Move stages to optimum position
+                    _rotationStages[0].Move_Absolute(MinPos[0]);
+                    _rotationStages[1].Move_Absolute(MinPos[1]);
+                    _rotationStages[2].Move_Absolute(MinPos[2]);
+                    break;
+
+                case ExitCondition.ExceedIterations:
+                    WriteLog($"Maximum iterations ({MaxIterations}) exeeded.");
+                    break;
+
+                default:
+                    WriteLog($"Other exit reason: {Enum.GetName(typeof(ExitCondition),solver_result.ReasonForExit)}", true);
+                    break;
+            }        
         }
 
         public void StopSynchronization()
@@ -241,10 +270,9 @@ namespace QKD_Library
 
                         Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
 
-                        //Register costfunction value
-                        cost = GetCostFunction(ct);
+                        //Get loss function value
+                        cost = GetLossFunction();
 
-                        //MAKE MORE ACCURATE BY ERROR
                         if (cost.val+(cost.err/4) < cost_min.val-(cost_min.err/4))
                         {
                             min_indices = (i0, i1, i2);
@@ -269,7 +297,7 @@ namespace QKD_Library
         /// Returns relative middle peak area of combined histogram
         /// </summary>
         /// <returns></returns>
-        private (double val, double err) GetCostFunction(CancellationToken ct)
+        private (double val, double err) GetLossFunction()
         {
             ulong timewindow = 100000;
             Histogram hist = new Histogram(CorrConfig, timewindow);
@@ -281,7 +309,6 @@ namespace QKD_Library
           
             for(int i=0; i<IntegrationTime; i++)
             {
-                if (ct.IsCancellationRequested) return (1.0,0);
                 Thread.Sleep(1000);
             }
 
@@ -292,11 +319,11 @@ namespace QKD_Library
             foreach(TimeTags tt in tts ) corr.AddCorrelations(tt,tt, TaggerOffset);
 
             hist.GetPeaks(6250, 0.1, true, TimeBin);
-            var cost = hist.GetRelativeMiddlePeakArea();
+            var loss = hist.GetRelativeMiddlePeakArea();
 
-            OnCostFunctionAquired(new CostFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,cost));
+            OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss));
 
-            return cost;
+            return loss;
         }
 
         private void WriteLog(string msg, bool doLog=false)
@@ -307,17 +334,17 @@ namespace QKD_Library
 
     }
 
-    public class CostFunctionAquiredEventArgs : EventArgs
+    public class LossFunctionAquiredEventArgs : EventArgs
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
-        public (double val,double err) Cost { get; private set; }
+        public (double val,double err) Loss { get; private set; }
 
-        public CostFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) cost)
+        public LossFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) loss)
         {
             HistogramX = histX;
             HistogramY = histY;
-            Cost = cost;
+            Loss = loss;
         }
     }
     
