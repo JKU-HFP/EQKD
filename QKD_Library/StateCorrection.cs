@@ -44,7 +44,7 @@ namespace QKD_Library
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 10;
+        public int PacketSize { get; set; } = 200000;
 
         /// <summary>
         /// Correlation configuration, corresponding to  HV, DA
@@ -78,22 +78,19 @@ namespace QKD_Library
         /// n... Number of points per iteration
         /// t... Time for one integration (+movement)
         /// </summary>
-        public double TotalTime
-        {
-            get => Math.Log(InitRange / Accurracy) / Math.Log(2) * Math.Pow(1+IntegrationTime * 2, 3); //1 + Time for axis movement
-        }
+
         public object StopWatch { get; private set; }
 
         //#################################################
         //##  P R I V A T E S
         //#################################################
 
+        Synchronization _taggerSync;
         //Waveplates in order
         //0... QWP
         //1... HWP
         //2... QWP
         List<IRotationStage> _rotationStages;
-        ITimeTagger _tagger;
         private Action<string> _loggerCallback;
         private CancellationTokenSource _cts;
 
@@ -121,9 +118,9 @@ namespace QKD_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public StateCorrection(ITimeTagger tagger, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
+        public StateCorrection(Synchronization taggerSync, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
         {
-            _tagger = tagger;
+            _taggerSync = taggerSync;
             _rotationStages = rotationStages;
             _loggerCallback = loggerCallback;
         }
@@ -137,7 +134,7 @@ namespace QKD_Library
                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
                  
-            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");
+            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, Packetsize {PacketSize}");
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -304,19 +301,12 @@ namespace QKD_Library
             Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
 
             //Collect timetags
-            _tagger.ClearTimeTagBuffer();        
-            _tagger.StartCollectingTimeTagsAsync();
-          
-            for(int i=0; i<IntegrationTime; i++)
-            {
-                Thread.Sleep(1000);
-            }
+            TimeTags tt1;
+            TimeTags tt2;
 
-            _tagger.StopCollectingTimeTags();       
-
-            List<TimeTags> tts = _tagger.GetAllTimeTags();
+            if(_taggerSync.GetSyncedTimeTags(out tt1,out tt2,PacketSize) != Synchronization.SyncStatus.InSync) return (-1,0);
           
-            foreach(TimeTags tt in tts ) corr.AddCorrelations(tt,tt, TaggerOffset);
+            corr.AddCorrelations(tt1,tt2,0);
 
             hist.GetPeaks(6250, 0.1, true, TimeBin);
             var loss = hist.GetRelativeMiddlePeakArea();

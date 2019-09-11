@@ -20,6 +20,7 @@ namespace QKD_Library
         public List<Peak> Peaks { get; set; }
         public Peak MiddlePeak { get; set; }
         public TimeTags CompTimeTags_Bob { get; set; }
+        public TimeSpan ProcessingTime { get; set; } = new TimeSpan();
     }
 
     public class DriftCompResult
@@ -48,6 +49,8 @@ namespace QKD_Library
         public long CorrPeakPos { get; set; }
         public bool CorrPeakFound { get; set; }
         public bool IsCorrSync { get; set; }
+        public TimeTags CompTimeTags_Bob { get; set; }
+        public TimeSpan ProcessingTime { get; set; } = new TimeSpan();
     }
 
 }

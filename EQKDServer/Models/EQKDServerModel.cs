@@ -122,10 +122,8 @@ namespace EQKDServer.Models
 
             //StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
-            TaggerSynchronization = new Synchronization(_loggerCallback);
-            StateCorr = new StateCorrection(ClientTimeTagger, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, loggercallback);
-
-            ReadServerConfig();
+            TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
+            StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
         }
 
         //--------------------------------------
@@ -138,15 +136,6 @@ namespace EQKDServer.Models
 
             _cts = new CancellationTokenSource();
 
-            //Configure Timetaggers
-            ServerTimeTagger.PacketSize = PacketSize;
-            ClientTimeTagger.PacketSize = PacketSize;
-
-            //Configure Synchronisation
-            TaggerSynchronization.PVal = 0.0;
-            TaggerSynchronization.Chan_Tagger1 = 2;
-            TaggerSynchronization.Chan_Tagger2 = 7;
-
             WriteLog("Synchronisation started");
 
             IsSyncActive = true;
@@ -155,33 +144,9 @@ namespace EQKDServer.Models
           {
               while (!_cts.Token.IsCancellationRequested)
               {
-                  //Collect Timetags
-                  ServerTimeTagger.ClearTimeTagBuffer();
-                  ClientTimeTagger.ClearTimeTagBuffer();
-
-                  ServerTimeTagger.StartCollectingTimeTagsAsync();
-                  ClientTimeTagger.StartCollectingTimeTagsAsync();
-
-                  TimeTags ttAlice;
-                  TimeTags ttBob;
-
-                  while (!ServerTimeTagger.GetNextTimeTags(out ttAlice)) Thread.Sleep(10);
-                  while (!ClientTimeTagger.GetNextTimeTags(out ttBob)) Thread.Sleep(10);
-
-                  ServerTimeTagger.StopCollectingTimeTags();
-                  ClientTimeTagger.StopCollectingTimeTags();
-
-                  SyncClockResults syncClockres = TaggerSynchronization.SyncClocksAsync(ttAlice, ttBob).GetAwaiter().GetResult();
-
-                  if(syncClockres.IsClocksSync)
-                  {
-                      SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(ttAlice, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
-                      if (syncCorrres.IsCorrSync) break;
-                  }                                  
+                  TaggerSynchronization.GetSyncedTimeTags(out TimeTags tt1, out TimeTags tt2, PacketSize);                     
               }
 
-              ServerTimeTagger.StopCollectingTimeTags();
-              ClientTimeTagger.StopCollectingTimeTags();
           });
 
             IsSyncActive = false;
