@@ -95,19 +95,33 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private double _pVal;
+        private double _linDriftCoeff_Variation = 0.001E-5;
 
-        public double PVal
+        public double LinDriftCoeff_Variation
         {
-            get { return _pVal; }
+            get { return _linDriftCoeff_Variation; }
             set
             {
-                _pVal = value;
-                OnPropertyChanged("PVal");
+                _linDriftCoeff_Variation = value;
+                OnPropertyChanged("LinDriftCoeff_Variation");
             }
         }
+
+        private int _linDriftCoeff_NumVar = 10;
+
+        public int LinDriftCoeffNumVar
+        {
+            get { return _linDriftCoeff_NumVar; }
+            set
+            {
+                _linDriftCoeff_NumVar = value;
+                OnPropertyChanged("LinDriftCoeffNumVar");
+            }
+        }
+
+
         #endregion
-               
+
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
@@ -167,7 +181,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             TimeWindow = e.StartConfig.TimeWindow;
             Resolution = e.StartConfig.TimeBin;
             PacketSize = e.StartConfig.PacketSize;
-            PVal = e.StartConfig.PVal;
+
         }
 
         private void CostFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
@@ -210,6 +224,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.TaggerSynchronization.TimeBin = Resolution;
             _EQKDServer.TaggerSynchronization.ClockSyncTimeWindow = TimeWindow;
             _EQKDServer.TaggerSynchronization.LinearDriftCoefficient = LinearDriftCoefficient;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
 
             _EQKDServer.StartSynchronizeAsync();
         }

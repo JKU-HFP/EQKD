@@ -174,7 +174,7 @@ namespace QKD_Library
             {
                 Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
                 Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
-                Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[1]));
+                Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[2]));
 
                 Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
 

@@ -83,7 +83,7 @@ namespace QKD_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 5;
+        public int PacketSize { get; set; } = 500000;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
         public long OffsetChanB { get; set; } = 0;
@@ -96,7 +96,7 @@ namespace QKD_Library
         //#################################################
         //##  P R I V A T E S 
         //#################################################
-        private ITimeTagger _tagger;
+        private Synchronization _sync;
         private IRotationStage _HWP_A;
         private IRotationStage _QWP_A;
         private IRotationStage _HWP_B;
@@ -129,9 +129,9 @@ namespace QKD_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public DensityMatrixMeasurement(ITimeTagger tagger, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
+        public DensityMatrixMeasurement(Synchronization sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
         {
-            _tagger = tagger;
+            _sync = sync;
 
             _HWP_A = HWP_A;
             _QWP_A = QWP_A;
@@ -198,9 +198,6 @@ namespace QKD_Library
 
         private bool DoMeasureHistograms(CancellationToken ct)
         {
-            //Initialize photon buffer
-            _tagger.ClearTimeTagBuffer();
-
             Stopwatch stopwatch = new Stopwatch();
             int index = 1;
 
@@ -231,22 +228,11 @@ namespace QKD_Library
 
                 //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
-              
-                //Start collecting timetags
-                _tagger.StartCollectingTimeTagsAsync();
 
-                //Wait integration time
-                for(int i=0; i<IntegrationTime; i++)
-                {
-                    if (ct.IsCancellationRequested) return false;
-                    Thread.Sleep(1000);
-                }
-
-                //Stop collecting timetags
-                _tagger.StopCollectingTimeTags();
+                //Get TimeTags
+                TimeTags tt = _sync.GetSingleTimeTags(0);                
 
                 //Create Histogram
-                List<TimeTags> tt = _tagger.GetAllTimeTags();
                 basis.CreateHistogram(tt,OffsetChanB);
 
                 basis.RelPeakArea = basis.CrossCorrHistogram.GetRelativeMiddlePeakArea();

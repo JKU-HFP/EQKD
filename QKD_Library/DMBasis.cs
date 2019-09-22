@@ -28,9 +28,9 @@ namespace QKD_Library
             _correlator = new Kurolator(new List<CorrelationGroup> { CrossCorrHistogram }, timewindow);
         }
 
-        public void CreateHistogram(List<TimeTags> tt, long offsetB)
+        public void CreateHistogram(TimeTags tt, long offsetB)
         {
-            tt.ForEach(tags => _correlator.AddCorrelations(tags, tags, offsetB));
+            _correlator.AddCorrelations(tt, tt, offsetB);
 
             Peaks = CrossCorrHistogram.GetPeaks(6250, 0.1, true, TimeBin);
         }

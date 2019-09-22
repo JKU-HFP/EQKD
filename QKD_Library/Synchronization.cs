@@ -31,7 +31,7 @@ namespace QKD_Library
         public long GlobalClockOffset { get; set; } = 0;
 
         public double LinearDriftCoefficient { get; set; } = 0;
-        public double LinearDriftCoeff_RelVar { get; set; } = 0.001;
+        public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
         public int LinearDriftCoeff_NumVar { get; set; } = 5;
         
         public double STD_Tolerance { get; set; } = 4000;
@@ -102,7 +102,26 @@ namespace QKD_Library
         //#################################################
         //##  M E T H O D S 
         //#################################################
-        
+        public TimeTags GetSingleTimeTags(int TaggerNr)
+        {
+            if(TaggerNr<0 || TaggerNr>1 || (TaggerNr==1 && _tagger2==null))
+            {
+                WriteLog("Invalid Time Tagger Number.");
+                return null;
+            }
+
+            ITimeTagger tagger = TaggerNr == 0 ? _tagger1 : _tagger2;
+            tagger.ClearTimeTagBuffer();
+            tagger.StartCollectingTimeTagsAsync();
+
+            TimeTags tt = null;
+            while (!tagger.GetNextTimeTags(out tt)) Thread.Sleep(10);
+
+            tagger.StopCollectingTimeTags();
+
+            return tt;
+        }
+
         public SyncStatus GetSyncedTimeTags(out TimeTags tt1, out TimeTags tt2, int packetSize=100000)
         {
             tt1 = null;
@@ -184,7 +203,7 @@ namespace QKD_Library
                 long starttime = ttBob.time[0];
 
                 int[] variation_steps = Generate.LinearRangeInt32(-LinearDriftCoeff_NumVar, LinearDriftCoeff_NumVar);
-                List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient * (1 + s*LinearDriftCoeff_RelVar)).ToList();
+                List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient + s*LinearDriftCoeff_Var).ToList();
                 List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => (long)(t + (t - starttime) * c)).ToArray()).ToList();
                 List<TimeTags> ttBob_comp_list = comp_times_list.Select( (ct) => new TimeTags(ttBob.chan, ct)).ToList();
 

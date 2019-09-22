@@ -35,7 +35,6 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical">
-            <CheckBox Content="Overwrite" IsChecked="{Binding OverwriteChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Timewindow"/>
                 <TextBox Width="100" Text="{Binding TimeWindow}"/>
@@ -53,8 +52,12 @@
                 <TextBox Width="100" Text="{Binding LinearDriftCoefficient}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Controller PVal"/>
-                <TextBox Width="100" Text="{Binding PVal}"/>
+                <TextBlock Text="Drift Coeff. Var."/>
+                <TextBox Width="100" Text="{Binding LinDriftCoeff_Variation}"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Drift Coeff. Num Var."/>
+                <TextBox Width="100" Text="{Binding LinDriftCoeffNumVar}"/>
             </StackPanel>
         </StackPanel>
 

@@ -159,6 +159,11 @@ namespace EQKDServer.Models
            if(IsSyncActive) _cts?.Cancel();
         }
 
+        public async Task StartFiberCorrectionAsync()
+        {
+            await StateCorr.StartOptimizationAsync();
+        }
+
 
         public void ReadServerConfig()
         {
