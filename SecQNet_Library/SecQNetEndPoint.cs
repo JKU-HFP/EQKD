@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using TimeTagger_Library;
 using SecQNet.SecQNetPackets;
+using TimeTagger_Library.TimeTagger;
 
 namespace SecQNet
 {
@@ -74,7 +75,13 @@ namespace SecQNet
                 _nws.Write(packet_bytes, 0, packet_length);
             }
         }
-        
+
+        public void SendTimeTags(TimeTags tt, int bufferfillstatus=0, int buffersize=0, bool compress = false)
+        {
+            SendPacket(new TimeTagPacket(tt, bufferfillstatus, buffersize)
+            { flags = compress ? SecQNetPacket.FLAG_COMPRESS : (byte)0 });
+        }
+
         protected SecQNetPacket.PacketSpecifier ReceivePacket(out byte flags, out byte[] received_bytes, int init_read_timeout)
         {
             lock (_receiveLock)

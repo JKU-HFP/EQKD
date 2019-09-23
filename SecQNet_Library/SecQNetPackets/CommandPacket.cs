@@ -21,7 +21,10 @@ namespace SecQNet.SecQNetPackets
             SendTimeTagsSecure,
             ClearPhotonBuffer,
             StartCollecting,
-            StopCollecting
+            StopCollecting,
+            ReceiveSiftedTags,
+            ObscureBasisON,
+            ObscureBasisOFF
         };
 
         private SecQNetCommands _command;

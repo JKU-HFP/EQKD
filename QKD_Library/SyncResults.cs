@@ -19,6 +19,8 @@ namespace QKD_Library
         public (double val, double err) Sigma { get; set; } = (0, 0);
         public List<Peak> Peaks { get; set; }
         public Peak MiddlePeak { get; set; }
+        public TimeTags TimeTags_Alice { get; set; }
+        public TimeTags TimeTags_Bob { get; set; }
         public TimeTags CompTimeTags_Bob { get; set; }
         public TimeSpan ProcessingTime { get; set; } = new TimeSpan();
     }

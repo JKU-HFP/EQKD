@@ -88,6 +88,10 @@
       <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
       <Name>Extensions_Library</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
+      <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>
+      <Name>SecQNet_Library</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

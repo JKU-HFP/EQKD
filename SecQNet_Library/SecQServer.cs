@@ -38,6 +38,23 @@ namespace SecQNet
             get { return _port; }
         }
 
+        private bool _obscureClientTimeTags;
+
+        public bool ObscureClientTimeTags
+        {
+            get { return _obscureClientTimeTags; }
+            set
+            {
+                if (!(connectionStatus == ConnectionStatus.ClientConnected)) return;
+
+                if (value == false) SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ObscureBasisOFF));
+                else SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ObscureBasisON));
+
+                _obscureClientTimeTags = value;
+            }
+        }
+
+
 
         //Events
         public event EventHandler<ServerConnStatChangedEventArgs> ConnectionStatusChanged;
@@ -134,6 +151,25 @@ namespace SecQNet
                     OnTimeTagsReceived(new TimeTagsReceivedEventArgs(tt_packet.timetags.Countrate, tt_packet.BufferStatus, tt_packet.BufferSize, tt.time.Length));
                     return true;
                 }
+            }
+            //Read Timeout: IOException
+            catch (IOException ex)
+            {
+                Disconnect();
+                WriteLog("TCP Read error. Disconnecting from client.\n" + ex.Message);
+            }
+
+            return false;
+        }
+
+        public bool SendSiftedTimeTags(TimeTags tt)
+        {
+            try
+            {
+                //Request Timetags
+                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ReceiveSiftedTags));
+
+                SendTimeTags(tt);
             }
             //Read Timeout: IOException
             catch (IOException ex)

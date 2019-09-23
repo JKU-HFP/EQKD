@@ -301,12 +301,11 @@ namespace QKD_Library
             Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
 
             //Collect timetags
-            TimeTags tt1;
-            TimeTags tt2;
+            SyncClockResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
 
-            if(_taggerSync.GetSyncedTimeTags(out tt1,out tt2,PacketSize) != Synchronization.SyncStatus.InSync) return (-1,0);
+            if (!syncRes.IsClocksSync) return (-1,0);
           
-            corr.AddCorrelations(tt1,tt2,0);
+            corr.AddCorrelations(syncRes.TimeTags_Alice,syncRes.CompTimeTags_Bob,0);
 
             hist.GetPeaks(6250, 0.1, true, TimeBin);
             var loss = hist.GetRelativeMiddlePeakArea();

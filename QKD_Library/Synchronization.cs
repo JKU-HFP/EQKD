@@ -37,12 +37,13 @@ namespace QKD_Library
         public double STD_Tolerance { get; set; } = 4000;
         public double PVal { get; set; } = 0;
         public ulong ExcitationPeriod { get; set; } = 12500;
-        public byte Chan_Tagger1 { get; set; } = 2;
-        public byte Chan_Tagger2 { get; set; } = 7;
 
-        
+
+
         //Correlation Synchronization
 
+        public byte CorrChan_Tagger1 { get; set; } = 2;
+        public byte CorrChan_Tagger2 { get; set; } = 7;
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
         /// </summary>
@@ -79,16 +80,6 @@ namespace QKD_Library
         }
 
         //#################################################
-        //##  E N U M E R A T O R 
-        //#################################################
-
-        public enum SyncStatus
-        {
-            InSync,
-            SyncLost
-        }
-
-        //#################################################
         //##  C O N S T R U C T O R
         //#################################################
 
@@ -122,54 +113,44 @@ namespace QKD_Library
             return tt;
         }
 
-        public SyncStatus GetSyncedTimeTags(out TimeTags tt1, out TimeTags tt2, int packetSize=100000)
+        public SyncClockResults GetSyncedTimeTags(int packetSize=100000)
         {
-            tt1 = null;
-            tt2 = null;
+            if(_tagger1 == null || _tagger2 == null)
+            {
+                WriteLog("One or both timetaggers not ready.");
+                return null;
+            }
 
             TimeTags ttA = null;
             TimeTags ttB = null;
 
-            _tagger1.PacketSize = packetSize;
-            if(_tagger2!=null) _tagger2.PacketSize = packetSize;
+            _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
 
             //Collect Timetags
             _tagger1.ClearTimeTagBuffer();
-            _tagger2?.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
 
             _tagger1.StartCollectingTimeTagsAsync();
-            _tagger2?.StartCollectingTimeTagsAsync();
+            _tagger2.StartCollectingTimeTagsAsync();
 
             WriteLog("Requesting timetags");
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
-            if(_tagger2!=null) while(!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+            while(!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
 
             _tagger1.StopCollectingTimeTags();
-            _tagger2?.StopCollectingTimeTags();
+            _tagger2.StopCollectingTimeTags();
             
-            //Only one tagger --> Automatically synced
-            if(_tagger2 == null)
-            {
-                tt1 = ttA;
-                return SyncStatus.InSync;
-            }
-
-            //Two taggers --> Do Synchronization until successfull or cancelled
+            //Do Synchronization until successfull or cancelled
             while(true)
             {
                 SyncClockResults syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
 
                 if (syncClockres.IsClocksSync)
                 {
-                    SyncCorrResults syncCorrres = SyncCorrelationAsync(ttA, syncClockres.CompTimeTags_Bob).GetAwaiter().GetResult();
-                    if (syncCorrres.IsCorrSync)
-                    {
-                        tt1 = ttA;
-                        tt2 = syncClockres.CompTimeTags_Bob;
-                        return SyncStatus.InSync;
-                    }
+                    return syncClockres;
                 }
+
             }
         }
 
@@ -212,9 +193,24 @@ namespace QKD_Library
                 //------------------------------------------------------------------------------
                 List<DriftCompResult> driftCompResults = new List<DriftCompResult>() { };
 
+                //Channel configuration
+                byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
+                byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
+                List<(byte cA, byte cB)> chan_config = new List<(byte cA, byte cB)>
+                {
+                    //Clear Basis
+                    (0,5),(0,6),(0,7),(0,8),
+                    (1,5),(1,6),(1,7),(1,8),
+                    (2,5),(2,6),(2,7),(2,8),
+                    (3,5),(3,6),(3,7),(3,8),
+
+                    //Obscured Basis
+                    (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+                };
+
                 for(int drift_index = 0; drift_index<variation_steps.Length; drift_index++)
                 {
-                    Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, ClockSyncTimeWindow, (long)TimeBin);
+                    Histogram hist = new Histogram(chan_config, ClockSyncTimeWindow, (long)TimeBin);
                     _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
                     _kurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + FiberOffset);
                    
@@ -300,7 +296,9 @@ namespace QKD_Library
                         NewLinearDriftCoeff = initDriftResult.LinearDriftCoeff,
                         CompTimeTags_Bob = ttBob_comp_list[initDriftResult.Index],
                         MiddlePeak = initDriftResult.MiddlePeak,
-                        ProcessingTime = sw.Elapsed
+                        ProcessingTime = sw.Elapsed,
+                        TimeTags_Alice = ttAlice,
+                        TimeTags_Bob = ttBob
                     };
                 }
 
@@ -328,7 +326,9 @@ namespace QKD_Library
                     Peaks = opt_driftResults.Peaks,
                     MiddlePeak = opt_driftResults.MiddlePeak,
                     CompTimeTags_Bob = ttBob_comp_list[opt_driftResults.Index],
-                    ProcessingTime = sw.Elapsed
+                    ProcessingTime = sw.Elapsed,
+                    TimeTags_Alice = ttAlice,
+                    TimeTags_Bob = ttBob
                 };
 
             });
@@ -338,7 +338,7 @@ namespace QKD_Library
             return syncres;
         }
 
-        private async Task<SyncCorrResults> SyncCorrelationAsync(TimeTags ttAlice, TimeTags ttBob)
+        public async Task<SyncCorrResults> SyncCorrelationAsync(TimeTags ttAlice, TimeTags ttBob)
         {
 
             SyncCorrResults syncRes = await Task<SyncCorrResults>.Run( () => 
@@ -346,7 +346,7 @@ namespace QKD_Library
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (Chan_Tagger1, Chan_Tagger2) }, CorrSyncTimeWindow, (long)TimeBin);
+                Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (CorrChan_Tagger1, CorrChan_Tagger2) }, CorrSyncTimeWindow, (long)TimeBin);
                 _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, CorrSyncTimeWindow);
 
                 _kurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + FiberOffset);

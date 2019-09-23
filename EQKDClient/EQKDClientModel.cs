@@ -1,4 +1,5 @@
-﻿using SecQNet;
+﻿using Extensions_Library;
+using SecQNet;
 using SecQNet.SecQNetPackets;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,9 @@ namespace EQKDClient
         //Private fields       
         private Action<string> _loggerCallback;
         private CancellationTokenSource _listening_cts;
+
+        private bool _obscureBasis = false;
+        private List<byte> _secureKeys = new List<byte>();
 
         //Properties
         public SecQClient secQNetClient { get; private set; }
@@ -48,6 +52,9 @@ namespace EQKDClient
         {
             try
             {
+                TimeTags send_tt = null;
+                TimeTags receive_tt = null;
+
                 while (true)
                 {
                     if (_listening_ct.IsCancellationRequested) return;
@@ -57,15 +64,49 @@ namespace EQKDClient
                     switch (commandPacket.Command)
                     {
                         case CommandPacket.SecQNetCommands.SendTimeTags:
-                            if (TimeTagger.GetNextTimeTags(out TimeTags tt))
+                            if (TimeTagger.GetNextTimeTags(out send_tt))
                             {
-                                secQNetClient.SendTimeTags(tt, TimeTagger, CompressTimeTags);
+                                //Obscure basis if requested
+                                if(_obscureBasis)
+                                {
+                                    byte act_chan = 0;
+                                    for(int i=0; i<send_tt.chan.Length; i++)
+                                    {
+                                        act_chan = send_tt.chan[i];
+                                        send_tt.chan[i] = act_chan == 5 || act_chan == 7 ? TimeTagPacket.RectBasisCodedChan : TimeTagPacket.DiagbasisCodedChan;
+                                    }
+                                }
+
+                                secQNetClient.SendTimeTags(send_tt, TimeTagger.BufferFillStatus, TimeTagger.BufferSize, CompressTimeTags);
                             }
                             else
                             {
                                 //Send acknowledge if no timetags available
                                 secQNetClient.SendAcknowledge();
                             }
+                            break;
+
+                        case CommandPacket.SecQNetCommands.ObscureBasisOFF:
+                            _obscureBasis = false;
+                            break;
+
+                        case CommandPacket.SecQNetCommands.ObscureBasisON:
+                            _obscureBasis = true;
+                            break;
+
+                        case CommandPacket.SecQNetCommands.ReceiveSiftedTags:
+
+                            receive_tt = secQNetClient.ReceiveSiftedTimeTags();
+
+                            if (receive_tt == null) break;
+
+                            List<int> key_indices = send_tt.time.GetIndicesOf(receive_tt.time).ToList();
+                            
+                            key_indices.ForEach( (i) =>
+                            {
+                                byte act_chan = send_tt.chan[i];
+                                _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
+                            });                           
                             break;
 
                         case CommandPacket.SecQNetCommands.SendTimeTagsSecure:
