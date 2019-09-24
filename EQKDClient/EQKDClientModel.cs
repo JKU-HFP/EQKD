@@ -36,6 +36,9 @@ namespace EQKDClient
             TimeTagger = new SITimeTagger(_loggerCallback);
             TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
+            //List<int> countrate = TimeTagger.GetCountrate();
+            //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
+
             secQNetClient = new SecQClient(_loggerCallback);
         }
 
@@ -136,7 +139,8 @@ namespace EQKDClient
             }
             catch (Exception)
             {
-               secQNetClient.Disconnect();
+                TimeTagger?.StopCollectingTimeTags();
+                secQNetClient.Disconnect();
                 WriteLog("Disconnected from Server");
             }
         }
