@@ -193,28 +193,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         }
 
         //Event Handler
-        private void BasisComplete(object sender, BasisCompletedEventArgs e )
-        {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
-
-            CorrelationSectionsCollection.Clear();
-
-            //Check Dispatcher Target
-
-            //foreach (Peak peak in e.Peaks)
-            //{
-            //    var axisSection = new AxisSection
-            //    {
-            //        Value = peak.MeanTime,
-            //        SectionWidth = 1,
-            //        Stroke = Brushes.Blue,
-            //        StrokeThickness = 1,
-            //        StrokeDashArray = new DoubleCollection(new[] { 4d })
-            //    };
-            //    CorrelationSectionsCollection.Add(axisSection);
-            //}
-        }
        
 
         private void Synchronize(object o)

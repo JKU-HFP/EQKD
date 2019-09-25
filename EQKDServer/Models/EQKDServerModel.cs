@@ -39,6 +39,7 @@ namespace EQKDServer.Models
         //Synchronization and State correction
         public Synchronization TaggerSynchronization;
         public StateCorrection StateCorr;
+        public DensityMatrixMeasurement densMeas;
         public bool IsSyncActive { get; private set; } = false;
 
         //SecQNet Connection
@@ -84,53 +85,55 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 200 };
+            
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
-            ////Instanciate and connect rotation Stages
-            //_smcController = new SMC100Controller(_loggerCallback);
-            //_smcController.Connect("COM4");
+            //Instanciate and connect rotation Stages
+            _smcController = new SMC100Controller(_loggerCallback);
+            _smcController.Connect("COM4");
 
-            //_HWP_A = _smcController[1];
-            //_HWP_B = _smcController[2];
+            _HWP_A = _smcController[1];
+            _HWP_B = _smcController[2];
 
-            //if (_HWP_A != null)
-            //{
-            //    _HWP_A.Offset = 45.01;
-            //}
+            if (_HWP_A != null)
+            {
+                _HWP_A.Offset = 45.01;
+            }
 
-            //if (_HWP_B != null)
-            //{
-            //    _HWP_B.Offset = 100.06;
-            //}
+            if (_HWP_B != null)
+            {
+                _HWP_B.Offset = 100.06;
+            }
 
 
             //_HWP_C = new KPRM1EStage(_loggerCallback);
-            //_QWP_A = new KPRM1EStage(_loggerCallback);
-            //_QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_A = new KPRM1EStage(_loggerCallback);
+            _QWP_B = new KPRM1EStage(_loggerCallback);
             //_QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_D = new KPRM1EStage(_loggerCallback);
 
             //_HWP_C.Connect("27254524");
-            //_QWP_A.Connect("27254310");
-            //_QWP_B.Connect("27504148");
+            _QWP_A.Connect("27254310");
+            _QWP_B.Connect("27504148");
             //_QWP_C.Connect("27003707");
             //_QWP_D.Connect("27254574");
 
             //_HWP_C.Offset = 58.5;
-            //_QWP_A.Offset = 35.15;
-            //_QWP_B.Offset = 63.84;
+            _QWP_A.Offset = 35.15;
+            _QWP_B.Offset = 63.84;
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
 
 
             //Connect timetagger
-            ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
+            //ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
+            ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 });
 
             //StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
             TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
             StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
+            densMeas = new DensityMatrixMeasurement(TaggerSynchronization, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
         }
 
         //--------------------------------------
@@ -158,10 +161,10 @@ namespace EQKDServer.Models
               {
                  SyncClockResults syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
 
-                 if(syncClockRes.IsClocksSync)
-                  {
-                    SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
-                  }              
+                 //if(syncClockRes.IsClocksSync)
+                 // {
+                 //   SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
+                 // }              
               }
 
           });

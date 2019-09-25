@@ -32,11 +32,11 @@ namespace QKD_Library
 
         public double LinearDriftCoefficient { get; set; } = 0;
         public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
-        public int LinearDriftCoeff_NumVar { get; set; } = 5;
+        public int LinearDriftCoeff_NumVar { get; set; } = 2;
         
         public double STD_Tolerance { get; set; } = 4000;
         public double PVal { get; set; } = 0;
-        public ulong ExcitationPeriod { get; set; } = 12500;
+        public ulong ExcitationPeriod { get; set; } = 200000000; //12500;
 
 
 
@@ -93,7 +93,7 @@ namespace QKD_Library
         //#################################################
         //##  M E T H O D S 
         //#################################################
-        public TimeTags GetSingleTimeTags(int TaggerNr)
+        public TimeTags GetSingleTimeTags(int TaggerNr, int packetSize=100000)
         {
             if(TaggerNr<0 || TaggerNr>1 || (TaggerNr==1 && _tagger2==null))
             {
@@ -102,6 +102,9 @@ namespace QKD_Library
             }
 
             ITimeTagger tagger = TaggerNr == 0 ? _tagger1 : _tagger2;
+
+            tagger.PacketSize = packetSize;
+
             tagger.ClearTimeTagBuffer();
             tagger.StartCollectingTimeTagsAsync();
 
@@ -141,17 +144,10 @@ namespace QKD_Library
             _tagger1.StopCollectingTimeTags();
             _tagger2.StopCollectingTimeTags();
             
-            //Do Synchronization until successfull or cancelled
-            while(true)
-            {
-                SyncClockResults syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
+            SyncClockResults syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
 
-                if (syncClockres.IsClocksSync)
-                {
-                    return syncClockres;
-                }
-
-            }
+           return syncClockres;
+                      
         }
 
         private async Task<SyncClockResults> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
@@ -196,20 +192,27 @@ namespace QKD_Library
                 //Channel configuration
                 byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
                 byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
+                //List<(byte cA, byte cB)> chan_config = new List<(byte cA, byte cB)>
+                //{
+                //    //Clear Basis
+                //    (0,5),(0,6),(0,7),(0,8),
+                //    (1,5),(1,6),(1,7),(1,8),
+                //    (2,5),(2,6),(2,7),(2,8),
+                //    (3,5),(3,6),(3,7),(3,8),
+
+                //    //Obscured Basis
+                //    (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+                //};
                 List<(byte cA, byte cB)> chan_config = new List<(byte cA, byte cB)>
                 {
-                    //Clear Basis
-                    (0,5),(0,6),(0,7),(0,8),
-                    (1,5),(1,6),(1,7),(1,8),
-                    (2,5),(2,6),(2,7),(2,8),
-                    (3,5),(3,6),(3,7),(3,8),
-
-                    //Obscured Basis
-                    (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+                    //Function generator
+                    (0,1)
                 };
 
-                for(int drift_index = 0; drift_index<variation_steps.Length; drift_index++)
+                for (int drift_index = 0; drift_index<variation_steps.Length; drift_index++)
                 {
+                    DriftCompResult driftCompResult = new DriftCompResult(drift_index);
+
                     Histogram hist = new Histogram(chan_config, ClockSyncTimeWindow, (long)TimeBin);
                     _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
                     _kurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + FiberOffset);
@@ -219,22 +222,37 @@ namespace QKD_Library
                     List<Peak> peaks = hist.GetPeaks(peakBinning: 2000);
                     
                     //Number of peaks plausible?
-                    int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod);
-                    if (peaks.Count < numExpectedPeaks || peaks.Count > numExpectedPeaks + 1) break;
-
-                    //Get Middle Peak
-                    Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
-
-                    //Fit peaks
-                    Vector<double> initial_guess = new DenseVector(new double[] { MiddlePeak.MeanTime, 30, 1000 });
-                    Vector<double> lower_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime- ExcitationPeriod/2, 5, 1000 });
-                    Vector<double> upper_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime + ExcitationPeriod / 2, 1000000, ExcitationPeriod*0.75 });
-
-                    Vector<double> XVals = new DenseVector(hist.Histogram_X.Select(x => (double)x).ToArray());
-                    Vector<double> YVals = new DenseVector(hist.Histogram_Y.Select(y => (double)y).ToArray());
-
-                    Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
+                    int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod)+1;
+                    if (peaks.Count < numExpectedPeaks || peaks.Count > numExpectedPeaks + 1)
                     {
+                        //Return standard result
+                                                         
+                        driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
+                        driftCompResult.IsFitSuccessful = false;
+                        driftCompResult.HistogramX = hist.Histogram_X;
+                        driftCompResult.HistogramY = hist.Histogram_Y;
+                        driftCompResult.Peaks = peaks;
+                        driftCompResult.MiddlePeak = null;
+                        driftCompResult.FittedMeanTime = 0;
+                        driftCompResult.Sigma = (-1,-1);                     
+                    }
+                    else
+                    {
+                        //FITTING
+
+                        //Get Middle Peak
+                        Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
+
+                        //Fit peaks
+                        Vector<double> initial_guess = new DenseVector(new double[] { MiddlePeak.MeanTime, 30, 1000 });
+                        Vector<double> lower_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime - ExcitationPeriod / 2, 5, 1000 });
+                        Vector<double> upper_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime + ExcitationPeriod / 2, 1000000, ExcitationPeriod * 0.75 });
+
+                        Vector<double> XVals = new DenseVector(hist.Histogram_X.Select(x => (double)x).ToArray());
+                        Vector<double> YVals = new DenseVector(hist.Histogram_Y.Select(y => (double)y).ToArray());
+
+                        Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
+                        {
                         //Parameter Vector:
                         //0 ... height
                         //1 ... mean value
@@ -242,37 +260,37 @@ namespace QKD_Library
 
                         Vector<double> result_vector = new DenseVector(x.Count);
 
-                        int[] x0_range = Generate.LinearRangeInt32(-numExpectedPeaks, numExpectedPeaks);
-                        double[] x0_vals = x0_range.Select(xv => p[1] + xv * (double)ExcitationPeriod).ToArray();
+                            int[] x0_range = Generate.LinearRangeInt32(-numExpectedPeaks, numExpectedPeaks);
+                            double[] x0_vals = x0_range.Select(xv => p[1] + xv * (double)ExcitationPeriod).ToArray();
 
-                        for (int i = 0; i < x.Count; i++)
+                            for (int i = 0; i < x.Count; i++)
+                            {
+                                result_vector[i] = p[0] * x0_vals.Select(xv => Normal.PDF(xv, p[2], x[i])).Sum();
+                            }
+
+                            return result_vector;
+                        };
+
+                        IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
+
+                        LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 1000);
+                        NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess, lowerBound: lower_bound, upperBound: upper_bound);
+
+                        //Write results                                               
+                        driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
+                        driftCompResult.IsFitSuccessful = minimization_result.ReasonForExit != ExitCondition.ExceedIterations;
+                        driftCompResult.HistogramX = hist.Histogram_X;
+                        driftCompResult.HistogramY = hist.Histogram_Y;
+                        driftCompResult.Peaks = peaks;
+                        driftCompResult.MiddlePeak = MiddlePeak;
+                        if (driftCompResult.IsFitSuccessful)
                         {
-                            result_vector[i] = p[0] * x0_vals.Select(xv => Normal.PDF(xv, p[2], x[i])).Sum();
+                            driftCompResult.HistogramYFit = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
+                            driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[1];
+                            driftCompResult.Sigma = (minimization_result.MinimizingPoint[2], minimization_result.StandardErrors[2]);
                         }
-
-                        return result_vector;
-                    };
-
-                    IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
-
-                    LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations:1000);
-                    NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess, lowerBound:lower_bound, upperBound:upper_bound);
-
-                    //Write results
-
-                    DriftCompResult driftCompResult = new DriftCompResult(drift_index);
-                    driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
-                    driftCompResult.IsFitSuccessful = minimization_result.ReasonForExit == ExitCondition.Converged;
-                    driftCompResult.HistogramX = hist.Histogram_X;
-                    driftCompResult.HistogramY = hist.Histogram_Y;
-                    driftCompResult.Peaks = peaks;
-                    driftCompResult.MiddlePeak = MiddlePeak;
-                    if (driftCompResult.IsFitSuccessful)
-                    {
-                        driftCompResult.HistogramYFit = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-                        driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[1];
-                        driftCompResult.Sigma = (minimization_result.MinimizingPoint[2], minimization_result.StandardErrors[2]);
                     }
+
                     driftCompResults.Add(driftCompResult);
                 }
 
@@ -285,7 +303,7 @@ namespace QKD_Library
                 //No fitting found
                 if (driftCompResults.Where( r => r.IsFitSuccessful==true).Count()<=0)
                 {
-                    DriftCompResult initDriftResult = driftCompResults[variation_steps.Length / 2];
+                    DriftCompResult initDriftResult = driftCompResults[driftCompResults.Count / 2];
 
                     return new SyncClockResults()
                     {
@@ -293,6 +311,8 @@ namespace QKD_Library
                         IsClocksSync = false,
                         HistogramX = initDriftResult.HistogramX,
                         HistogramY = initDriftResult.HistogramY,
+                        Peaks = initDriftResult.Peaks,
+                        HistogramYFit = initDriftResult.HistogramYFit,
                         NewLinearDriftCoeff = initDriftResult.LinearDriftCoeff,
                         CompTimeTags_Bob = ttBob_comp_list[initDriftResult.Index],
                         MiddlePeak = initDriftResult.MiddlePeak,

@@ -86,7 +86,7 @@ namespace QKD_Library
         public int PacketSize { get; set; } = 500000;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
-        public long OffsetChanB { get; set; } = 0;
+        public long OffsetChanB { get; set; } = -76032;
 
         /// <summary>
         /// Folder for logging Density matrix Correction data. No saving if string is empty
@@ -230,7 +230,7 @@ namespace QKD_Library
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
                 //Get TimeTags
-                TimeTags tt = _sync.GetSingleTimeTags(0);                
+                TimeTags tt = _sync.GetSingleTimeTags(0,PacketSize);                
 
                 //Create Histogram
                 basis.CreateHistogram(tt,OffsetChanB);

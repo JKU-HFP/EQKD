@@ -61,6 +61,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private void StartListeningToNetwork(object o)
         {
+            //_EQKDServer.densMeas.MeasurePeakAreasAsync();
+
             _EQKDServer.SecQNetServer.ConnectAsync(SecQNetServer.GetIP4Address(), Port);
             ServerIPAddress = _EQKDServer.SecQNetServer.ServerIP.ToString();
         }

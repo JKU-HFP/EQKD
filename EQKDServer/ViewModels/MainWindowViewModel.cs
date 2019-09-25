@@ -206,6 +206,7 @@ namespace EQKDServer.ViewModels
             _EQKDServer = new EQKDServerModel(LogMessage);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
+            _EQKDServer.densMeas.BasisCompleted += BasisComplete;
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
@@ -281,7 +282,6 @@ namespace EQKDServer.ViewModels
                 Title = "Sync correlations",
                 PointGeometrySize = 0,
                 Values = _fittingChartValues
-
             };
             CorrelationCollection.Add(_fittingLineSeries);
 
@@ -342,25 +342,27 @@ namespace EQKDServer.ViewModels
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
 
             _fittingChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            if(e.SyncRes.HistogramYFit!=null) _fittingChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
             CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
 
-                            
-            foreach(Peak p in e.SyncRes.Peaks)
-            {
-                var axisSection = new AxisSection
-                {
-                    Value = p.MeanTime/1000.0,
-                    SectionWidth = 0.1,
-                    Stroke = Brushes.Red,
-                    StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection(new[] { 4d })
-                };
-                CorrelationSectionsCollection.Add(axisSection);
-            }
 
+            if (e.SyncRes.Peaks != null)
+            {
+                foreach (Peak p in e.SyncRes.Peaks)
+                {
+                    var axisSection = new AxisSection
+                    {
+                        Value = p.MeanTime / 1000.0,
+                        SectionWidth = 0.1,
+                        Stroke = Brushes.Red,
+                        StrokeThickness = 1,
+                        StrokeDashArray = new DoubleCollection(new[] { 4d })
+                    };
+                    CorrelationSectionsCollection.Add(axisSection);
+                }
+            }
 
             if(e.SyncRes.MiddlePeak!=null)
             {
@@ -390,18 +392,48 @@ namespace EQKDServer.ViewModels
             _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);              
         }
 
-
-        private void TimeTagsReceived(object sender, TimeTagsReceivedEventArgs e)
+        private void BasisComplete(object sender, BasisCompletedEventArgs e)
         {
-            ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
-            ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
-
-            ReceivedClientTagsBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
-            ReceivedClientTagsBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
-
-            ClientBufferSize = e.BufferSize;
-            ClientBufferStatus = e.BufferStatus;
+            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);        
         }
+
+        private void ShowCorrelationPeaks(long[] HistogramX, long[] HistogramY, List<Peak> peaks)
+        {
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(HistogramX.Zip(HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
+            CorrelationSectionsCollection.Clear();
+            CorrelationVisualElementsCollection.Clear();
+
+
+            CorrChartXMin = HistogramX[0] / 1000.0;
+            CorrChartXMax = HistogramX[HistogramX.Length - 1] / 1000.0;
+
+            foreach (Peak peak in peaks)
+            {
+                var axisSection = new AxisSection
+                {
+                    Value = peak.MeanTime / 1000.0,
+                    SectionWidth = 0.1,
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection(new[] { 4d })
+                };
+                CorrelationSectionsCollection.Add(axisSection);
+            }
+        }
+
+        //private void TimeTagsReceived(object sender, TimeTagsReceivedEventArgs e)
+        //{
+        //    ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+        //    ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
+
+        //    ReceivedClientTagsBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+        //    ReceivedClientTagsBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
+
+        //    ClientBufferSize = e.BufferSize;
+        //    ClientBufferStatus = e.BufferStatus;
+        //}
 
         #endregion
 
