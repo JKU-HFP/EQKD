@@ -152,6 +152,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 //Register Events
                 _EQKDServer.StateCorr.LossFunctionAquired += CostFunctionAquired;
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
+                _EQKDServer.TaggerSynchronization.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
             });
 
            
@@ -171,6 +172,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         }
 
+        private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
+        {
+            LinearDriftCoefficient = e.SyncRes.NewLinearDriftCoeff;
+        }
+
         //##########################
         // E V E N T   H A N D L E R
         //##########################
@@ -178,6 +184,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private void _EQKDServer_ServerConfigRead(object sender, ServerConfigReadEventArgs e)
         {
             LinearDriftCoefficient = e.StartConfig.LinearDriftCoefficient;
+            LinDriftCoeffNumVar = e.StartConfig.LinearDriftCoeff_NumVar;
+            LinDriftCoeff_Variation = e.StartConfig.LinearDriftCoeff_Var;
             TimeWindow = e.StartConfig.TimeWindow;
             Resolution = e.StartConfig.TimeBin;
             PacketSize = e.StartConfig.PacketSize;

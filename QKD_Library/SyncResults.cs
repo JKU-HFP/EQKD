@@ -15,6 +15,8 @@ namespace QKD_Library
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
         public double[] HistogramYFit { get; set; }
+        public double NumIterations { get; set; }
+        public (double val, double max) GroundLevel { get; set; }
         public double NewLinearDriftCoeff { get; set; }
         public (double val, double err) Sigma { get; set; } = (0, 0);
         public List<Peak> Peaks { get; set; }
@@ -36,6 +38,8 @@ namespace QKD_Library
         public Peak MiddlePeak { get; set; }
         public double[] HistogramYFit { get; set; } = null;
         public double FittedMeanTime { get; set; }
+        public double NumIterations { get; set; }
+        public double GroundLevel { get; set; }
         public (double val, double err) Sigma { get; set; } = (0, 0);
 
         public DriftCompResult(int index)

@@ -55,6 +55,8 @@ namespace EQKDServer.ViewModels
         private TimeTaggerChannelView _channelView;
         private ChannelViewModel _channelViewModel;
 
+        private bool _isUpdating = false;
+
         #region Propterties
         //#################################################
         //## P R O P E R T I E S
@@ -266,30 +268,33 @@ namespace EQKDServer.ViewModels
 
         private void OnMainWindowLoaded(object o)
         {
-            _correlationChartValues = new ChartValues<ObservablePoint> { new ObservablePoint(-1000, 100), new ObservablePoint(1000,100) };
+            _correlationChartValues = new ChartValues<ObservablePoint> { };
             _correlationLineSeries = new LineSeries()
             {
                 Title = "Sync correlations",
                 PointGeometrySize = 0,
+                LineSmoothness = 0.0,
                 Values = _correlationChartValues
                 
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
-            _fittingChartValues = new ChartValues<ObservablePoint> { new ObservablePoint(-1000, 100), new ObservablePoint(1000, 100) };
+            _fittingChartValues = new ChartValues<ObservablePoint> { };
             _fittingLineSeries = new LineSeries()
             {
                 Title = "Sync correlations",
                 PointGeometrySize = 0,
+                LineSmoothness = 0.0,
                 Values = _fittingChartValues
             };
             CorrelationCollection.Add(_fittingLineSeries);
 
-            _linearDriftCompChartValues = new ChartValues<double>() { 100000, 200000 };
+            _linearDriftCompChartValues = new ChartValues<double>() { };
             _linearDriftCompLineSeries = new LineSeries()
             {
                 Title = "Linear Clock Drift compensation factor",
                 PointGeometrySize = 0,
+                LineSmoothness = 0.0,
                 Values = _linearDriftCompChartValues,
             };
             LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
@@ -331,6 +336,10 @@ namespace EQKDServer.ViewModels
 
         private void SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
         {
+            if (_isUpdating) return;
+
+            _isUpdating = true;
+
             //-------------------------
             // Correlation Chart
             //-------------------------
@@ -370,7 +379,10 @@ namespace EQKDServer.ViewModels
                 TextBox tb = new TextBox()
                 {
                     Text = "Pos: " + e.SyncRes.MiddlePeak.MeanTime.ToString() + "\n" +
-                           $"FWHM: {e.SyncRes.Sigma.val:F2}({e.SyncRes.Sigma.err:F2})"+ "\n" +
+                           $"Sigma: {e.SyncRes.Sigma.val:F2}({e.SyncRes.Sigma.err:F2})" + "\n" +
+                           $"FWHM: {e.SyncRes.Sigma.val*2.3548:F2}({e.SyncRes.Sigma.err*2.3548:F2})" + "\n" +
+                           $"Iterations: {e.SyncRes.NumIterations}" + "\n" +
+                           $"GroundLevel: ({e.SyncRes.GroundLevel.val}, max:{e.SyncRes.GroundLevel.max}) " + "\n" +
                            "InSync: " + (e.SyncRes.IsClocksSync ? "true" : "false")
                 };
                 b.Child = tb;
@@ -388,8 +400,10 @@ namespace EQKDServer.ViewModels
             // Linear Drift Comp Chart
             //-------------------------
 
-            if (_linearDriftCompChartValues.Count >= 100) _linearDriftCompChartValues.RemoveAt(0);
-            _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);              
+            if (_linearDriftCompChartValues.Count >= 20) _linearDriftCompChartValues.RemoveAt(0);
+            _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);
+
+            _isUpdating = false;
         }
 
         private void BasisComplete(object sender, BasisCompletedEventArgs e)

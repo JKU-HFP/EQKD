@@ -85,7 +85,7 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            
+            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 200 };
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages
@@ -160,6 +160,8 @@ namespace EQKDServer.Models
               while (!_cts.Token.IsCancellationRequested)
               {
                  SyncClockResults syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+
+                  File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
                  //if(syncClockRes.IsClocksSync)
                  // {
@@ -281,9 +283,10 @@ namespace EQKDServer.Models
             _currentServerSettings.PacketSize = PacketSize;
 
             _currentServerSettings.LinearDriftCoefficient = TaggerSynchronization.LinearDriftCoefficient;
+            _currentServerSettings.LinearDriftCoeff_NumVar = TaggerSynchronization.LinearDriftCoeff_NumVar;
+            _currentServerSettings.LinearDriftCoeff_Var = TaggerSynchronization.LinearDriftCoeff_Var;
             _currentServerSettings.TimeWindow = TaggerSynchronization.ClockSyncTimeWindow;
             _currentServerSettings.TimeBin = TaggerSynchronization.TimeBin;
-            _currentServerSettings.PVal = TaggerSynchronization.PVal;
 
             //Write Config file
             SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);

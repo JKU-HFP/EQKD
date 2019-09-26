@@ -123,10 +123,9 @@
             <lvc:CartesianChart Grid.Row="1"
                         Zoom="None"
                         Series="{Binding LinearDriftCompCollection}"
-                        DisableAnimations="True"
-                        AnimationsSpeed="00:00:00.01">
+                        DisableAnimations="True"  >
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis Title="Linear Drift Coeff." />
+                    <lvc:Axis Title="Linear Drift Coeff."/>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
         </Grid>
