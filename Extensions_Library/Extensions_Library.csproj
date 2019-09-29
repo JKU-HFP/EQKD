@@ -76,7 +76,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ArrayExtensions.cs" />
+    <Compile Include="EnumExtensions.cs" />
     <Compile Include="EventManipulation.cs" />
     <Compile Include="UIEventMarshalling.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

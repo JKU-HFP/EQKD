@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Extensions_Library
 {
-    public static class EnumeratorExtensions
+    public static class EnumExtensions
     {
         public static T[] ConcatArray<T>(this T[] inarray, T[] addarray)
         {
@@ -30,5 +30,31 @@ namespace Extensions_Library
             }
         }
 
+        public static int ArgMin (this IEnumerable<double> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            double minValue = double.MaxValue;
+            int minIndex = -1;
+            int index = -1;
+
+            foreach (double num in source)
+            {
+                index++;
+
+                if (num <= minValue)
+                {
+                    minValue = num;
+                    minIndex = index;
+                }
+            }
+
+            if (index == -1)
+                throw new InvalidOperationException("Sequence was empty");
+
+            return minIndex;
+
+        } 
     }
 }
