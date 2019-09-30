@@ -85,11 +85,13 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            //ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
-            //ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 });
+            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
+            //ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
+            ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
 
-            ServerTimeTagger = new SITimeTagger(_loggerCallback);
-            ServerTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            //ServerTimeTagger = new SITimeTagger(_loggerCallback);
+            //ServerTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+
 
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
@@ -128,10 +130,7 @@ namespace EQKDServer.Models
             _QWP_B.Offset = 63.84;
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
-
-
-            //Connect timetagger
-            //ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });                  
+               
 
             TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
             StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
