@@ -85,7 +85,7 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 200 };
+            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages

@@ -65,25 +65,28 @@ namespace QKD_Library
 
         private bool _firstSyncDone = false;
 
-        //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
-        //{
-        //    //Clear Basis
-        //    (0,5),(0,6),(0,7),(0,8),
-        //    (1,5),(1,6),(1,7),(1,8),
-        //    (2,5),(2,6),(2,7),(2,8),
-        //    (3,5),(3,6),(3,7),(3,8),
-
-        //    //Obscured Basis
-        //    //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
-        //};
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
-                {
-                    //Laser
-                    (2,7)
+        {
+            //Clear Basis
+            (0,5),(0,6),(0,7),(0,8),
+            (1,5),(1,6),(1,7),(1,8),
+            (2,5),(2,6),(2,7),(2,8),
+            (3,5),(3,6),(3,7),(3,8),
 
-                    //Funky generator
-                    //(0,1)
-                };
+           // Obscured Basis
+            //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+
+            //Funky generator
+            //(0,1)
+        };
+        //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
+        //        {
+        //            //Laser
+        //            (2,7)
+
+        //            //Funky generator
+        //            //(0,1)
+        //        };
 
         //#################################################
         //##  E V E N T S 
@@ -196,7 +199,8 @@ namespace QKD_Library
                 TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
 
                 //Set global clock offset
-                if (!_firstSyncDone)
+                //if (!_firstSyncDone)
+                if(true)
                 {
                     _firstSyncDone = true;
                     GlobalClockOffset = (ttAlice.time[0] - ttBob.time[0]);
@@ -332,7 +336,7 @@ namespace QKD_Library
                         if (driftCompResult.IsFitSuccessful)
                         {
                             driftCompResult.HistogramYFit = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-                            driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[1];
+                            driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[0];
                             driftCompResult.Sigma = (minimization_result.MinimizingPoint[2], minimization_result.StandardErrors[2]);
                         }
                     }

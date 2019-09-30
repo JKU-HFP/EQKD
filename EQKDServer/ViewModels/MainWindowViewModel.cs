@@ -252,11 +252,14 @@ namespace EQKDServer.ViewModels
 
         private void On_OpenCountrateWindowCommand(object obj)
         {
+            if (_channelView != null) if (_channelView.IsVisible) return;
+            
             _channelView = new TimeTaggerChannelView();
-            if(_channelViewModel==null) _channelViewModel = new ChannelViewModel(_EQKDServer);
+            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer);
             _channelView.DataContext = _channelViewModel;
             _channelView.Title = "TimeTagger Stats";
             _channelView.Show();
+            
         }
 
         private void LogMessage(string mess)
