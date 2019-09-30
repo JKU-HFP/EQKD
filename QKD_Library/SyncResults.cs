@@ -52,7 +52,9 @@ namespace QKD_Library
     {
         public long[] HistogramX { get; set; }
         public long[] HistogramY { get; set; }
+        public List<Peak> Peaks { get; set; }
         public long CorrPeakPos { get; set; }
+        public long NewFiberOffset { get; set; }
         public bool CorrPeakFound { get; set; }
         public bool IsCorrSync { get; set; }
         public TimeTags CompTimeTags_Bob { get; set; }

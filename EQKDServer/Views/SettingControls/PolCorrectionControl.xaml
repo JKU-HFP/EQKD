@@ -9,12 +9,30 @@
              d:DesignHeight="450" d:DesignWidth="800">
 
     <UserControl.Resources>
-        <scvm:TaggerControlViewModel x:Key="PolCorrectionControlViewModel"/>
+        <scvm:PolCorrectionControlViewModel x:Key="PolCorrectionControlViewModel"/>
         <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource PropertyTextBlockStyle}"/>
         <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource PropertyTextBoxStyle}" />
     </UserControl.Resources>
-    
-    <Grid>
-            
+
+    <Grid DataContext="{StaticResource PolCorrectionControlViewModel}" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="10" />
+            <RowDefinition Height="30" />
+            <RowDefinition Height="20" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+        
     </Grid>
 </UserControl>

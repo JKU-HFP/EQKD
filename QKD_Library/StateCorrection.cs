@@ -28,31 +28,35 @@ namespace QKD_Library
         //#################################################
 
         /// <summary>
+        /// Number of tagger involved
+        /// 1.. only SI
+        /// 2... Hydraharp and SI
+        /// </summary>
+        public int NumTagger { get; set; } = 1;
+
+        /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.4;
+        public double Accurracy { get; set; } = 0.3;
         /// <summary>
         /// Maximum iteration for nonlinear Solver
         /// </summary>
         public int MaxIterations { get; set; } = 5000;
-        public double[] MinPos { get; private set; }
+        public double[] MinPos { get;  set; } = new double[] { 0, 0, 0 };
+        public double[] MinPosAcc { get; set; } = new double[] { 90, 90, 90 };
 
-        public int InitNumPoints { get; set; } = 3;
+        /// <summary>
+        /// Perform initial "brute force" optimization
+        /// </summary>
+        public bool DoInitOptimization { get; set; } = false;
+        public int InitNumPoints { get; set; } = 6;
         public double InitRange { get; set; } = 180;
-        public double[] InitPos { get; set; } = new double[] {0,0,0};
         
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int PacketSize { get; set; } = 200000;
+        public int PacketSize { get; set; } = 2000000;
 
-        /// <summary>
-        /// Correlation configuration, corresponding to  HV, DA
-        /// </summary>
-        private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
-        {
-            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad
-        };
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -98,7 +102,18 @@ namespace QKD_Library
         private string _currLogfile = "";
         private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
 
-               
+
+        private List<(byte cA, byte cB)> _corrConfig2Tagger = new List<(byte cA, byte cB)>
+        {
+            (0,6),(1,5),(2,8),(3,7) //hv, vh, da, ad
+        };
+
+        private List<(byte cA, byte cB)> _corrConfig1Tagger = new List<(byte cA, byte cB)>
+        {
+            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, da
+        };
+
+
         //#################################################
         //##  E V E N T
         //#################################################
@@ -146,23 +161,24 @@ namespace QKD_Library
 
         private void DoOptimize(CancellationToken ct)
         {
+ 
             //Initial Optimization for initial guess;
-
+                       
             Stopwatch stopwatch = new Stopwatch();
 
             WriteLog("-------------------------------------");
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
-            WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}",true);
-
-            stopwatch.Start();
-
-            MinPos = GetOptimumPositions(InitPos, InitNumPoints, InitRange, ct);
-
-            stopwatch.Stop();
-
-            WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
 
 
+            if (DoInitOptimization)
+            {
+                WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}", true);
+                stopwatch.Restart();
+
+                MinPos = GetOptimumPositions(MinPos, InitNumPoints, InitRange, ct);
+                stopwatch.Stop();
+                WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
+            }
             //Nelder Mead Sigleton Minimization
 
             _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
@@ -186,9 +202,10 @@ namespace QKD_Library
             };
 
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
-            Vector<double> init_guess = new DenseVector(MinPos);         
+            Vector<double> init_guess = new DenseVector(MinPos);
+            Vector<double> init_perturb = new DenseVector(new double[] {MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
             NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, 1000);
-            MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess);
+            MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess, init_perturb);
 
             stopwatch.Stop();
 
@@ -297,15 +314,27 @@ namespace QKD_Library
         private (double val, double err) GetLossFunction()
         {
             ulong timewindow = 100000;
-            Histogram hist = new Histogram(CorrConfig, timewindow);
+            Histogram hist = new Histogram(NumTagger == 2 ? _corrConfig2Tagger : _corrConfig1Tagger, timewindow, hist_resolution:256);
             Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
 
             //Collect timetags
-            SyncClockResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
+            TimeTags tt1, tt2;
 
-            if (!syncRes.IsClocksSync) return (-1,0);
-          
-            corr.AddCorrelations(syncRes.TimeTags_Alice,syncRes.CompTimeTags_Bob,0);
+            if(NumTagger==2)
+            {
+                SyncClockResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
+
+                if (!syncRes.IsClocksSync) return (-1, 0);
+
+                tt1 = syncRes.TimeTags_Alice;
+                tt2 = syncRes.CompTimeTags_Bob;
+            }
+            else
+            {
+                tt1 = tt2 =_taggerSync.GetSingleTimeTags(0, packetSize: PacketSize);
+            }
+     
+            corr.AddCorrelations(tt1,tt2,0);
 
             hist.GetPeaks(6250, 0.1, true, TimeBin);
             var loss = hist.GetRelativeMiddlePeakArea();

@@ -14,8 +14,20 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //Private fields
         private EQKDServerModel _EQKDServer;
 
+        //Commands
+        public RelayCommand<object> StartCorrectionCommand { get; private set; }
+        public RelayCommand<object> CancelCommand { get; private set; }
+
         public PolCorrectionControlViewModel()
         {
+            //Map RelayCommmands
+            StartCorrectionCommand = new RelayCommand<object>( (o) => _EQKDServer.StartFiberCorrectionAsync() );
+
+            CancelCommand = new RelayCommand<object>((o) =>
+            {
+               
+            });
+
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
             {

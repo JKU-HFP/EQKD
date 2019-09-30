@@ -23,7 +23,7 @@ namespace QKD_Library
         //##  P R O P E R T I E S
         //#################################################
 
-        public ulong TimeBin { get; set; } = 1000;
+        public ulong ClockTimeBin { get; set; } = 1000;
 
         //Clock Synchronisation
 
@@ -44,13 +44,13 @@ namespace QKD_Library
 
         //Correlation Synchronization
 
-        public byte CorrChan_Tagger1 { get; set; } = 2;
-        public byte CorrChan_Tagger2 { get; set; } = 7;
+        public ulong CorrTimeBin { get; set; } = 512;
+        public long CoarseFiberOffset { get; set; } = 0;
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
         /// </summary>
         public long FiberOffset { get; set; } = 0;
-        public ulong CorrSyncTimeWindow { get; set; } = 1000000;
+        public ulong CorrSyncTimeWindow { get; set; } = 100000;
         public long CorrPeakOffset_Tolerance { get; set; } = 2000;
 
         //#################################################
@@ -61,9 +61,13 @@ namespace QKD_Library
         private ITimeTagger _tagger2;
 
         private Action<string> _loggerCallback;
-        private Kurolator _kurolator;
+
+        private Kurolator _clockKurolator;
+        private Kurolator _corrKurolator;
+        private Histogram _corrHist;
 
         private bool _firstSyncDone = false;
+        private long _bobLastStopTime = 0;
 
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         {
@@ -88,6 +92,11 @@ namespace QKD_Library
         //            //(0,1)
         //        };
 
+        List<(byte cA, byte cB)> _corrChanConfig = new List<(byte cA, byte cB)>
+        {
+            (2,7)
+        };
+
         //#################################################
         //##  E V E N T S 
         //#################################################
@@ -99,7 +108,7 @@ namespace QKD_Library
             SyncClocksComplete?.Raise(this, e);
         }
 
-        public event EventHandler<SyncCorrResults> SyncCorrComplete;
+        public event EventHandler<SyncCorrCompleteEventArgs> SyncCorrComplete;
 
         private void OnSyncCorrComplete(SyncCorrCompleteEventArgs e)
         {
@@ -177,6 +186,17 @@ namespace QKD_Library
                       
         }
 
+        public void Reset()
+        {
+            _tagger1.StopCollectingTimeTags();
+            _tagger2.StopCollectingTimeTags();
+
+            _tagger1.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
+
+            _firstSyncDone = false;
+        }
+
         private async Task<SyncClockResults> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
         {
             Stopwatch sw = new Stopwatch();
@@ -198,23 +218,28 @@ namespace QKD_Library
 
                 TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
 
+                long startOffset = 0;
                 //Set global clock offset
-                //if (!_firstSyncDone)
-                if(true)
+                if (!_firstSyncDone)
                 {
                     _firstSyncDone = true;
-                    GlobalClockOffset = (ttAlice.time[0] - ttBob.time[0]);
+                    GlobalClockOffset = (alice_first - bob_first);
+                    startOffset = 0;
                 }
+                else
+                {
+                    startOffset = (long)((bob_first - _bobLastStopTime) * LinearDriftCoefficient);
+                }
+
+                _bobLastStopTime = bob_last;
 
                 //----------------------------------------------------------------
                 //Compensate Bobs tags for a variation of linear drift coefficients
                 //-----------------------------------------------------------------
 
-                long starttime = ttBob.time[0];
-
                 int[] variation_steps = Generate.LinearRangeInt32(-LinearDriftCoeff_NumVar, LinearDriftCoeff_NumVar);
                 List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient + s*LinearDriftCoeff_Var).ToList();
-                List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => (long)(t + (t - starttime) * c)).ToArray()).ToList();
+                List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => startOffset + (long)(t + (t - bob_first) * c)).ToArray()).ToList();
                 List<TimeTags> ttBob_comp_list = comp_times_list.Select( (ct) => new TimeTags(ttBob.chan, ct)).ToList();
 
                 //------------------------------------------------------------------------------
@@ -230,9 +255,9 @@ namespace QKD_Library
                 {
                     DriftCompResult driftCompResult = new DriftCompResult(drift_index);
 
-                    Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)TimeBin);
-                    _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
-                    _kurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + FiberOffset);
+                    Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)ClockTimeBin);
+                    _clockKurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
+                    _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + CoarseFiberOffset);
                    
                     //----- Analyse peaks ----
                      
@@ -424,19 +449,21 @@ namespace QKD_Library
 
         public async Task<SyncCorrResults> SyncCorrelationAsync(TimeTags ttAlice, TimeTags ttBob)
         {
+            if(_corrKurolator==null)
+            {
+                _corrHist = new Histogram(_corrChanConfig, CorrSyncTimeWindow, (long)CorrTimeBin);
+                _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, CorrSyncTimeWindow);
+            }            
 
             SyncCorrResults syncRes = await Task<SyncCorrResults>.Run( () => 
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-
-                Histogram hist = new Histogram(new List<(byte cA, byte cB)> { (CorrChan_Tagger1, CorrChan_Tagger2) }, CorrSyncTimeWindow, (long)TimeBin);
-                _kurolator = new Kurolator(new List<CorrelationGroup> { hist }, CorrSyncTimeWindow);
-
-                _kurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + FiberOffset);
+             
+                _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + FiberOffset);
 
                 //Find correlated peak
-                List<Peak> peaks = hist.GetPeaks(peakBinning:2000);
+                List<Peak> peaks = _corrHist.GetPeaks(peakBinning:2000);
                 double av_area = peaks.Select(p => p.Area).Average();
                 double av_area_err = Math.Sqrt(av_area);
 
@@ -455,7 +482,7 @@ namespace QKD_Library
                     corrPeakFound = true;
                     if (Math.Abs(CorrPeak.MeanTime) < CorrPeakOffset_Tolerance) isCorrSync = true;
 
-                    FiberOffset += CorrPeak.MeanTime;
+                    //FiberOffset += CorrPeak.MeanTime;
 
                     //Correct Bobs tags
                     comptimetags_Bob = new TimeTags(ttBob.chan, ttBob.time.Select(t => t - (GlobalClockOffset + FiberOffset)).ToArray());
@@ -465,10 +492,12 @@ namespace QKD_Library
 
                 return new SyncCorrResults()
                 {
-                    HistogramX = hist.Histogram_X,
-                    HistogramY = hist.Histogram_Y,
+                    HistogramX = _corrHist.Histogram_X,
+                    HistogramY = _corrHist.Histogram_Y,
+                    Peaks = peaks,
                     CorrPeakPos = CorrPeak.MeanTime,
                     CorrPeakFound = corrPeakFound,
+                    NewFiberOffset = FiberOffset,
                     IsCorrSync = isCorrSync,
                     CompTimeTags_Bob = comptimetags_Bob,
                     ProcessingTime = sw.Elapsed

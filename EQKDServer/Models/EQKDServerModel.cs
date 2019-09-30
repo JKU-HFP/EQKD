@@ -85,7 +85,12 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
+            //ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
+            //ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 });
+
+            ServerTimeTagger = new SITimeTagger(_loggerCallback);
+            ServerTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+
             ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages
@@ -126,10 +131,7 @@ namespace EQKDServer.Models
 
 
             //Connect timetagger
-            //ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });
-            ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 });
-
-            //StateCorrTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            //ServerTimeTagger.Connect(new List<long> { 0, 38016, 0, 0 });                  
 
             TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
             StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
@@ -148,12 +150,12 @@ namespace EQKDServer.Models
 
             //Deactivate client side basis obscuring
             SecQNetServer.ObscureClientTimeTags = false;
-            TaggerSynchronization.CorrChan_Tagger1 = 0;
-            TaggerSynchronization.CorrChan_Tagger2 = 5;
 
             WriteLog("Synchronisation started");
 
             IsSyncActive = true;
+
+            TaggerSynchronization.Reset();
 
             await Task.Run(() =>
           {
@@ -163,10 +165,10 @@ namespace EQKDServer.Models
 
                   File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
-                 //if(syncClockRes.IsClocksSync)
-                 // {
-                 //   SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
-                 // }              
+                  if (syncClockRes.IsClocksSync)
+                  {
+                      SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
+                  }
               }
 
           });
@@ -286,7 +288,9 @@ namespace EQKDServer.Models
             _currentServerSettings.LinearDriftCoeff_NumVar = TaggerSynchronization.LinearDriftCoeff_NumVar;
             _currentServerSettings.LinearDriftCoeff_Var = TaggerSynchronization.LinearDriftCoeff_Var;
             _currentServerSettings.TimeWindow = TaggerSynchronization.ClockSyncTimeWindow;
-            _currentServerSettings.TimeBin = TaggerSynchronization.TimeBin;
+            _currentServerSettings.TimeBin = TaggerSynchronization.ClockTimeBin;
+
+            _currentServerSettings.FiberOffset = TaggerSynchronization.FiberOffset;
 
             //Write Config file
             SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);

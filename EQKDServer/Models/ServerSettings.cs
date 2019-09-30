@@ -18,5 +18,9 @@ namespace EQKDServer.Models
         public int LinearDriftCoeff_NumVar { get; set; } = 2;
         public ulong TimeWindow { get; set; } = 100000;
         public ulong TimeBin { get; set; } = 500;
+
+
+        public long FiberOffset { get; set; } = 0;
+
     }
 }

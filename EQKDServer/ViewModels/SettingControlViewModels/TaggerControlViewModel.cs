@@ -34,6 +34,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private LineSeries _correlationLineSeries;
         private Kurolator _correlator;
 
+        private bool _isUpdating;
+
         #region Properties
         //#############################
         //### P R O P E R T I E S   ###
@@ -119,12 +121,26 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private long _fiberOffset;
+
+        public long FiberOffset
+        {
+            get { return _fiberOffset; }
+            set
+            {
+                _fiberOffset = value;
+                OnPropertyChanged("FiberOffset");
+
+            }
+        }
+
 
         #endregion
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
+        public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
 
         //Commands
         public RelayCommand<object> StartSyncCommand { get; private set; }
@@ -153,6 +169,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.StateCorr.LossFunctionAquired += CostFunctionAquired;
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
                 _EQKDServer.TaggerSynchronization.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
+                _EQKDServer.TaggerSynchronization.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
             });
 
            
@@ -166,10 +183,45 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 Title = "Sync correlations",
                 Values = _correlationChartValues,
-                PointGeometrySize = 0.0
+                PointGeometrySize = 0.0,
+                LineSmoothness = 0.0
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
+        }
+
+        private void TaggerSynchronization_SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
+        {
+            if (_isUpdating) return;
+
+            _isUpdating = true;
+
+            CorrelationSectionsCollection.Clear();
+
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
+            if (e.SyncRes.Peaks != null)
+            {
+                foreach (Peak p in e.SyncRes.Peaks)
+                {
+                    var axisSection = new AxisSection
+                    {
+                        Value = p.MeanTime / 1000.0,
+                        SectionWidth = 0.1,
+                        Stroke = p.MeanTime==e.SyncRes.CorrPeakPos ? Brushes.Red : Brushes.Blue,
+                        StrokeThickness = 1,
+                        StrokeDashArray = new DoubleCollection(new[] { 4d })
+                    };
+                    CorrelationSectionsCollection.Add(axisSection);
+                }
+            }
+
+            //Write new FiberOffset
+            FiberOffset = e.SyncRes.NewFiberOffset;
+            
+
+            _isUpdating = false;
         }
 
         private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
@@ -190,6 +242,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             Resolution = e.StartConfig.TimeBin;
             PacketSize = e.StartConfig.PacketSize;
 
+            FiberOffset = e.StartConfig.FiberOffset;
+
         }
 
         private void CostFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
@@ -207,11 +261,13 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         {
             _EQKDServer.PacketSize = PacketSize;
 
-            _EQKDServer.TaggerSynchronization.TimeBin = Resolution;
+            _EQKDServer.TaggerSynchronization.ClockTimeBin = Resolution;
             _EQKDServer.TaggerSynchronization.ClockSyncTimeWindow = TimeWindow;
             _EQKDServer.TaggerSynchronization.LinearDriftCoefficient = LinearDriftCoefficient;
             _EQKDServer.TaggerSynchronization.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
             _EQKDServer.TaggerSynchronization.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
+
+            _EQKDServer.TaggerSynchronization.FiberOffset = FiberOffset;
 
             _EQKDServer.StartSynchronizeAsync();
         }

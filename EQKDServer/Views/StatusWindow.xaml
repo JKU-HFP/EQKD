@@ -111,11 +111,15 @@
                         DisableAnimations="True"
                         VisualElements="{Binding CorrelationVisualElementsCollection}">
                 <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
                     <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
                 <lvc:CartesianChart.AxisX>
+                    <lvc:AxesCollection>
                     <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}"
                               MinValue="{Binding CorrChartXMin}" MaxValue="{Binding CorrChartXMax}"></lvc:Axis>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
 
@@ -125,9 +129,12 @@
                         Series="{Binding LinearDriftCompCollection}"
                         DisableAnimations="True"  >
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis Title="Linear Drift Coeff."/>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Linear Drift Coeff."/>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
+
         </Grid>
 
     </Grid>
