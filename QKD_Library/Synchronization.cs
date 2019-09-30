@@ -63,6 +63,8 @@ namespace QKD_Library
         private Action<string> _loggerCallback;
         private Kurolator _kurolator;
 
+        private bool _firstSyncDone = false;
+
         //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         //{
         //    //Clear Basis
@@ -193,7 +195,12 @@ namespace QKD_Library
 
                 TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
 
-                GlobalClockOffset = (ttAlice.time[0] - ttBob.time[0]);
+                //Set global clock offset
+                if (!_firstSyncDone)
+                {
+                    _firstSyncDone = true;
+                    GlobalClockOffset = (ttAlice.time[0] - ttBob.time[0]);
+                }
 
                 //----------------------------------------------------------------
                 //Compensate Bobs tags for a variation of linear drift coefficients
@@ -429,8 +436,9 @@ namespace QKD_Library
                 double av_area = peaks.Select(p => p.Area).Average();
                 double av_area_err = Math.Sqrt(av_area);
 
-                //Find peak most outside outside the average
-                Peak CorrPeak = peaks.Where(p => Math.Abs(p.Area-av_area) == peaks.Select(a => Math.Abs(a.Area-av_area)).Min()).FirstOrDefault();
+                //Find peak most outside the average
+                double max_deviation = peaks.Select(a => Math.Abs(a.Area - av_area)).Max();
+                Peak CorrPeak = peaks.Where(p => Math.Abs(p.Area-av_area) == max_deviation).FirstOrDefault();
 
                 //Is peak area statistically significant?
                 bool isCorrSync = false;
