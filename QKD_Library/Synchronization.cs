@@ -72,16 +72,16 @@ namespace QKD_Library
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         {
             //Clear Basis
-            (0,5),(0,6),(0,7),(0,8),
-            (1,5),(1,6),(1,7),(1,8),
-            (2,5),(2,6),(2,7),(2,8),
-            (3,5),(3,6),(3,7),(3,8),
+            //(0,5),(0,6),(0,7),(0,8),
+            //(1,5),(1,6),(1,7),(1,8),
+            //(2,5),(2,6),(2,7),(2,8),
+            //(3,5),(3,6),(3,7),(3,8),
 
            // Obscured Basis
             //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
 
             //Funky generator
-            //(0,1)
+            (0,7)
         };
         //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         //        {
@@ -165,6 +165,9 @@ namespace QKD_Library
 
             _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
 
+            //Refresh sync rate
+            _tagger2.SyncRate = _tagger1.SyncRate;
+
             //Collect Timetags
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
@@ -217,21 +220,9 @@ namespace QKD_Library
                 var bob_diff = bob_last - bob_first;
 
                 TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
-
-                long startOffset = 0;
-                //Set global clock offset
-                if (!_firstSyncDone)
-                {
-                    _firstSyncDone = true;
-                    GlobalClockOffset = (alice_first - bob_first);
-                    startOffset = 0;
-                }
-                else
-                {
-                    startOffset = (long)((bob_first - _bobLastStopTime) * LinearDriftCoefficient);
-                }
-
-                _bobLastStopTime = bob_last;
+                
+              
+                 GlobalClockOffset = (alice_first - bob_first);
 
                 //----------------------------------------------------------------
                 //Compensate Bobs tags for a variation of linear drift coefficients
@@ -239,7 +230,7 @@ namespace QKD_Library
 
                 int[] variation_steps = Generate.LinearRangeInt32(-LinearDriftCoeff_NumVar, LinearDriftCoeff_NumVar);
                 List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient + s*LinearDriftCoeff_Var).ToList();
-                List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => startOffset + (long)(t + (t - bob_first) * c)).ToArray()).ToList();
+                List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => (long)(t + (t - bob_first) * c)).ToArray()).ToList();
                 List<TimeTags> ttBob_comp_list = comp_times_list.Select( (ct) => new TimeTags(ttBob.chan, ct)).ToList();
 
                 //------------------------------------------------------------------------------
@@ -322,7 +313,7 @@ namespace QKD_Library
                         //CHECK CONCIDENCES IN BETWEEN PEAKS
                         long BetweenCoinc = 0;
                         
-                        foreach(var peak in peaks.Except(new List<Peak> { MiddlePeak }))
+                        foreach(var peak in peaks.Except(new List<Peak> { MiddlePeak }).Skip(1).Take(peaks.Count-3))
                         {
                             int sign = peak.MeanTime < MiddlePeak.MeanTime ? 1 : -1;
 

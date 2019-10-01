@@ -276,9 +276,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         {
             return (_EQKDServer != null &&
                      _EQKDServer.ServerTimeTagger.CanCollect &&
-                     _EQKDServer.ClientTimeTagger.CanCollect &&
-                     _EQKDServer.SecQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
-
+                     _EQKDServer.ClientTimeTagger.CanCollect);
         }
                
     }

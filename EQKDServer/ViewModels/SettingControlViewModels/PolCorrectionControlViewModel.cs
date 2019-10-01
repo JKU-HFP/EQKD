@@ -21,7 +21,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public PolCorrectionControlViewModel()
         {
             //Map RelayCommmands
-            StartCorrectionCommand = new RelayCommand<object>((o) => _EQKDServer.densMeas.MeasurePeakAreasAsync() ); //_EQKDServer.StartFiberCorrectionAsync() 
+            StartCorrectionCommand = new RelayCommand<object>((o) => _EQKDServer.StartFiberCorrectionAsync());
 
             CancelCommand = new RelayCommand<object>((o) =>
             {

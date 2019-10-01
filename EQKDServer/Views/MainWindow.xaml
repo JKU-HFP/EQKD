@@ -77,8 +77,7 @@
         <GridSplitter Grid.Row="2" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
 
         <!-- SETTINGS AREA -->
-        <TabControl Grid.Row="3" Grid.Column="1"
-                    Grid.ColumnSpan="3" Margin="0,19.8,19.6,19.8" Grid.RowSpan="3">
+        <TabControl Grid.Row="4" Grid.Column="1" >
             <TabItem>
                 <TabItem.Header>
                     <StackPanel Orientation="Vertical">

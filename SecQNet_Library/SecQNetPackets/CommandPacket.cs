@@ -33,8 +33,10 @@ namespace SecQNet.SecQNetPackets
         //          |   StartCollecting   |    
         //---------------------------------
         //  val0    |     Packet Size
+        //  val1    |     Sync Rate
 
         public int val0 = 0;
+        public int val1 = 0;
 
         public SecQNetCommands Command { get { return _command; } }
                  
@@ -53,6 +55,7 @@ namespace SecQNet.SecQNetPackets
 
             this._command = p.Command;
             this.val0 = p.val0;
+            this.val1 = p.val1;
         }
 
         public override byte[] ToBytes()

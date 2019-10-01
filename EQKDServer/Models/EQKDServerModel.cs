@@ -85,15 +85,23 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback) { DiscriminatorLevel = 250 };
-            //ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
-            ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
+            ServerTimeTagger = new HydraHarp(_loggerCallback)
+            {
+                DiscriminatorLevel = 250,
+                MeasurementMode = HydraHarp.Mode.MODE_T3,
+                PacketSize = 500000
+            };
+            ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
+            //ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
 
-            //ServerTimeTagger = new SITimeTagger(_loggerCallback);
-            //ServerTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            ClientTimeTagger = new SITimeTagger(_loggerCallback)
+            {
+                RefChan = 1
+            };
+            ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
 
-            ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
+            //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -134,7 +142,7 @@ namespace EQKDServer.Models
 
             TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
             StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
-            densMeas = new DensityMatrixMeasurement(TaggerSynchronization, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);
+            densMeas = new DensityMatrixMeasurement(TaggerSynchronization, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
         }
 
         //--------------------------------------
@@ -156,19 +164,21 @@ namespace EQKDServer.Models
 
             TaggerSynchronization.Reset();
 
+                        
+
             await Task.Run(() =>
           {
-              while (!_cts.Token.IsCancellationRequested)
-              {
+              //while (!_cts.Token.IsCancellationRequested)
+              //{
                  SyncClockResults syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
 
-                  File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
+              //File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
-                  if (syncClockRes.IsClocksSync)
-                  {
-                      SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
-                  }
-              }
+              //    if (syncClockRes.IsClocksSync)
+              //    {
+              //        SyncCorrResults syncCorrres = TaggerSynchronization.SyncCorrelationAsync(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob).GetAwaiter().GetResult();
+              //    }
+              //}
 
           });
 
@@ -184,6 +194,14 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
+            //TEST
+            ServerTimeTagger.BackupFilename = "TT3TestBackup";
+            ServerTimeTagger.StartCollectingTimeTagsAsync();
+            Thread.Sleep(5000);
+            ServerTimeTagger.StopCollectingTimeTags();
+            return;
+            ///
+
             await StateCorr.StartOptimizationAsync();
         }
 

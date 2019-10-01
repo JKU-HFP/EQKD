@@ -205,12 +205,12 @@ namespace SecQNet
             return true;
         }
 
-        public bool RequestStartTimeTagger(int packetsize)
+        public bool RequestStartTimeTagger(int packetsize, int syncrate=0)
         {
             try
             {
                 //Send request
-                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.StartCollecting) { val0 = packetsize });
+                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.StartCollecting) { val0 = packetsize, val1=syncrate });
 
                 //Wait for acknowledge
                 byte[] packet_buffer;
