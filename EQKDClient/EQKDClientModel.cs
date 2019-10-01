@@ -33,7 +33,10 @@ namespace EQKDClient
             _loggerCallback = loggercallback;
             //TimeTaggerFactory timeTaggerFactory = new TimeTaggerFactory("ClientTagger",WriteLog);
             //TimeTagger = timeTaggerFactory.GetDefaultTimeTagger();
-            TimeTagger = new SITimeTagger(_loggerCallback);
+            TimeTagger = new SITimeTagger(_loggerCallback)
+            {
+                RefChan = 1
+            };
             TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
             //List<int> countrate = TimeTagger.GetCountrate();
@@ -122,6 +125,7 @@ namespace EQKDClient
 
                         case CommandPacket.SecQNetCommands.StartCollecting:
                             TimeTagger.PacketSize = commandPacket.val0;
+                            TimeTagger.SyncRate = commandPacket.val1;
                             TimeTagger.StartCollectingTimeTagsAsync();
                             secQNetClient.SendAcknowledge();
                             break;
