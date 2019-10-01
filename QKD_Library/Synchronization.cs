@@ -36,7 +36,7 @@ namespace QKD_Library
         
         public double STD_Tolerance { get; set; } = 1700;
         public long GroundlevelTimebin { get; set; } = 2000;
-        public long GroundlevelTolerance { get; set; } = 10;
+        public double GroundlevelTolerance { get; set; } = 0.02;
         public double PVal { get; set; } = 0;
         public ulong ExcitationPeriod { get; set; } = 12500; //200000000; 
 
@@ -408,7 +408,7 @@ namespace QKD_Library
 
                 //Define new Drift Coefficient
 
-                long MaxGroundLevel = GroundlevelTolerance * opt_driftResults.Peaks.Count;
+                double MaxGroundLevel = GroundlevelTolerance * opt_driftResults.MiddlePeak.Area * opt_driftResults.Peaks.Count;
                 bool clockInSync = opt_driftResults.Sigma.val <= STD_Tolerance && min_groundlevel < MaxGroundLevel;
                 if(clockInSync) LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
 

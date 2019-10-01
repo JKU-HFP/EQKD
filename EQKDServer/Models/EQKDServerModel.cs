@@ -94,14 +94,14 @@ namespace EQKDServer.Models
             ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
             //ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
 
-            ClientTimeTagger = new SITimeTagger(_loggerCallback)
-            {
-                RefChan = 1
-            };
-            ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            //ClientTimeTagger = new SITimeTagger(_loggerCallback)
+            //{
+            //    RefChan = 1
+            //};
+            //ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
 
-            //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
+            ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);

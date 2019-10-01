@@ -395,7 +395,7 @@ namespace EQKDServer.ViewModels
                            $"Sigma: {e.SyncRes.Sigma.val:F2}({e.SyncRes.Sigma.err:F2})" + "\n" +
                            $"FWHM: {e.SyncRes.Sigma.val*2.3548:F2}({e.SyncRes.Sigma.err*2.3548:F2})" + "\n" +
                            $"Iterations: {e.SyncRes.NumIterations}" + "\n" +
-                           $"GroundLevel: ({e.SyncRes.GroundLevel.val}, max:{e.SyncRes.GroundLevel.max}) " + "\n" +
+                           $"GroundLevel: ({e.SyncRes.GroundLevel.val}, max:{e.SyncRes.GroundLevel.max:F1}) " + "\n" +
                            "InSync: " + (e.SyncRes.IsClocksSync ? "true" : "false")
                 };
                 b.Child = tb;
