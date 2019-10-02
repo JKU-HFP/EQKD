@@ -29,21 +29,23 @@ namespace QKD_Library
 
         /// <summary>
         /// Number of tagger involved
-        /// 1.. only SI
-        /// 2... Hydraharp and SI
+        /// 0.. only ServerTagger
+        /// 1.. only ClientTagger
+        /// 2.. both tagger synchronized
         /// </summary>
         public int NumTagger { get; set; } = 1;
 
         /// <summary>
-        /// Desired accuracy in degree
-        /// </summary>
-        public double Accurracy { get; set; } = 0.3;
-        /// <summary>
         /// Maximum iteration for nonlinear Solver
         /// </summary>
         public int MaxIterations { get; set; } = 5000;
-        public double[] MinPos { get;  set; } = new double[] { 0, 0, 0 };
-        public double[] MinPosAcc { get; set; } = new double[] { 90, 90, 90 };
+        
+        /// <summary>
+        /// Desired accuracy in degree
+        /// </summary>
+        public double Accurracy { get; set; } = 0.2;
+        public double[] MinPos { get;  set; } = new double[] { 72, 52, -20 };
+        public double[] MinPosAcc { get; set; } = new double[] { 20, 20, 20 };
 
         /// <summary>
         /// Perform initial "brute force" optimization
@@ -110,7 +112,7 @@ namespace QKD_Library
 
         private List<(byte cA, byte cB)> _corrConfig1Tagger = new List<(byte cA, byte cB)>
         {
-            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, da
+            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad 
         };
 
 
@@ -196,7 +198,7 @@ namespace QKD_Library
 
                 var loss = GetLossFunction();
 
-                WriteLog($"Position Nr.:({p[0]:F2},{p[1]:F2},{p[2]:F2}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
+                WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
 
                 return loss.val;
             };
@@ -216,7 +218,7 @@ namespace QKD_Library
 
                     MinPos = solver_result.MinimizingPoint.ToArray();
 
-                    WriteLog($"Moving to optimum position ({MinPos[0]},{MinPos[1]},{MinPos[2]})");
+                    WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
 
                     //Move stages to optimum position
                     _rotationStages[0].Move_Absolute(MinPos[0]);
@@ -331,7 +333,7 @@ namespace QKD_Library
             }
             else
             {
-                tt1 = tt2 =_taggerSync.GetSingleTimeTags(0, packetSize: PacketSize);
+                tt1 = tt2 =_taggerSync.GetSingleTimeTags(NumTagger, packetSize: PacketSize);
             }
      
             corr.AddCorrelations(tt1,tt2,0);

@@ -30,6 +30,7 @@ namespace EQKDServer.Models
         CancellationTokenSource _cts;
 
         List<byte> _secureKeys = new List<byte>();
+        List<byte> _bobKeys = new List<byte>();
 
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -74,6 +75,11 @@ namespace EQKDServer.Models
             ServerConfigRead?.Raise(this, e);
         }
 
+        public event EventHandler<KeysGeneratedEventArgs> KeysGenerated;
+        private void OnKeysGenerated(KeysGeneratedEventArgs e)
+        {
+            KeysGenerated?.Raise(this, e);
+        }
 
         //-----------------------------------
         //---- C O N S T R U C T O R
@@ -94,14 +100,14 @@ namespace EQKDServer.Models
             ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
             //ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
 
-            //ClientTimeTagger = new SITimeTagger(_loggerCallback)
-            //{
-            //    RefChan = 1
-            //};
-            //ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            ClientTimeTagger = new SITimeTagger(_loggerCallback)
+            {
+                RefChan = 0
+            };
+            ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
 
-            ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
+            //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -194,60 +200,144 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            //TEST
-            ServerTimeTagger.BackupFilename = "TT3TestBackup";
-            ServerTimeTagger.StartCollectingTimeTagsAsync();
-            Thread.Sleep(5000);
-            ServerTimeTagger.StopCollectingTimeTags();
-            return;
-            ///
+            //await densMeas.MeasurePeakAreasAsync();
 
-            await StateCorr.StartOptimizationAsync();
+            //await StateCorr.StartOptimizationAsync();
+
+            await StartKeyGeneration();
         }
 
         public async Task StartKeyGeneration()
         {
+            bool local = true;
+            PacketSize = 1000000;
 
             SecQNetServer.ObscureClientTimeTags = true;
 
             await Task.Run(() =>
            {
-               byte bR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
-               byte bD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
-               List<(byte cA, byte cB)> keyCorrConfig = new List<(byte cA, byte cB)>
+
+               if (!local)
                {
-                   //Rectilinear
-                   (0,bR),(1,bR),
-                   //Diagonal
-                   (2,bD),(3,bD)
-               };
+                   byte bR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
+                   byte bD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
+                   List<(byte cA, byte cB)> keyCorrConfig = new List<(byte cA, byte cB)>
+                   {
+                       //Rectilinear
+                       (0,bR),(1,bR),
+                       //Diagonal
+                       (2,bD),(3,bD)
+                   };
 
-               //Get Key Correlations
-               SyncClockResults syncRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+                   //Get Key Correlations
+                   SyncClockResults syncRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
 
-               Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
-               Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
+                   Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
+                   Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
 
-               key_corr.AddCorrelations(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+                   key_corr.AddCorrelations(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
 
-               //KEY SIFTING
-               List<long> aliceKeyTimes = key_hist.Correlations.Select(corr => corr.t1).ToList();
-               List<long> bobKeyTimes = key_hist.Correlations.Select(corr => corr.t2).ToList();
+                   //KEY SIFTING
+                   List<long> aliceKeyTimes = key_hist.Correlations.Select(corr => corr.t1).ToList();
+                   List<long> bobKeyTimes = key_hist.Correlations.Select(corr => corr.t2).ToList();
 
-               //Register key at Alice
-               List<int> aliceKeyIndices = syncRes.TimeTags_Alice.time.GetIndicesOf(aliceKeyTimes).ToList();
-               aliceKeyIndices.ForEach((i) =>
+                   //Register key at Alice
+                   List<int> aliceKeyIndices = syncRes.TimeTags_Alice.time.GetIndicesOf(aliceKeyTimes).ToList();
+                   aliceKeyIndices.ForEach((i) =>
+                   {
+                       byte act_chan = syncRes.TimeTags_Alice.chan[i];
+                       _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
+                   });
+
+                   //Register key at Bob
+                   List<int> bobKeyIndices = syncRes.CompTimeTags_Bob.time.GetIndicesOf(bobKeyTimes).ToList();
+                   TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, bobKeyIndices.Select(bi => syncRes.TimeTags_Bob.time[bi]).ToArray());
+
+                   //Send sifted tags to bob
+                   SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
+               }
+
+               else
                {
-                   byte act_chan = syncRes.TimeTags_Alice.chan[i];
-                   _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-               });
+                   while (true)
+                   {
+                       List<byte> newAliceKeys = new List<byte>();
+                       List<byte> newBobKeys = new List<byte>();
 
-               //Register key at Bob
-               List<int> bobKeyIndices = syncRes.CompTimeTags_Bob.time.GetIndicesOf(bobKeyTimes).ToList();
-               TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, bobKeyIndices.Select(bi => syncRes.TimeTags_Bob.time[bi]).ToArray());
+                       List<(byte cA, byte cB)> keyCorrConfig = new List<(byte cA, byte cB)>
+                       {
+                           //Rectilinear
+                           (1,5),(1,6),(2,5),(2,6),
+                           //Diagonal
+                           (3,7),(3,8),(4,7),(4,8)
+                       };
+                       List<(byte cA, byte cB)> bellTestConfig = new List<(byte cA, byte cB)>
+                       {
+                           //Mixed bases
+                           (1,7),(1,8),(2,7),(2,8),
+                           (3,5),(3,6),(4,5),(4,6)
+                       };
 
-               //Send sifted tags to bob
-               SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
+                       //Get Key Correlations
+                       TimeTags tt = TaggerSynchronization.GetSingleTimeTags(1, PacketSize);
+
+                       long tspan = tt.time.Last() - tt.time.First();
+
+                       Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);          
+                       Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
+
+                       Histogram bell_hist = new Histogram(bellTestConfig, 100000);
+                       Kurolator bell_corr = new Kurolator(new List<CorrelationGroup> { bell_hist }, 100000);
+
+                       key_corr.AddCorrelations(tt, tt);
+                       bell_corr.AddCorrelations(tt, tt);
+
+                       List<Peak> peaks = bell_hist.GetPeaks();
+                       (double val, double err) relmeanpeakarea = bell_hist.GetRelativeMiddlePeakArea();                                          
+
+                       OnKeysGenerated(new KeysGeneratedEventArgs(bell_hist.Histogram_X, bell_hist.Histogram_Y));
+
+                       //KEY SIFTING
+                       List<long> aliceKeyTimes = key_hist.Correlations.Select(corr => corr.t1).ToList();
+                       List<long> bobKeyTimes = key_hist.Correlations.Select(corr => corr.t2).ToList();
+
+                       //Register key at Alice
+                       List<int> aliceKeyIndices = tt.time.GetIndicesOf(aliceKeyTimes).ToList();
+                       aliceKeyIndices.ForEach((i) =>
+                       {
+                           byte act_chan = tt.chan[i];
+                           newAliceKeys.Add(act_chan == 1 || act_chan == 3 ? (byte)0 : (byte)1);
+                       });
+
+                       //Register key at Bob
+                       List<int> bobKeyIndices = tt.time.GetIndicesOf(bobKeyTimes).ToList();
+                       bobKeyIndices.ForEach((i) =>
+                       {
+                           byte act_chan = tt.chan[i];
+                           newBobKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
+                       });
+
+                       //Check QBER
+                       _secureKeys.AddRange(newAliceKeys);
+                       _bobKeys.AddRange(newBobKeys);
+
+                       int sum_err = 0;
+                       for (int i = 0; i < _secureKeys.Count; i++)
+                       {
+                           if (_secureKeys[i] != _bobKeys[i]) sum_err++;
+                       }
+
+                       //Write to file
+                       File.AppendAllLines("AliceKey.txt", newAliceKeys.Select(k => k.ToString()));
+                       File.AppendAllLines("BobKey.txt", newBobKeys.Select(k => k.ToString()));
+
+                       double QBER = (double)sum_err / _secureKeys.Count;
+                       double rate = aliceKeyIndices.Count / (tspan / 1E12);
+
+                       WriteLog($"QBER: {QBER:F3} | rate: {rate:F3} | BellTest middlepeak: {relmeanpeakarea:F4}");
+                   }
+               }
+
            });
         }
         
@@ -354,6 +444,18 @@ namespace EQKDServer.Models
         public ServerConfigReadEventArgs(ServerSettings _config)
         {
             StartConfig = _config;
+        }
+    }
+
+    public class KeysGeneratedEventArgs : EventArgs
+    {
+        public long[] HistogramX { get; private set; }
+        public long[] HistogramY { get; private set; }
+
+        public KeysGeneratedEventArgs(long[] histX, long[] histY)
+        {
+            HistogramX = histX;
+            HistogramY = histY;
         }
     }
 

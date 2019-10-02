@@ -210,6 +210,7 @@ namespace EQKDServer.ViewModels
             _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
             _EQKDServer.densMeas.BasisCompleted += BasisComplete;
             _EQKDServer.StateCorr.LossFunctionAquired += StateCorr_LossFunctionAquired;
+            _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
@@ -249,6 +250,15 @@ namespace EQKDServer.ViewModels
             {
                 MessageBox.Show(e.Exception.Message + "\nInner Exception: " + e.Exception.InnerException.Message, "Unhandled TaskScheduler exception", MessageBoxButton.OK, MessageBoxImage.Error);
             };
+        }
+
+        private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
+        {
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
+            CorrChartXMin = e.HistogramX[0] / 1000.0;
+            CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
         }
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)

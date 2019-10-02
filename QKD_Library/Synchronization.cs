@@ -45,7 +45,6 @@ namespace QKD_Library
         //Correlation Synchronization
 
         public ulong CorrTimeBin { get; set; } = 512;
-        public long CoarseFiberOffset { get; set; } = 0;
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
         /// </summary>
@@ -81,7 +80,7 @@ namespace QKD_Library
             //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
 
             //Funky generator
-            (0,7)
+            (1,5)
         };
         //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         //        {
@@ -248,7 +247,7 @@ namespace QKD_Library
 
                     Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)ClockTimeBin);
                     _clockKurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
-                    _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + CoarseFiberOffset);
+                    _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + FiberOffset);
                    
                     //----- Analyse peaks ----
                      

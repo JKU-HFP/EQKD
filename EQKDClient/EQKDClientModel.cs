@@ -20,6 +20,7 @@ namespace EQKDClient
 
         private bool _obscureBasis = false;
         private List<byte> _secureKeys = new List<byte>();
+        private List<byte> _bobKeys = new List<byte>();
 
         //Properties
         public SecQClient secQNetClient { get; private set; }

@@ -93,10 +93,10 @@ namespace QKD_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int PacketSize { get; set; } = 500000;
+        public int PacketSize { get; set; } = 1000000;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
-        public long OffsetChanB { get; set; } = 0;
+        public long OffsetChanB { get; set; } = 53080;
 
         /// <summary>
         /// Folder for logging Density matrix Correction data. No saving if string is empty
