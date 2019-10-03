@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ConsoleTestApp
@@ -11,9 +12,16 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
-            QuantumKey k = new QuantumKey(null);
-            //await k.TestEncryptionAsync();
-            k.CreateBMPs();
+            TestClass testclass = new TestClass();
+            testclass.StartAsync();
+
+            Thread.Sleep(3000);
+
+            testclass.Cancel();
+
+
+            while (true) ;
+
         }
 
     }

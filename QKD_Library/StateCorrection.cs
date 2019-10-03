@@ -199,14 +199,14 @@ namespace QKD_Library
                 var loss = GetLossFunction();
 
                 WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
-
+                
                 return loss.val;
             };
 
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
             Vector<double> init_guess = new DenseVector(MinPos);
             Vector<double> init_perturb = new DenseVector(new double[] {MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
-            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, 1000);
+            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, MaxIterations);
             MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess, init_perturb);
 
             stopwatch.Stop();
@@ -219,6 +219,9 @@ namespace QKD_Library
                     MinPos = solver_result.MinimizingPoint.ToArray();
 
                     WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
+
+                    //Write new initial perturbations
+                    MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy * 10;
 
                     //Move stages to optimum position
                     _rotationStages[0].Move_Absolute(MinPos[0]);
