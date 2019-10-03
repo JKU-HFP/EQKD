@@ -102,15 +102,20 @@
     <Compile Include="Models\ChannelDiagnosis.cs" />
     <Compile Include="Models\EQKDServerModel.cs" />
     <Compile Include="Models\Messages\EQKDServerCreatedMessage.cs" />
+    <Compile Include="Models\ServerSettings.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="Models\RelayCommand.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\NetworkControlViewModel.cs" />
+    <Compile Include="ViewModels\SettingControlViewModels\PolCorrectionControlViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\TaggerControlViewModel.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\TimeTaggerViewModels\ChannelViewModel.cs" />
     <Compile Include="ViewModels\TextBoxBehaviour.cs" />
     <Compile Include="Views\SettingControls\NetworkControl.xaml.cs">
       <DependentUpon>NetworkControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SettingControls\PolCorrectionControl.xaml.cs">
+      <DependentUpon>PolCorrectionControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SettingControls\TaggerControl.xaml.cs">
       <DependentUpon>TaggerControl.xaml</DependentUpon>
@@ -145,6 +150,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Views\SettingControls\NetworkControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\SettingControls\PolCorrectionControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -204,13 +213,13 @@
     <Resource Include="Views\Pics\Network_16x.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Entanglement_Library\Entanglement_Library.csproj">
-      <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
-      <Name>Entanglement_Library</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
       <Project>{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}</Project>
       <Name>Extensions_Library</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
+      <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
+      <Name>QKD_Library</Name>
     </ProjectReference>
     <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
       <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>

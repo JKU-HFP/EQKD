@@ -1,4 +1,4 @@
-﻿using Entanglement_Library;
+﻿using QKD_Library;
 using System;
 using System.Collections.Generic;
 using System.Linq;

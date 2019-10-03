@@ -50,9 +50,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Entanglement_Library\Entanglement_Library.csproj">
+    <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
       <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
-      <Name>Entanglement_Library</Name>
+      <Name>QKD_Library</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

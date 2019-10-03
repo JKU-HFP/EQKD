@@ -38,11 +38,9 @@
 
         <TextBlock Grid.Row="2" Grid.Column="1" Text="Port"/>
         <TextBox Grid.Row="2" Grid.Column="2" MinWidth="100" Text="{Binding Port}" />
+    
+        <Button Grid.Row="4" Grid.Column="1" Width="150" Content="Listen to Network" Command="{ Binding StartListeningToNetworkCommand}" />
 
-        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal">
-            <Button Width="150" Content="Listen to Network" Command="{ Binding StartListeningToNetworkCommand}" />
-            <Button Width="150"  Content="Synchronize" Command="{ Binding SynchronizeCommand}"/>
-        </StackPanel>
       
     </Grid>
 </UserControl>

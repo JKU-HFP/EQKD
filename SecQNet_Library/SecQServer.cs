@@ -24,6 +24,7 @@ namespace SecQNet
         private ConnectionStatus _connStatus = ConnectionStatus.NotConnected;
 
         //Properties
+        public bool IsConnected { get => connectionStatus == ConnectionStatus.ClientConnected; }
         public ConnectionStatus connectionStatus
         {
             get { return _connStatus; }
@@ -36,6 +37,23 @@ namespace SecQNet
         {
             get { return _port; }
         }
+
+        private bool _obscureClientTimeTags;
+
+        public bool ObscureClientTimeTags
+        {
+            get { return _obscureClientTimeTags; }
+            set
+            {
+                if (!(connectionStatus == ConnectionStatus.ClientConnected)) return;
+
+                if (value == false) SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ObscureBasisOFF));
+                else SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ObscureBasisON));
+
+                _obscureClientTimeTags = value;
+            }
+        }
+
 
 
         //Events
@@ -144,6 +162,25 @@ namespace SecQNet
             return false;
         }
 
+        public bool SendSiftedTimeTags(TimeTags tt)
+        {
+            try
+            {
+                //Request Timetags
+                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ReceiveSiftedTags));
+
+                SendTimeTags(tt);
+            }
+            //Read Timeout: IOException
+            catch (IOException ex)
+            {
+                Disconnect();
+                WriteLog("TCP Read error. Disconnecting from client.\n" + ex.Message);
+            }
+
+            return false;
+        }
+
         public bool RequestClearBuffer()
         {
             try
@@ -168,12 +205,12 @@ namespace SecQNet
             return true;
         }
 
-        public bool RequestStartTimeTagger(int packetsize)
+        public bool RequestStartTimeTagger(int packetsize, int syncrate=0)
         {
             try
             {
                 //Send request
-                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.StartCollecting) { val0 = packetsize });
+                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.StartCollecting) { val0 = packetsize, val1=syncrate });
 
                 //Wait for acknowledge
                 byte[] packet_buffer;

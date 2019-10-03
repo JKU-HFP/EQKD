@@ -12,7 +12,7 @@ using System.Diagnostics;
 using Extensions_Library;
 using System.IO;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     public class DensityMatrixMeasurement
     {
@@ -21,57 +21,67 @@ namespace Entanglement_Library
         //#################################################
 
         //Standard-Basis sequence 36 elements
+        public readonly List<string> Std36Basis_Names = new List<string>
+        {
+            "HH", "HV", "HD", "HA", "HR", "HL",
+            "VH", "VV", "VD", "VA", "VR", "VL",
+            "DH", "DV", "DD", "DA", "DR", "DL",
+            "AH", "AV", "AD", "AA", "AR", "AL",
+            "RH", "RV", "RD", "RA", "RR", "RL",
+            "LH", "LV", "LD", "LA", "LR", "LL",
+        };
+
         public readonly List<double[]> StdBasis36 = new List<double[]>
         {
             // HWP_A, QWP_A, HWP_B, QWP_B
 
             //Hx
-            new double[] {45,0, 45, 0}, //xH
-            new double[] {45,0,0,0}, //xV
-            new double[] {45,0,22.5,45}, //xD
-            new double[] {45,0,-22.5,0}, //xA
-            new double[] {45,0,22.5,0}, //xR
-            new double[] {45,0,22.5, 90}, //xL
+            new double[] {45,0, 45, 0}, //xH 1
+            new double[] {45,0,0,0}, //xV 2
+            new double[] {45,0,22.5,45}, //xD 3
+            new double[] {45,0,-22.5,0}, //xA 4
+            new double[] {45,0,22.5,0}, //xR 5
+            new double[] {45,0,22.5, 90}, //xL 6
 
             //Vx
-            new double[] {0,0, 45, 0}, //xH
-            new double[] {0,0,0,0}, //xV
-            new double[] {0,0,22.5,0}, //xD
-            new double[] {0,0,-22.5,45}, //xA
-            new double[] {0,0,22.5,0}, //xR
-            new double[] {0,0,22.5, 90}, //xL
+            new double[] {0,0, 45, 0}, //xH 7
+            new double[] {0,0,0,0}, //xV 8
+            new double[] {0,0,22.5,0}, //xD 9
+            new double[] {0,0,-22.5,45}, //xA 10
+            new double[] {0,0,22.5,0}, //xR 11
+            new double[] {0,0,22.5, 90}, //xL 12
 
             //Dx
-            new double[] {22.5,45, 45, 0}, //xH
-            new double[] {22.5,45,0,0}, //xV
-            new double[] {22.5,45,22.5,45}, //xD
-            new double[] {22.5,45,-22.5,45}, //xA
-            new double[] {22.5,45,22.5,0}, //xR
-            new double[] {22.5,45,22.5, 90}, //xL
+            new double[] {22.5,45, 45, 0}, //xH 13
+            new double[] {22.5,45,0,0}, //xV 14
+            new double[] {22.5,45,22.5,45}, //xD 15
+            new double[] {22.5,45,-22.5,45}, //xA 16
+            new double[] {22.5,45,22.5,0}, //xR 17
+            new double[] {22.5,45,22.5, 90}, //xL 18
 
             //Ax
-            new double[] {-22.5,45, 45, 0}, //xH
-            new double[] {-22.5,45,0,0}, //xV
-            new double[] {-22.5,45,22.5,45}, //xD
-            new double[] {-22.5,45,-22.5,45}, //xA
-            new double[] {-22.5,45,22.5,0}, //xR
-            new double[] {-22.5,45,22.5, 90}, //xL
+            new double[] {-22.5,45, 45, 0}, //xH 19
+            new double[] {-22.5,45,0,0}, //xV 20
+            new double[] {-22.5,45,22.5,45}, //xD 21
+            new double[] {-22.5,45,-22.5,45}, //xA 22
+            new double[] {-22.5,45,22.5,0}, //xR 23
+            new double[] {-22.5,45,22.5, 90}, //xL 24
 
             //Rx
-            new double[] {22.5,0, 45, 0}, //xH
-            new double[] {22.5,0,0,0}, //xV
-            new double[] {22.5, 0, 22.5,45}, //xD
-            new double[] {22.5, 0, -22.5,45}, //xA
-            new double[] {22.5, 0,22.5,0}, //xR
-            new double[] {22.5, 0, 22.5, 90}, //xL
+            new double[] {22.5,0, 45, 0}, //xH 25
+            new double[] {22.5,0,0,0}, //xV 26
+            new double[] {22.5, 0, 22.5,45}, //xD 27
+            new double[] {22.5, 0, -22.5,45}, //xA 28
+            new double[] {22.5, 0,22.5,0}, //xR 29
+            new double[] {22.5, 0, 22.5, 90}, //xL 30
 
             //Lx
-            new double[] { 22.5, 90 , 45, 0}, //xH
-            new double[] { 22.5, 90, 0,0}, //xV
-            new double[] { 22.5, 90, 22.5,45}, //xD
-            new double[] { 22.5, 90, -22.5,45}, //xA
-            new double[] { 22.5, 90, 22.5,0}, //xR
-            new double[] { 22.5, 90, 22.5, 90}, //xL
+            new double[] { 22.5, 90 , 45, 0}, //xH 31
+            new double[] { 22.5, 90, 0,0}, //xV 32
+            new double[] { 22.5, 90, 22.5,45}, //xD 33
+            new double[] { 22.5, 90, -22.5,45}, //xA 34
+            new double[] { 22.5, 90, 22.5,0}, //xR 35
+            new double[] { 22.5, 90, 22.5, 90}, //xL 36
         };
         
 
@@ -83,10 +93,10 @@ namespace Entanglement_Library
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 5;
+        public int PacketSize { get; set; } = 1000000;
         public uint ChannelA { get; set; } = 0;
         public uint ChannelB { get; set; } = 1;
-        public long OffsetChanB { get; set; } = 0;
+        public long OffsetChanB { get; set; } = 53080;
 
         /// <summary>
         /// Folder for logging Density matrix Correction data. No saving if string is empty
@@ -96,7 +106,7 @@ namespace Entanglement_Library
         //#################################################
         //##  P R I V A T E S 
         //#################################################
-        private ITimeTagger _tagger;
+        private Synchronization _sync;
         private IRotationStage _HWP_A;
         private IRotationStage _QWP_A;
         private IRotationStage _HWP_B;
@@ -129,9 +139,9 @@ namespace Entanglement_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public DensityMatrixMeasurement(ITimeTagger tagger, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
+        public DensityMatrixMeasurement(Synchronization sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
         {
-            _tagger = tagger;
+            _sync = sync;
 
             _HWP_A = HWP_A;
             _QWP_A = QWP_A;
@@ -145,10 +155,10 @@ namespace Entanglement_Library
         //#################################################
         //##  M E T H O D S
         //#################################################
-        public async Task MeasurePeakAreasAsync(List<double[]> basisConfigsIn = null)
+        public async Task MeasurePeakAreasAsync()
         {
             //Use standard basis if no other given
-            List<double[]> basisConfigs = basisConfigsIn ?? StdBasis36;
+            List<double[]> basisConfigs = StdBasis36;
             
             if(!basisConfigs.TrueForAll(p => p.Count() == 4))
             {
@@ -198,9 +208,6 @@ namespace Entanglement_Library
 
         private bool DoMeasureHistograms(CancellationToken ct)
         {
-            //Initialize photon buffer
-            _tagger.ClearTimeTagBuffer();
-
             Stopwatch stopwatch = new Stopwatch();
             int index = 1;
 
@@ -209,7 +216,7 @@ namespace Entanglement_Library
             {
                 if (ct.IsCancellationRequested) return false;
 
-                WriteLog("Collecting coincidences in configuration Nr." + index + ": " + basis.BasisConfig[0] + "," + basis.BasisConfig[1] + "," + basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
+                WriteLog("Collecting coincidences in configuration Nr." + index + $"({Std36Basis_Names[index-1]})" + ": " + basis.BasisConfig[0] + "," + basis.BasisConfig[1] + "," + basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
                 stopwatch.Restart();
 
                 //Asynchronously Rotate stages to position
@@ -231,22 +238,11 @@ namespace Entanglement_Library
 
                 //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
-              
-                //Start collecting timetags
-                _tagger.StartCollectingTimeTagsAsync();
 
-                //Wait integration time
-                for(int i=0; i<IntegrationTime; i++)
-                {
-                    if (ct.IsCancellationRequested) return false;
-                    Thread.Sleep(1000);
-                }
-
-                //Stop collecting timetags
-                _tagger.StopCollectingTimeTags();
+                //Get TimeTags
+                TimeTags tt = _sync.GetSingleTimeTags(0,PacketSize);                
 
                 //Create Histogram
-                List<TimeTags> tt = _tagger.GetAllTimeTags();
                 basis.CreateHistogram(tt,OffsetChanB);
 
                 basis.RelPeakArea = basis.CrossCorrHistogram.GetRelativeMiddlePeakArea();

@@ -46,6 +46,7 @@ namespace EQKDServer.Models
             _countRateLineSeries = new LineSeries()
             {
                 Title = "Countrate",
+                PointGeometrySize = 0.0,
                 Values = _countRateChartValues,
             };
             CountRateSeriesCollection.Add(_countRateLineSeries);

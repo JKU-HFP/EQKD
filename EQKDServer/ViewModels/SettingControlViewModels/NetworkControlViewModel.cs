@@ -44,7 +44,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         //Commands
         public RelayCommand<object> StartListeningToNetworkCommand { get; private set; }
-        public RelayCommand<object> SynchronizeCommand { get; private set; }
 
         //Contructor
         public NetworkControlViewModel()
@@ -56,31 +55,17 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             //Route Commands
             StartListeningToNetworkCommand = new RelayCommand<object>(StartListeningToNetwork);
-            SynchronizeCommand = new RelayCommand<object>(Synchronize,CanSynchrononize);
 
             Port = 4242;
         }      
 
         private void StartListeningToNetwork(object o)
         {
-            _EQKDServer.secQNetServer.ConnectAsync(SecQNetServer.GetIP4Address(), Port);
-            ServerIPAddress = _EQKDServer.secQNetServer.ServerIP.ToString();
-        }
-              
-        private void Synchronize(object o)
-        {
-            _EQKDServer.StartSynchronizeAsync();
-        }
+            //_EQKDServer.densMeas.MeasurePeakAreasAsync();
 
-        private bool CanSynchrononize(object o)
-        {
-            if (_EQKDServer == null) return false;
-            else return ((_EQKDServer.SynchronizationStatus == EQKDServerModel.SyncStatus.Sync_Required ||
-                         _EQKDServer.SynchronizationStatus == EQKDServerModel.SyncStatus.Sync_Finished) &&
-                          _EQKDServer.ServerTimeTagger != null &&
-                         _EQKDServer.secQNetServer.connectionStatus == SecQNetServer.ConnectionStatus.ClientConnected);
-
+            _EQKDServer.SecQNetServer.ConnectAsync(SecQNetServer.GetIP4Address(), Port);
+            ServerIPAddress = _EQKDServer.SecQNetServer.ServerIP.ToString();
         }
-
+             
     }
 }

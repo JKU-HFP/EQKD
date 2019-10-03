@@ -108,31 +108,34 @@
             <lvc:CartesianChart Grid.Row="0"                     
                         Zoom="None"
                         Series="{Binding Path=CorrelationCollection}"
-                        AnimationsSpeed="00:00:00.1"
-                        VisualElements="{Binding CorrelationVisualElementsCollection}"
-                        DataClickCommand="{Binding CorrelationDataClickCommand}">
+                        DisableAnimations="True"
+                        VisualElements="{Binding CorrelationVisualElementsCollection}">
                 <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
                     <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
                 <lvc:CartesianChart.AxisX>
-                    <lvc:Axis Title="Delay [ps]" Sections="{Binding CorrelationSectionsCollection}"></lvc:Axis>
+                    <lvc:AxesCollection>
+                    <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}"
+                              MinValue="{Binding CorrChartXMin}" MaxValue="{Binding CorrChartXMax}"></lvc:Axis>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
 
-            <!-- Network performance-->
+            <!-- Linear Drift Compensation -->
             <lvc:CartesianChart Grid.Row="1"
                         Zoom="None"
-                        Series="{Binding ClientTagsReceiveRateCollection}"
-                        AnimationsSpeed="00:00:00.01">
+                        Series="{Binding LinearDriftCompCollection}"
+                        DisableAnimations="True"  >
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis LabelFormatter="{Binding RateFormatter}" />
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Linear Drift Coeff."/>
+                    </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
+
         </Grid>
 
-        <StackPanel Grid.Row="5" Grid.Column="3" Orientation="Horizontal">
-            <TextBlock Text="Average:" />
-            <TextBlock Text="{Binding MeanClientTagsReceiveRate}" />
-        </StackPanel>
     </Grid>
 </UserControl>

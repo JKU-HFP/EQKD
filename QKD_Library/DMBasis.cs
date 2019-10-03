@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     internal class DMBasis
     {
@@ -28,9 +28,9 @@ namespace Entanglement_Library
             _correlator = new Kurolator(new List<CorrelationGroup> { CrossCorrHistogram }, timewindow);
         }
 
-        public void CreateHistogram(List<TimeTags> tt, long offsetB)
+        public void CreateHistogram(TimeTags tt, long offsetB)
         {
-            tt.ForEach(tags => _correlator.AddCorrelations(tags, tags, offsetB));
+            _correlator.AddCorrelations(tt, tt, offsetB);
 
             Peaks = CrossCorrHistogram.GetPeaks(6250, 0.1, true, TimeBin);
         }

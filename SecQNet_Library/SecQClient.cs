@@ -103,11 +103,33 @@ namespace SecQNet
       
             return comm;
         }
-
-        public void SendTimeTags(TimeTags tt, ITimeTagger tagger, bool compress)
+        
+        public TimeTags ReceiveSiftedTimeTags()
         {
-            SendPacket(new TimeTagPacket(tt, tagger.BufferFillStatus, tagger.BufferSize)
-            { flags = compress ? SecQNetPacket.FLAG_COMPRESS : (byte)0 });
+            TimeTagPacket tt_packet = null;
+            TimeTags siftedTags = null;
+            
+            try
+            {
+                //Wait for timetags
+                byte[] packet_buffer;
+                byte flags;
+                SecQNetPacket.PacketSpecifier packet_spec = ReceivePacket(out flags, out packet_buffer, _receive_timeout);
+
+                if (packet_spec == SecQNetPacket.PacketSpecifier.TimeTags)
+                {
+                    tt_packet = new TimeTagPacket(flags, packet_buffer);
+                    siftedTags = tt_packet.timetags;                    
+                }
+            }
+            //Read Timeout: IOException
+            catch (IOException ex)
+            {
+                Disconnect();
+                WriteLog("TCP Read error. Disconnecting from client.\n" + ex.Message);
+            }
+
+            return siftedTags;
         }
 
         public void SendAcknowledge()

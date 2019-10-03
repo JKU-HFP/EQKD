@@ -13,7 +13,9 @@ namespace SecQNet.SecQNetPackets
     [Serializable]
     public class TimeTagPacket : SecQNetPacket
     {
-        
+        public static byte RectBasisCodedChan = 10;
+        public static byte DiagbasisCodedChan = 11;
+
         public override PacketSpecifier packetSpecifier
         { get { return PacketSpecifier.TimeTags; } }
 

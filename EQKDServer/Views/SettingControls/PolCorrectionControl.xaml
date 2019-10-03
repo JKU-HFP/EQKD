@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="EQKDServer.Views.SettingControls.PolCorrectionControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:scvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels"
+             xmlns:local="clr-namespace:EQKDServer.Views.SettingControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <scvm:PolCorrectionControlViewModel x:Key="PolCorrectionControlViewModel"/>
+        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource PropertyTextBlockStyle}"/>
+        <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource PropertyTextBoxStyle}" />
+    </UserControl.Resources>
+
+    <Grid DataContext="{StaticResource PolCorrectionControlViewModel}" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="10" />
+            <RowDefinition Height="30" />
+            <RowDefinition Height="20" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+        
+    </Grid>
+</UserControl>

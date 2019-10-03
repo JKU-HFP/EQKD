@@ -12,8 +12,11 @@ using Stage_Library;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
+using MathNet.Numerics.Optimization;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
-namespace Entanglement_Library
+namespace QKD_Library
 {
     /// <summary>
     /// Entangled state correction with three rotation Plates and one Timetagger
@@ -25,27 +28,37 @@ namespace Entanglement_Library
         //#################################################
 
         /// <summary>
+        /// Number of tagger involved
+        /// 0.. only ServerTagger
+        /// 1.. only ClientTagger
+        /// 2.. both tagger synchronized
+        /// </summary>
+        public int NumTagger { get; set; } = 1;
+
+        /// <summary>
+        /// Maximum iteration for nonlinear Solver
+        /// </summary>
+        public int MaxIterations { get; set; } = 5000;
+        
+        /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.4;
-        public double[] MinPos { get; private set; }
+        public double Accurracy { get; set; } = 0.2;
+        public double[] MinPos { get;  set; } = new double[] { 72, 52, -20 };
+        public double[] MinPosAcc { get; set; } = new double[] { 20, 20, 20 };
 
-        public int InitNumPoints { get; set; } = 3;
-        public double InitRange { get; set; } = 2;
-        public double[] InitPos { get; set; } = new double[] { 23.2,-125.86,-37.97 };
+        /// <summary>
+        /// Perform initial "brute force" optimization
+        /// </summary>
+        public bool DoInitOptimization { get; set; } = false;
+        public int InitNumPoints { get; set; } = 6;
+        public double InitRange { get; set; } = 180;
         
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int IntegrationTime { get; set; } = 15;
+        public int PacketSize { get; set; } = 2000000;
 
-        /// <summary>
-        /// Correlation configuration, corresponding to  HV, DA
-        /// </summary>
-        private List<(byte cA, byte cB)> CorrConfig = new List<(byte cA, byte cB)>
-        {
-            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad
-        };
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -71,22 +84,19 @@ namespace Entanglement_Library
         /// n... Number of points per iteration
         /// t... Time for one integration (+movement)
         /// </summary>
-        public double TotalTime
-        {
-            get => Math.Log(InitRange / Accurracy) / Math.Log(2) * Math.Pow(1+IntegrationTime * 2, 3); //1 + Time for axis movement
-        }
+
         public object StopWatch { get; private set; }
 
         //#################################################
         //##  P R I V A T E S
         //#################################################
 
+        Synchronization _taggerSync;
         //Waveplates in order
         //0... QWP
         //1... HWP
         //2... QWP
         List<IRotationStage> _rotationStages;
-        ITimeTagger _tagger;
         private Action<string> _loggerCallback;
         private CancellationTokenSource _cts;
 
@@ -94,15 +104,26 @@ namespace Entanglement_Library
         private string _currLogfile = "";
         private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
 
-               
+
+        private List<(byte cA, byte cB)> _corrConfig2Tagger = new List<(byte cA, byte cB)>
+        {
+            (0,6),(1,5),(2,8),(3,7) //hv, vh, da, ad
+        };
+
+        private List<(byte cA, byte cB)> _corrConfig1Tagger = new List<(byte cA, byte cB)>
+        {
+            (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad 
+        };
+
+
         //#################################################
         //##  E V E N T
         //#################################################
 
-        public event EventHandler<CostFunctionAquiredEventArgs> CostFunctionAquired;
-        private void OnCostFunctionAquired(CostFunctionAquiredEventArgs e)
+        public event EventHandler<LossFunctionAquiredEventArgs> LossFunctionAquired;
+        private void OnLossFunctionAquired(LossFunctionAquiredEventArgs e)
         {
-            CostFunctionAquired?.Raise(this, e);  
+            LossFunctionAquired?.Raise(this, e);  
         }
 
         public event EventHandler<OptimizationCompleteEventArgs> OptimizationComplete;
@@ -114,9 +135,9 @@ namespace Entanglement_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public StateCorrection(ITimeTagger tagger, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
+        public StateCorrection(Synchronization taggerSync, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
         {
-            _tagger = tagger;
+            _taggerSync = taggerSync;
             _rotationStages = rotationStages;
             _loggerCallback = loggerCallback;
         }
@@ -130,65 +151,89 @@ namespace Entanglement_Library
                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
                  
-            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, {IntegrationTime}s integration time");
+            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, Packetsize {PacketSize}");
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            bool result = await Task.Run(() => DoOptimize(_cts.Token));
+            await Task.Run(() => DoOptimize(_cts.Token));
 
             WriteLog($"State correction complete in {stopwatch.Elapsed}");
         }
 
-        private bool DoOptimize(CancellationToken ct)
+        private void DoOptimize(CancellationToken ct)
         {
-
+ 
+            //Initial Optimization for initial guess;
+                       
             Stopwatch stopwatch = new Stopwatch();
 
             WriteLog("-------------------------------------");
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
-            WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}",true);
 
+
+            if (DoInitOptimization)
+            {
+                WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}", true);
+                stopwatch.Restart();
+
+                MinPos = GetOptimumPositions(MinPos, InitNumPoints, InitRange, ct);
+                stopwatch.Stop();
+                WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
+            }
+            //Nelder Mead Sigleton Minimization
+
+            _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
             stopwatch.Restart();
 
-            MinPos = GetOptimumPositions(InitPos, InitNumPoints, InitRange, ct);
+            WriteLog($"Starting Nelder Mead Singleton Minimization with MaxIterations = {MaxIterations}, Convergence Criterium = {Accurracy}", true);
+
+            Func<Vector<double>,double> loss_func = (Vector<double> p) =>
+            {
+                Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
+                Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
+                Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[2]));
+
+                Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
+
+                var loss = GetLossFunction();
+
+                WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
+
+                return loss.val;
+            };
+
+            IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
+            Vector<double> init_guess = new DenseVector(MinPos);
+            Vector<double> init_perturb = new DenseVector(new double[] {MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
+            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, 1000);
+            MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess, init_perturb);
 
             stopwatch.Stop();
 
-            WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
-
-            //Bisect until Accuracy is reached
-            double Range = InitRange / (InitNumPoints - 1);
-
-            int iteration = 1;
-              
-            while(Range>=Accurracy)
+            switch(solver_result.ReasonForExit)
             {
-                int n = 3;
+                case ExitCondition.Converged:
+                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed}",true);
 
-                WriteLog("-------------------------------------");
-                _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration:D3}.txt");
-                WriteLog($"Iteration {iteration} | n={n} | range={Range}",true);
-                                             
-                stopwatch.Restart();
+                    MinPos = solver_result.MinimizingPoint.ToArray();
 
-                MinPos = GetOptimumPositions(MinPos, n, Range, ct);
-                if (ct.IsCancellationRequested) return false;
-                Range = Range / 2;
+                    WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
 
-                stopwatch.Stop();
+                    //Move stages to optimum position
+                    _rotationStages[0].Move_Absolute(MinPos[0]);
+                    _rotationStages[1].Move_Absolute(MinPos[1]);
+                    _rotationStages[2].Move_Absolute(MinPos[2]);
+                    break;
 
-                WriteLog($"Iteration {iteration} done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})",true);
+                case ExitCondition.ExceedIterations:
+                    WriteLog($"Maximum iterations ({MaxIterations}) exeeded.");
+                    break;
 
-                iteration++;
-            }
-
-            //Move stages to optimum position
-            _rotationStages[0].Move_Absolute(MinPos[0]);
-            _rotationStages[1].Move_Absolute(MinPos[1]);
-            _rotationStages[2].Move_Absolute(MinPos[2]);
-
-            return true;
+                default:
+                    WriteLog($"Other exit reason: {Enum.GetName(typeof(ExitCondition),solver_result.ReasonForExit)}", true);
+                    break;
+            }        
         }
 
         public void StopSynchronization()
@@ -241,10 +286,9 @@ namespace Entanglement_Library
 
                         Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
 
-                        //Register costfunction value
-                        cost = GetCostFunction(ct);
+                        //Get loss function value
+                        cost = GetLossFunction();
 
-                        //MAKE MORE ACCURATE BY ERROR
                         if (cost.val+(cost.err/4) < cost_min.val-(cost_min.err/4))
                         {
                             min_indices = (i0, i1, i2);
@@ -269,34 +313,37 @@ namespace Entanglement_Library
         /// Returns relative middle peak area of combined histogram
         /// </summary>
         /// <returns></returns>
-        private (double val, double err) GetCostFunction(CancellationToken ct)
+        private (double val, double err) GetLossFunction()
         {
             ulong timewindow = 100000;
-            Histogram hist = new Histogram(CorrConfig, timewindow);
+            Histogram hist = new Histogram(NumTagger == 2 ? _corrConfig2Tagger : _corrConfig1Tagger, timewindow, hist_resolution:256);
             Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
 
             //Collect timetags
-            _tagger.ClearTimeTagBuffer();        
-            _tagger.StartCollectingTimeTagsAsync();
-          
-            for(int i=0; i<IntegrationTime; i++)
+            TimeTags tt1, tt2;
+
+            if(NumTagger==2)
             {
-                if (ct.IsCancellationRequested) return (1.0,0);
-                Thread.Sleep(1000);
+                SyncClockResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
+
+                if (!syncRes.IsClocksSync) return (-1, 0);
+
+                tt1 = syncRes.TimeTags_Alice;
+                tt2 = syncRes.CompTimeTags_Bob;
             }
-
-            _tagger.StopCollectingTimeTags();       
-
-            List<TimeTags> tts = _tagger.GetAllTimeTags();
-          
-            foreach(TimeTags tt in tts ) corr.AddCorrelations(tt,tt, TaggerOffset);
+            else
+            {
+                tt1 = tt2 =_taggerSync.GetSingleTimeTags(NumTagger, packetSize: PacketSize);
+            }
+     
+            corr.AddCorrelations(tt1,tt2,0);
 
             hist.GetPeaks(6250, 0.1, true, TimeBin);
-            var cost = hist.GetRelativeMiddlePeakArea();
+            var loss = hist.GetRelativeMiddlePeakArea();
 
-            OnCostFunctionAquired(new CostFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,cost));
+            OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss));
 
-            return cost;
+            return loss;
         }
 
         private void WriteLog(string msg, bool doLog=false)
@@ -307,17 +354,17 @@ namespace Entanglement_Library
 
     }
 
-    public class CostFunctionAquiredEventArgs : EventArgs
+    public class LossFunctionAquiredEventArgs : EventArgs
     {
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
-        public (double val,double err) Cost { get; private set; }
+        public (double val,double err) Loss { get; private set; }
 
-        public CostFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) cost)
+        public LossFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) loss)
         {
             HistogramX = histX;
             HistogramY = histY;
-            Cost = cost;
+            Loss = loss;
         }
     }
     

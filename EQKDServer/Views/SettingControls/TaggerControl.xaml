@@ -35,7 +35,6 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical">
-            <CheckBox Content="Overwrite" IsChecked="{Binding OverwriteChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Timewindow"/>
                 <TextBox Width="100" Text="{Binding TimeWindow}"/>
@@ -45,34 +44,53 @@
                 <TextBox Width="100" Text="{Binding Resolution}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Shot Time"/>
-                <TextBox Width="100" Text="{Binding ShotTime}"/>
+                <TextBlock Text="Packet Size"/>
+                <TextBox Width="100" Text="{Binding PacketSize}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Linear Drift Coeff."/>
                 <TextBox Width="100" Text="{Binding LinearDriftCoefficient}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Controller PVal"/>
-                <TextBox Width="100" Text="{Binding PVal}"/>
+                <TextBlock Text="Drift Coeff. Var."/>
+                <TextBox Width="100" Text="{Binding LinDriftCoeff_Variation}"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Drift Coeff. Num Var."/>
+                <TextBox Width="100" Text="{Binding LinDriftCoeffNumVar}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Vertical">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Fiber Offset"/>
+                <TextBox Width="100" Text="{Binding FiberOffset}"/>
             </StackPanel>
         </StackPanel>
 
 
-        <lvc:CartesianChart Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3"
+        <lvc:CartesianChart Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2"
                             DisableAnimations="True"
-                            Series="{Binding CorrelationCollection}">
+                            Series="{Binding CorrelationCollection}"
+                            VisualElements="{Binding CorrelationVisualElementsCollection}">
+            
             <lvc:CartesianChart.AxisY>
-                <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                </lvc:AxesCollection>
             </lvc:CartesianChart.AxisY>
+      
             <lvc:CartesianChart.AxisX>
-                <lvc:Axis Title="Delay [ms]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
+                </lvc:AxesCollection>
             </lvc:CartesianChart.AxisX>
+
         </lvc:CartesianChart>
 
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Stokes" Command="{Binding StartCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Start Sync" Command="{Binding StopCollectingCommand}" />
-        <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+     
+        <Button Grid.Row="3" Grid.Column="1" Content="Start Sync" Command="{Binding StartSyncCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
 
 
     </Grid>

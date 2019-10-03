@@ -17,7 +17,7 @@ using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
-using Entanglement_Library;
+using QKD_Library;
 using System.IO;
 using System.Windows.Media;
 
@@ -25,18 +25,18 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 {
     public class TaggerControlViewModel : ViewModelBase
     {
-        //Private fields
+        //###########################
+        // P R I V A T E 
+        //###########################
         private EQKDServerModel _EQKDServer;
 
         ChartValues<ObservablePoint> _correlationChartValues;
         private LineSeries _correlationLineSeries;
         private Kurolator _correlator;
 
-        //TimeTaggerChannelView _serverChannelView;
-        //TimeTaggerChannelView _clientChannelView;
-        //ChannelViewModel _serverChannelViewModel;
-        //ChannelViewModel _clientChannelViewModel;
+        private bool _isUpdating;
 
+        #region Properties
         //#############################
         //### P R O P E R T I E S   ###
         //#############################
@@ -85,19 +85,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private ulong _shotTime = 100000000000;
-
-        public ulong ShotTime
-        {
-            get { return _shotTime; }
-            set
-            {
-                _shotTime = value;
-                OnPropertyChanged("ShotTime");
-
-            }
-        }
-
         private double _linearDriftCoefficient;
 
         public double LinearDriftCoefficient
@@ -110,63 +97,79 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private double _pVal;
+        private double _linDriftCoeff_Variation = 0.001E-5;
 
-        public double PVal
+        public double LinDriftCoeff_Variation
         {
-            get { return _pVal; }
+            get { return _linDriftCoeff_Variation; }
             set
             {
-                _pVal = value;
-                OnPropertyChanged("PVal");
+                _linDriftCoeff_Variation = value;
+                OnPropertyChanged("LinDriftCoeff_Variation");
+            }
+        }
+
+        private int _linDriftCoeff_NumVar = 10;
+
+        public int LinDriftCoeffNumVar
+        {
+            get { return _linDriftCoeff_NumVar; }
+            set
+            {
+                _linDriftCoeff_NumVar = value;
+                OnPropertyChanged("LinDriftCoeffNumVar");
+            }
+        }
+
+        private long _fiberOffset;
+
+        public long FiberOffset
+        {
+            get { return _fiberOffset; }
+            set
+            {
+                _fiberOffset = value;
+                OnPropertyChanged("FiberOffset");
+
             }
         }
 
 
-
+        #endregion
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
+        public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
 
         //Commands
-        public RelayCommand<object> StartCollectingCommand { get; private set; }
-        public RelayCommand<object> StopCollectingCommand { get; private set; }
+        public RelayCommand<object> StartSyncCommand { get; private set; }
         public RelayCommand<object> CancelCommand { get; private set; }
 
-        //Contructor
+        //###########################
+        // C O N S T R U C T O R
+        //###########################
         public TaggerControlViewModel()
         {
             //Map RelayCommmands
-            StartCollectingCommand = new RelayCommand<object>( (o) =>
-            {
-                //_EQKDServer.ServerTimeTagger.StartCollectingTimeTagsAsync();
-                _EQKDServer.MeasureDensityMatrix();
-            });
-            StopCollectingCommand = new RelayCommand<object>((o) =>
-            {
-                _EQKDServer.sync.TimeWindow = TimeWindow;
-                _EQKDServer.sync.Bin = Resolution;          
-                _EQKDServer.sync.ShotTime = ShotTime;
-                _EQKDServer.sync.LinearDriftCoefficient = LinearDriftCoefficient;
-                _EQKDServer.sync.PVal = PVal;
-                _EQKDServer.sync.MeasureCorrelationAsync();
-            });
+            StartSyncCommand = new RelayCommand<object>(Synchronize, CanSynchrononize);
+
             CancelCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.sync.Cancel();
+                _EQKDServer.StopSynchronize();  
             });
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
             {
                 _EQKDServer= servermsg.EQKDServer;
-                _EQKDServer.DensMeas.BasisCompleted += BasisComplete;
+                //_EQKDServer.DensMeas.BasisCompleted += BasisComplete;
 
-                _EQKDServer.StateCorr.CostFunctionAquired += CostFunctionAquired;
-
-                _EQKDServer.sync.SyncComplete += SyncComplete;
-                //_EQKDServer.secQNetServer.TimeTagsReceived += TimeTagsReceived;
+                //Register Events
+                _EQKDServer.StateCorr.LossFunctionAquired += CostFunctionAquired;
+                _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
+                _EQKDServer.TaggerSynchronization.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
+                _EQKDServer.TaggerSynchronization.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
             });
 
            
@@ -180,45 +183,70 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 Title = "Sync correlations",
                 Values = _correlationChartValues,
-                PointGeometrySize = 0.0
+                PointGeometrySize = 0.0,
+                LineSmoothness = 0.0
             };
             CorrelationCollection.Add(_correlationLineSeries);
 
-
-            TimeWindow = 100000;
-            Resolution = 100;
-            ShotTime = 5000000000000;
-            LinearDriftCoefficient = 5.52E-5;
-            PVal = -8;
-
-            //_serverChannelView = new TimeTaggerChannelView();
-            //_serverChannelViewModel = new ChannelViewModel();
-            //_serverChannelView.DataContext = _serverChannelViewModel;
-            //_serverChannelView.Title = "Server TimeTagger Stats";
-            //_serverChannelView.Show();
-
-            //_clientChannelView = new TimeTaggerChannelView();
-            //_clientChannelViewModel = new ChannelViewModel();
-            //_clientChannelView.DataContext = _clientChannelViewModel;
-            //_clientChannelView.Title = "Client TimeTagger Stats";
-            //_clientChannelView.Show();
         }
 
-        private void SyncComplete(object sender, SyncCompleteEventArgs e)
+        private void TaggerSynchronization_SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+            if (_isUpdating) return;
+
+            _isUpdating = true;
 
             CorrelationSectionsCollection.Clear();
 
-            LinearDriftCoefficient = e.CurrentLinearDriftCoeff;
+            _correlationChartValues.Clear();
+            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            Directory.CreateDirectory("Sync");
-            File.WriteAllLines($"Sync//Sync_{DateTime.Now:yy_MM_dd_HH_mm_ss}.txt", e.HistogramX.Zip(e.HistogramY, (x, y) => x.ToString() + "\t" + y.ToString()));
-            File.AppendAllLines("Sync//Sync.txt", new string[] { $"{DateTime.Now:yy_MM_dd_HH_mm_ss},{e.CurrentLinearDriftCoeff},{e.FWHM},{e.MeanTime}" });            
+            if (e.SyncRes.Peaks != null)
+            {
+                foreach (Peak p in e.SyncRes.Peaks)
+                {
+                    var axisSection = new AxisSection
+                    {
+                        Value = p.MeanTime / 1000.0,
+                        SectionWidth = 0.1,
+                        Stroke = p.MeanTime==e.SyncRes.CorrPeakPos ? Brushes.Red : Brushes.Blue,
+                        StrokeThickness = 1,
+                        StrokeDashArray = new DoubleCollection(new[] { 4d })
+                    };
+                    CorrelationSectionsCollection.Add(axisSection);
+                }
+            }
+
+            //Write new FiberOffset
+            FiberOffset = e.SyncRes.NewFiberOffset;
+            
+
+            _isUpdating = false;
         }
 
-        private void CostFunctionAquired(object sender, CostFunctionAquiredEventArgs e)
+        private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
+        {
+            LinearDriftCoefficient = e.SyncRes.NewLinearDriftCoeff;
+        }
+
+        //##########################
+        // E V E N T   H A N D L E R
+        //##########################
+
+        private void _EQKDServer_ServerConfigRead(object sender, ServerConfigReadEventArgs e)
+        {
+            LinearDriftCoefficient = e.StartConfig.LinearDriftCoefficient;
+            LinDriftCoeffNumVar = e.StartConfig.LinearDriftCoeff_NumVar;
+            LinDriftCoeff_Variation = e.StartConfig.LinearDriftCoeff_Var;
+            TimeWindow = e.StartConfig.TimeWindow;
+            Resolution = e.StartConfig.TimeBin;
+            PacketSize = e.StartConfig.PacketSize;
+
+            FiberOffset = e.StartConfig.FiberOffset;
+
+        }
+
+        private void CostFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
             _correlationChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
@@ -227,59 +255,28 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         }
 
         //Event Handler
-        private void BasisComplete(object sender, BasisCompletedEventArgs e )
+       
+
+        private void Synchronize(object o)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
+            _EQKDServer.PacketSize = PacketSize;
 
-            CorrelationSectionsCollection.Clear();
+            _EQKDServer.TaggerSynchronization.ClockTimeBin = Resolution;
+            _EQKDServer.TaggerSynchronization.ClockSyncTimeWindow = TimeWindow;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoefficient = LinearDriftCoefficient;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
+            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
 
-            //Check Dispatcher Target
+            _EQKDServer.TaggerSynchronization.FiberOffset = FiberOffset;
 
-            //foreach (Peak peak in e.Peaks)
-            //{
-            //    var axisSection = new AxisSection
-            //    {
-            //        Value = peak.MeanTime,
-            //        SectionWidth = 1,
-            //        Stroke = Brushes.Blue,
-            //        StrokeThickness = 1,
-            //        StrokeDashArray = new DoubleCollection(new[] { 4d })
-            //    };
-            //    CorrelationSectionsCollection.Add(axisSection);
-            //}
-        }
-        
-        private void TimeTagsCollected(object sender, TimeTagsCollectedEventArgs e)
-        {
-            if(OverwriteChecked || _correlator==null)
-            {
-                //Configure Correlation Channels
-                List<CorrelationGroup> corrconfig = new List<CorrelationGroup>
-                {
-                    new Histogram(new List<(byte cA, byte cB)>{ (102, 0) }, TimeWindow * 1000000000, (long)Resolution * 1000000)
-                };
-
-                _correlator = new Kurolator(corrconfig, TimeWindow * 1000000000);
-            }
-
-            TimeTags tt;
-            if (!_EQKDServer.ServerTimeTagger.GetNextTimeTags(out tt)) return;
-
-            _correlator.AddCorrelations(tt, tt, 0);
-            
-
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(_correlator[0].Histogram_X.Zip(_correlator[0].Histogram_Y, (X,Y) => new ObservablePoint(X/1000000000.0,Y))));
-
+            _EQKDServer.StartSynchronizeAsync();
         }
 
-        private void TimeTagsReceived(object sender, TimeTagsReceivedEventArgs e)
+        private bool CanSynchrononize(object o)
         {
-            //for (int i = 0; i < _clientChannelViewModel.ChanDiag.Count; i++)
-            //{
-            //    _clientChannelViewModel.ChanDiag[i].CountRate = e.Countrate[i];
-            //}
+            return (_EQKDServer != null &&
+                     _EQKDServer.ServerTimeTagger.CanCollect &&
+                     _EQKDServer.ClientTimeTagger.CanCollect);
         }
                
     }
