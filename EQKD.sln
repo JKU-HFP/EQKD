@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecQNet_Library", "SecQNet_
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EQKDServer", "EQKDServer\EQKDServer.csproj", "{F43D8793-B0C3-48B9-9C8F-17BEF6413AC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions_Library", "Extensions_Library\Extensions_Library.csproj", "{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}"
-EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Stage_Library", "..\ProjectLibrary\Stage_Library\Stage_Library.shproj", "{105B3F84-F045-4EC7-B75C-DE9A85F2D3E9}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "TimeTagger_Library", "..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.shproj", "{721AF447-1302-4AF1-BC15-B3D878AFBBF8}"
@@ -22,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stage_Library_x64", "..\ProjectLibrary\Stage_Library_x64\Stage_Library_x64.csproj", "{B61F6AE3-55A5-4E34-9C97-06710B0F1D3D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeTagger_Library_x64", "..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj", "{C11C1B88-8C40-4026-8F66-41603917AF87}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions_Library", "..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj", "{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -61,14 +61,6 @@ Global
 		{F43D8793-B0C3-48B9-9C8F-17BEF6413AC7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F43D8793-B0C3-48B9-9C8F-17BEF6413AC7}.Release|x64.ActiveCfg = Release|Any CPU
 		{F43D8793-B0C3-48B9-9C8F-17BEF6413AC7}.Release|x64.Build.0 = Release|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|x64.ActiveCfg = Debug|x64
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|x64.Build.0 = Debug|x64
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|x64.ActiveCfg = Release|Any CPU
-		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|x64.Build.0 = Release|Any CPU
 		{62168CA7-D0B0-4FDD-8A39-21B8700E34CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{62168CA7-D0B0-4FDD-8A39-21B8700E34CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62168CA7-D0B0-4FDD-8A39-21B8700E34CD}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -101,6 +93,14 @@ Global
 		{C11C1B88-8C40-4026-8F66-41603917AF87}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C11C1B88-8C40-4026-8F66-41603917AF87}.Release|x64.ActiveCfg = Release|Any CPU
 		{C11C1B88-8C40-4026-8F66-41603917AF87}.Release|x64.Build.0 = Release|Any CPU
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|x64.ActiveCfg = Debug|x64
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Debug|x64.Build.0 = Debug|x64
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|x64.ActiveCfg = Release|x64
+		{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
