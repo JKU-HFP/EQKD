@@ -134,9 +134,6 @@
     <Compile Include="Views\StatusWindow.xaml.cs">
       <DependentUpon>StatusWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\TimeTaggerModifyView.xaml.cs">
-      <DependentUpon>TimeTaggerModifyView.xaml</DependentUpon>
-    </Compile>
     <Page Include="Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -166,10 +163,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\StatusWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\TimeTaggerModifyView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -230,6 +223,5 @@
     <Resource Include="Views\Pics\ConnectPlugged_16x.png" />
     <Resource Include="Views\Pics\ConnectUnplugged_16x.png" />
   </ItemGroup>
-  <Import Project="..\..\ProjectLibrary\TimeTaggerWPF_Library\TimeTaggerWPF_Library.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

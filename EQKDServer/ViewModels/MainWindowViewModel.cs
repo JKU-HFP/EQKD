@@ -24,7 +24,6 @@ using EQKDServer.Models.Messages;
 using LiveCharts.Events;
 using System.Windows.Input;
 using EQKDServer.Models;
-using TimeTaggerWPF_Library;
 using TimeTagger_Library.Correlation;
 using QKD_Library;
 using EQKDServer.Views.SettingControls;

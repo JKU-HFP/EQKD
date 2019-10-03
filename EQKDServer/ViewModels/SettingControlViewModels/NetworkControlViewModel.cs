@@ -9,7 +9,6 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using TimeTagger_Library;
-using TimeTaggerWPF_Library;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {

@@ -15,8 +15,6 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Stage_Library", "..\Project
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "TimeTagger_Library", "..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.shproj", "{721AF447-1302-4AF1-BC15-B3D878AFBBF8}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "TimeTaggerWPF_Library", "..\ProjectLibrary\TimeTaggerWPF_Library\TimeTaggerWPF_Library.shproj", "{36985BFC-5753-4865-BBD2-129B7DCF0ACC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleTestApp", "ConsoleTestApp\ConsoleTestApp.csproj", "{62168CA7-D0B0-4FDD-8A39-21B8700E34CD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QKD_Library", "QKD_Library\QKD_Library.csproj", "{DF65E344-A52A-4D85-AB5D-8509ABC3A9E5}"
@@ -24,11 +22,9 @@ EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{105b3f84-f045-4ec7-b75c-de9a85f2d3e9}*SharedItemsImports = 13
-		..\ProjectLibrary\TimeTaggerWPF_Library\TimeTaggerWPF_Library.projitems*{36985bfc-5753-4865-bbd2-129b7dcf0acc}*SharedItemsImports = 13
 		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{721af447-1302-4af1-bc15-b3d878afbbf8}*SharedItemsImports = 13
 		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{a72e8128-6414-4dad-aa0c-b2f673a90ff8}*SharedItemsImports = 4
 		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{a72e8128-6414-4dad-aa0c-b2f673a90ff8}*SharedItemsImports = 4
-		..\ProjectLibrary\TimeTaggerWPF_Library\TimeTaggerWPF_Library.projitems*{f43d8793-b0c3-48b9-9c8f-17bef6413ac7}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
