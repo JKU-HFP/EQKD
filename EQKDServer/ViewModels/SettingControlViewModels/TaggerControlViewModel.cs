@@ -131,6 +131,27 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private double _corrChartXMin = -10000;
+        public double CorrChartXMin
+        {
+            get { return _corrChartXMin; }
+            set
+            {
+                _corrChartXMin = value;
+                OnPropertyChanged("CorrChartXMin");
+            }
+        }
+
+        private double _corrChartXMax = 10000;
+        public double CorrChartXMax
+        {
+            get { return _corrChartXMax; }
+            set
+            {
+                _corrChartXMax = value;
+                OnPropertyChanged("CorrChartXMax");
+            }
+        }
 
         #endregion
 
@@ -202,14 +223,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 new LineSeries()
                 {
                     Title = "Derivative",
-                    Values = _correlationChartValues[1],
+                    Values = _correlationChartValues[2],
                     PointGeometrySize = 0.0,
                     LineSmoothness = 0.0
                 },
                 new LineSeries()
                 {
                     Title = "Fitted Derivative",
-                    Values = _correlationChartValues[1],
+                    Values = _correlationChartValues[3],
                     PointGeometrySize = 0.0,
                     LineSmoothness = 0.0
                 }
@@ -221,23 +242,29 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private void TaggerSynchronization_FindSignalStartComplete(object sender, FindSignalStartEventArgs e)
         {
 
+            File.WriteAllLines("FindStartTimeTest.txt", e.ResultA.Times.Zip(e.ResultA.Rates, (x, y) => x.ToString() + "\t" + y.ToString()));
+
             int[] XIndices = Enumerable.Range(0, e.ResultA.Times.Length).ToArray();
 
             //Rates
             _correlationChartValues[0].Clear();
-            _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Rates, (X, Y) => new ObservablePoint(X, Y))));
+            _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.ResultA.Times.Zip(e.ResultA.Rates, (X, Y) => new ObservablePoint(X/1E6, Y))));
 
             //Fitted rates
             _correlationChartValues[1].Clear();
-            _correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X, Y))));
+            //_correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X, Y))));
 
             //Derivatives
             _correlationChartValues[2].Clear();
-            _correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Derivatives, (X, Y) => new ObservablePoint(X, Y))));
+            //_correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Derivatives, (X, Y) => new ObservablePoint(X, Y))));
 
             //Fitted Derivatives
             _correlationChartValues[3].Clear();
-            _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRateDervatives, (X, Y) => new ObservablePoint(X, Y))));
+            //_correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRateDervatives, (X, Y) => new ObservablePoint(X, Y))));
+
+
+            CorrChartXMin = e.ResultA.StartTime - 1000;
+            CorrChartXMax = e.ResultA.StartTime + 1000;
 
 
             CorrelationSectionsCollection.Clear();

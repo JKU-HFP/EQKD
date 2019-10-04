@@ -31,6 +31,7 @@ namespace QKD_Library
     {
         public long[] Times { get; set; }
         public double[] Rates { get; set; }
+        public double Threshold { get; set; }
         public double[] Derivatives { get; set; }
         public double[] FittedRates { get; set; }
         public double[] FittedRateDervatives { get; set; }

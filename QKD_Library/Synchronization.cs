@@ -42,8 +42,8 @@ namespace QKD_Library
 
         //Start time finding
         public bool GlobalOffsetDefined { get; private set; } = false;
-        public int AveragingFIFOSize { get; set; } = 10;
-        public int RateThreshold { get; set; } = 5000;
+        public int AveragingFIFOSize { get; set; } = 30;
+        public int RateThreshold { get; set; } = 50000;
         public double StartTimeTolerance { get; set; } = 100E6;
 
 
@@ -163,7 +163,8 @@ namespace QKD_Library
         
         public static double Rate(IEnumerable<long> buffer)
         {
-            return buffer.Count() / (buffer.Last() - buffer.First());
+            double rate = 1E12 * buffer.Count() / (double)(buffer.Last() - buffer.First());
+            return rate;
         }
 
         public FindSignalStartResult FindSignalStartTime(TimeTags tt)
@@ -194,6 +195,8 @@ namespace QKD_Library
                 //Calculate rates
                 rates.Add(Rate(FIFO));
 
+                FIFO.Dequeue();
+
                 //Is threshold exeeded?
                 if(rates[i]>RateThreshold && threshold_found==false)
                 {
@@ -202,6 +205,8 @@ namespace QKD_Library
                 }
             }
 
+            result.Threshold = RateThreshold;
+
             //No threshold found?
             if(!threshold_found)
             {
@@ -209,7 +214,7 @@ namespace QKD_Library
             }
 
             //Is signal above threshold in the beginning? 
-            if (threshold_index==0)
+            if (threshold_index < 2*AveragingFIFOSize)
             {
                 result.Status = StartSignalStatus.InitialSignalTooHigh;
                 return result;
@@ -252,15 +257,18 @@ namespace QKD_Library
 
             IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
             LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
-            NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
-           
-            double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-            
-            if (minimization_result.ReasonForExit != ExitCondition.Converged)
-            {
-                result.Status = StartSignalStatus.SignalFittingFailed;
-                return result;
-            }                      
+
+            //STUCKS!?
+            //NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
+            //double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
+            //if (minimization_result.ReasonForExit != ExitCondition.Converged)
+            //{
+            //    result.Status = StartSignalStatus.SignalFittingFailed;
+            //    return result;
+            //}
+
+            double[] func_values = obj_function(new DenseVector(Enumerable.Repeat((double)0,polynomial_order).ToArray()), XVals).ToArray();
+            result.FittedRates = func_values;
 
             //-----------  2. Fit derivatives by gaussian -------------
 
@@ -268,7 +276,8 @@ namespace QKD_Library
             double[] derivertives = new double[func_values.Length];
             for(int i=0; i<derivertives.Length-1; i++)
             {
-                derivertives[i] = (func_values[i + 1] - func_values[i]) / (cropped_times[i + 1] - cropped_times[i]);
+                //derivertives[i] = (func_values[i + 1] - func_values[i]) / (double)(cropped_times[i + 1] - cropped_times[i]);
+                derivertives[i] = (cropped_rates[i + 1] - cropped_rates[i]) / (double)(cropped_times[i + 1] - cropped_times[i]);
             }
             derivertives[derivertives.Length - 1] = 0;
 
@@ -294,14 +303,14 @@ namespace QKD_Library
 
             objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
             solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
-            minimization_result = solver.FindMinimum(objective_model, initial_guess);
+            var minimization_result = solver.FindMinimum(objective_model, initial_guess);
 
             func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
 
             result.FittedRateDervatives = func_values;
             
             //If not converged or mean value is too far away
-            if(minimization_result.ReasonForExit != ExitCondition.Converged ||
+            if((minimization_result.ReasonForExit != ExitCondition.Converged && minimization_result.ReasonForExit != ExitCondition.RelativePoints) ||
                 !minimization_result.MinimizingPoint[1].AlmostEqual(cropped_times[cropped_threshold_index],100E6))
             {
                 result.Status = StartSignalStatus.DerivativeFittingFailed;
@@ -315,7 +324,7 @@ namespace QKD_Library
             //Starttime is point of steepest derivative
             double local_starttime = minimization_result.MinimizingPoint[1];
 
-            result.StartTime = crop_starttime + (long)local_starttime;
+            result.StartTime = cropped_times[cropped_threshold_index];
             result.StartTimeFWHM = minimization_result.MinimizingPoint[2] * 2.35482;
             
             if(result.StartTimeFWHM>StartTimeTolerance)
@@ -358,11 +367,20 @@ namespace QKD_Library
 
                 WriteLog("Global Clock offset undefined. Block signal and release it fast.");
 
+                _tagger1.PacketSize = 200000;
+                _tagger2.PacketSize = 200000;
+
+
                 ResetTimeTaggers();
                 _tagger1.StartCollectingTimeTagsAsync();
                 _tagger2.StartCollectingTimeTagsAsync();
-                while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
-                while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+                //while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
+                while (!_tagger2.GetNextTimeTags(out ttB))
+                {
+                    Thread.Sleep(10);
+                }
+
+                ResetTimeTaggers();
 
                 //FindSignalStartResult startresA = FindSignalStartTime(ttA);
                 FindSignalStartResult startresA = FindSignalStartTime(ttB);
@@ -370,6 +388,9 @@ namespace QKD_Library
 
 
                 OnFindSignalStartComplete(new FindSignalStartEventArgs(startresA, startresB));
+
+                //TEST
+                return new SyncClockResult();
 
                 if (startresA.Status == StartSignalStatus.SlopeOK && startresB.Status == StartSignalStatus.SlopeOK)
                 {

@@ -85,7 +85,8 @@
 
                 <lvc:CartesianChart.AxisX>
                     <lvc:AxesCollection>
-                        <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
+                        <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}"
+                                  MinValue="{Binding CorrChartXMin}" MaxValue="{Binding CorrChartXMax}"></lvc:Axis>
                     </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisX>
 
