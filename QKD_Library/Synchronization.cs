@@ -44,8 +44,7 @@ namespace QKD_Library
         public bool GlobalOffsetDefined { get; private set; } = false;
         public int AveragingFIFOSize { get; set; } = 30;
         public int RateThreshold { get; set; } = 50000;
-        public double StartTimeTolerance { get; set; } = 100E6;
-
+        public double SlopeTolerance { get; set; } = 200;
 
         //Correlation Synchronization
         public ulong CorrTimeBin { get; set; } = 512;
@@ -172,15 +171,15 @@ namespace QKD_Library
             int threshold_index = 0;
             bool threshold_found = false;
 
-            FindSignalStartResult result = new FindSignalStartResult(); 
+            FindSignalStartResult result = new FindSignalStartResult();
 
             Queue<long> FIFO = new Queue<long>();
             List<double> rates = new List<double>();
 
             long[] times = tt.time;
-            
+
             //Get rates and find threshold
-            for(int i=0; i<times.Length; i ++)
+            for (int i = 0; i < times.Length; i++)
             {
                 //Fill FIFO
                 FIFO.Enqueue(times[i]);
@@ -198,7 +197,7 @@ namespace QKD_Library
                 FIFO.Dequeue();
 
                 //Is threshold exeeded?
-                if(rates[i]>RateThreshold && threshold_found==false)
+                if (rates[i] > RateThreshold && threshold_found == false)
                 {
                     threshold_index = i;
                     threshold_found = true;
@@ -208,13 +207,13 @@ namespace QKD_Library
             result.Threshold = RateThreshold;
 
             //No threshold found?
-            if(!threshold_found)
+            if (!threshold_found)
             {
                 result.Status = StartSignalStatus.ThresholdNotFound;
             }
 
             //Is signal above threshold in the beginning? 
-            if (threshold_index < 2*AveragingFIFOSize)
+            if (threshold_index < 2 * AveragingFIFOSize)
             {
                 result.Status = StartSignalStatus.InitialSignalTooHigh;
                 return result;
@@ -225,7 +224,7 @@ namespace QKD_Library
             long crop_starttime = times[min_index];
 
             int cropped_threshold_index = threshold_index - min_index;
-            long[] cropped_times = times.Skip(min_index).Take(20 * AveragingFIFOSize).Select(t => t-crop_starttime).ToArray();
+            long[] cropped_times = times.Skip(min_index).Take(20 * AveragingFIFOSize).Select(t => t - crop_starttime).ToArray();
             double[] cropped_rates = rates.Skip(min_index).Take(20 * AveragingFIFOSize).ToArray();
 
             result.Times = cropped_times;
@@ -239,17 +238,26 @@ namespace QKD_Library
 
             int polynomial_order = 10;
 
-            Vector<double> initial_guess = new DenseVector( Enumerable.Repeat(1.0, polynomial_order).ToArray() );
-          
-            Vector<double> XVals = new DenseVector(cropped_times.Select(t => (double)t).ToArray());
-            Vector<double> YVals = new DenseVector(cropped_rates);
+            Vector<double> initial_guess = new DenseVector(Enumerable.Repeat(1.0, polynomial_order).ToArray());
+
+            //Select some points around threshold
+            double[] linRegrTimes = cropped_times.Skip(cropped_threshold_index - 5).Take(5).Select(v => (double)v).ToArray();
+            double[] linRegrVals = cropped_rates.Skip(cropped_threshold_index - 5).Take(5).ToArray();
+
+            result.FittingTimes = linRegrTimes;
+
+            Vector<double> XVals = new DenseVector(linRegrTimes);
+            Vector<double> YVals = new DenseVector(linRegrVals);
+
+            //FIX LINEAR REGRESSION!!!
+            //!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
             {
-                //p... Polynomial coefficients
-                
-                Polynomial poly = new Polynomial(p);
-                IEnumerable<double> results = poly.Evaluate(x);
+                //p[0]... Slope
+                //p[1]... Interceptor
+
+                IEnumerable<double> results = x.Select(val => p[0] * val + p[1]);
                 Vector<double> result_vector = new DenseVector(results.ToArray());
 
                 return result_vector;
@@ -258,62 +266,14 @@ namespace QKD_Library
             IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
             LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
 
-            //STUCKS!?
-            //NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
-            //double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-            //if (minimization_result.ReasonForExit != ExitCondition.Converged)
-            //{
-            //    result.Status = StartSignalStatus.SignalFittingFailed;
-            //    return result;
-            //}
+            NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
+            double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
 
-            double[] func_values = obj_function(new DenseVector(Enumerable.Repeat((double)0,polynomial_order).ToArray()), XVals).ToArray();
             result.FittedRates = func_values;
 
-            //-----------  2. Fit derivatives by gaussian -------------
-
-            //Get numerical derivatives
-            double[] derivertives = new double[func_values.Length];
-            for(int i=0; i<derivertives.Length-1; i++)
+            if (minimization_result.ReasonForExit != ExitCondition.Converged && minimization_result.ReasonForExit != ExitCondition.RelativePoints)
             {
-                //derivertives[i] = (func_values[i + 1] - func_values[i]) / (double)(cropped_times[i + 1] - cropped_times[i]);
-                derivertives[i] = (cropped_rates[i + 1] - cropped_rates[i]) / (double)(cropped_times[i + 1] - cropped_times[i]);
-            }
-            derivertives[derivertives.Length - 1] = 0;
-
-            result.Derivatives = derivertives;
-
-            initial_guess = new DenseVector(new double[] { 10000, (double)cropped_times[cropped_threshold_index], 10000 });                 
-            YVals = new DenseVector(derivertives);
-
-            obj_function = (Vector<double> p, Vector<double> x) =>
-            {
-                //p[0]... area
-                //p[1]... mean value
-                //p[2]... standard deviation
-                Vector result_vector = new DenseVector(new double[x.Count]);
-
-                for(int i=0; i<result_vector.Count; i++)
-                {
-                    result_vector[i] = p[0]*Normal.PDF(p[1], p[2], x[i]);
-                }
-               
-                return result_vector;
-            };
-
-            objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
-            solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
-            var minimization_result = solver.FindMinimum(objective_model, initial_guess);
-
-            func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-
-            result.FittedRateDervatives = func_values;
-            
-            //If not converged or mean value is too far away
-            if((minimization_result.ReasonForExit != ExitCondition.Converged && minimization_result.ReasonForExit != ExitCondition.RelativePoints) ||
-                !minimization_result.MinimizingPoint[1].AlmostEqual(cropped_times[cropped_threshold_index],100E6))
-            {
-                result.Status = StartSignalStatus.DerivativeFittingFailed;
+                result.Status = StartSignalStatus.SignalFittingFailed;
                 return result;
             }
 
@@ -321,19 +281,13 @@ namespace QKD_Library
             //     R A T E   R E S U L T S
             //-------------------------------
 
-            //Starttime is point of steepest derivative
-            double local_starttime = minimization_result.MinimizingPoint[1];
-
             result.StartTime = cropped_times[cropped_threshold_index];
-            result.StartTimeFWHM = minimization_result.MinimizingPoint[2] * 2.35482;
-            
-            if(result.StartTimeFWHM>StartTimeTolerance)
-            {
-                result.Status = StartSignalStatus.SlopeTooLow;
-                return result;
-            }
+            result.GlobalStartTime = times[threshold_index];
 
-            result.Status = StartSignalStatus.SlopeOK;
+            result.Slope = minimization_result.MinimizingPoint[0];
+            WriteLog($"Slope: {result.Slope}");
+
+            result.Status = result.Slope > SlopeTolerance ?  StartSignalStatus.SlopeOK : StartSignalStatus.SlopeTooLow;
             return result;
         }
 

@@ -32,11 +32,11 @@ namespace QKD_Library
         public long[] Times { get; set; }
         public double[] Rates { get; set; }
         public double Threshold { get; set; }
-        public double[] Derivatives { get; set; }
+        public double[] FittingTimes { get; set; }
         public double[] FittedRates { get; set; }
-        public double[] FittedRateDervatives { get; set; }
+        public double Slope { get; set; }
         public long StartTime { get; set; }
-        public double StartTimeFWHM { get; set; }
+        public long GlobalStartTime { get; set; }
         public StartSignalStatus Status { get; set; } = StartSignalStatus.NotStarted;
     }
 

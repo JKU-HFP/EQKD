@@ -200,8 +200,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _correlationChartValues = new List<ChartValues<ObservablePoint>>
             {
                 new ChartValues<ObservablePoint>(),
-                new ChartValues<ObservablePoint>(),
-                new ChartValues<ObservablePoint>(),
                 new ChartValues<ObservablePoint>()
             };
 
@@ -218,21 +216,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                     Title = "Fitted Rate",
                     Values = _correlationChartValues[1],
                     PointGeometrySize = 0.0,
-                    LineSmoothness = 0.0
-                },
-                new LineSeries()
-                {
-                    Title = "Derivative",
-                    Values = _correlationChartValues[2],
-                    PointGeometrySize = 0.0,
-                    LineSmoothness = 0.0
-                },
-                new LineSeries()
-                {
-                    Title = "Fitted Derivative",
-                    Values = _correlationChartValues[3],
-                    PointGeometrySize = 0.0,
-                    LineSmoothness = 0.0
+                    LineSmoothness = 0.0,
+                    Fill = null
                 }
             };
 
@@ -252,19 +237,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             //Fitted rates
             _correlationChartValues[1].Clear();
-            //_correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X, Y))));
+            _correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(e.ResultA.FittingTimes.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X/1E6, Y))));
 
-            //Derivatives
-            _correlationChartValues[2].Clear();
-            //_correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Derivatives, (X, Y) => new ObservablePoint(X, Y))));
-
-            //Fitted Derivatives
-            _correlationChartValues[3].Clear();
-            //_correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRateDervatives, (X, Y) => new ObservablePoint(X, Y))));
-
-
-            CorrChartXMin = e.ResultA.StartTime - 1000;
-            CorrChartXMax = e.ResultA.StartTime + 1000;
+            CorrChartXMin = e.ResultA.StartTime/1E6 - 1000;
+            CorrChartXMax = double.NaN;
 
 
             CorrelationSectionsCollection.Clear();
