@@ -168,7 +168,7 @@ namespace EQKDServer.Models
 
             IsSyncActive = true;
 
-            TaggerSynchronization.Reset();
+            TaggerSynchronization.ResetTimeTaggers();
 
                         
 
@@ -176,7 +176,7 @@ namespace EQKDServer.Models
           {
               //while (!_cts.Token.IsCancellationRequested)
               //{
-                 SyncClockResults syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+                 SyncClockResult syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
 
               //File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
@@ -230,7 +230,7 @@ namespace EQKDServer.Models
                    };
 
                    //Get Key Correlations
-                   SyncClockResults syncRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+                   SyncClockResult syncRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
 
                    Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
                    Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
@@ -298,24 +298,20 @@ namespace EQKDServer.Models
                        OnKeysGenerated(new KeysGeneratedEventArgs(bell_hist.Histogram_X, bell_hist.Histogram_Y));
 
                        //KEY SIFTING
-                       List<long> aliceKeyTimes = key_hist.Correlations.Select(corr => corr.t1).ToList();
-                       List<long> bobKeyTimes = key_hist.Correlations.Select(corr => corr.t2).ToList();
 
                        //Register key at Alice
-                       List<int> aliceKeyIndices = tt.time.GetIndicesOf(aliceKeyTimes).ToList();
-                       aliceKeyIndices.ForEach((i) =>
+                       foreach (int i in key_hist.CorrelationIndices.Select(i => i.i1))
                        {
                            byte act_chan = tt.chan[i];
                            newAliceKeys.Add(act_chan == 1 || act_chan == 3 ? (byte)0 : (byte)1);
-                       });
+                       };
 
                        //Register key at Bob
-                       List<int> bobKeyIndices = tt.time.GetIndicesOf(bobKeyTimes).ToList();
-                       bobKeyIndices.ForEach((i) =>
+                       foreach (int i in key_hist.CorrelationIndices.Select(i => i.i2))
                        {
                            byte act_chan = tt.chan[i];
                            newBobKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-                       });
+                       };
 
                        //Check QBER
                        _secureKeys.AddRange(newAliceKeys);
@@ -332,7 +328,7 @@ namespace EQKDServer.Models
                        File.AppendAllLines("BobKey.txt", newBobKeys.Select(k => k.ToString()));
 
                        double QBER = (double)sum_err / _secureKeys.Count;
-                       double rate = aliceKeyIndices.Count / (tspan / 1E12);
+                       double rate = key_hist.CorrelationIndices.Count / (tspan / 1E12);
 
                        WriteLog($"QBER: {QBER:F3} | rate: {rate:F3} | BellTest middlepeak: {relmeanpeakarea:F4}");
                    }

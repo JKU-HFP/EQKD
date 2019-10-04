@@ -40,10 +40,14 @@ namespace QKD_Library
         public double PVal { get; set; } = 0;
         public ulong ExcitationPeriod { get; set; } = 12500; //200000000; 
 
+        //Start time finding
+        public bool GlobalOffsetDefined { get; private set; } = false;
+        public int AveragingFIFOSize { get; set; } = 10;
+        public int RateThreshold { get; set; } = 5000;
+        public double StartTimeTolerance { get; set; } = 100E6;
 
 
         //Correlation Synchronization
-
         public ulong CorrTimeBin { get; set; } = 512;
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
@@ -65,7 +69,6 @@ namespace QKD_Library
         private Kurolator _corrKurolator;
         private Histogram _corrHist;
 
-        private bool _firstSyncDone = false;
         private long _bobLastStopTime = 0;
 
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
@@ -114,6 +117,12 @@ namespace QKD_Library
             SyncCorrComplete?.Raise(this, e);
         }
 
+        public event EventHandler<FindSignalStartEventArgs> FindSignalStartComplete;
+        private void OnFindSignalStartComplete(FindSignalStartEventArgs e)
+        {
+            FindSignalStartComplete?.Raise(this, e);
+        }
+
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
@@ -151,7 +160,175 @@ namespace QKD_Library
             return tt;
         }
 
-        public SyncClockResults GetSyncedTimeTags(int packetSize=100000)
+        
+        public static double Rate(IEnumerable<long> buffer)
+        {
+            return buffer.Count() / (buffer.Last() - buffer.First());
+        }
+
+        public FindSignalStartResult FindSignalStartTime(TimeTags tt)
+        {
+            int threshold_index = 0;
+            bool threshold_found = false;
+
+            FindSignalStartResult result = new FindSignalStartResult(); 
+
+            Queue<long> FIFO = new Queue<long>();
+            List<double> rates = new List<double>();
+
+            long[] times = tt.time;
+            
+            //Get rates and find threshold
+            for(int i=0; i<times.Length; i ++)
+            {
+                //Fill FIFO
+                FIFO.Enqueue(times[i]);
+
+                //Is FIFO filled?
+                if (FIFO.Count < AveragingFIFOSize)
+                {
+                    rates.Add(0);
+                    continue;
+                }
+
+                //Calculate rates
+                rates.Add(Rate(FIFO));
+
+                //Is threshold exeeded?
+                if(rates[i]>RateThreshold && threshold_found==false)
+                {
+                    threshold_index = i;
+                    threshold_found = true;
+                }
+            }
+
+            //No threshold found?
+            if(!threshold_found)
+            {
+                result.Status = StartSignalStatus.ThresholdNotFound;
+            }
+
+            //Is signal above threshold in the beginning? 
+            if (threshold_index==0)
+            {
+                result.Status = StartSignalStatus.InitialSignalTooHigh;
+                return result;
+            }
+
+            //Crop part around threshold and store start time
+            int min_index = Math.Max(threshold_index - 10 * AveragingFIFOSize, 0);
+            long crop_starttime = times[min_index];
+
+            int cropped_threshold_index = threshold_index - min_index;
+            long[] cropped_times = times.Skip(min_index).Take(20 * AveragingFIFOSize).Select(t => t-crop_starttime).ToArray();
+            double[] cropped_rates = rates.Skip(min_index).Take(20 * AveragingFIFOSize).ToArray();
+
+            result.Times = cropped_times;
+            result.Rates = cropped_rates;
+
+            //-------------------------------
+            //      F I T   S L O P E
+            //-------------------------------
+
+            //-----------  1. Fit rate by polynomial -------------
+
+            int polynomial_order = 10;
+
+            Vector<double> initial_guess = new DenseVector( Enumerable.Repeat(1.0, polynomial_order).ToArray() );
+          
+            Vector<double> XVals = new DenseVector(cropped_times.Select(t => (double)t).ToArray());
+            Vector<double> YVals = new DenseVector(cropped_rates);
+
+            Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
+            {
+                //p... Polynomial coefficients
+                
+                Polynomial poly = new Polynomial(p);
+                IEnumerable<double> results = poly.Evaluate(x);
+                Vector<double> result_vector = new DenseVector(results.ToArray());
+
+                return result_vector;
+            };
+
+            IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
+            LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
+            NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
+           
+            double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
+            
+            if (minimization_result.ReasonForExit != ExitCondition.Converged)
+            {
+                result.Status = StartSignalStatus.SignalFittingFailed;
+                return result;
+            }                      
+
+            //-----------  2. Fit derivatives by gaussian -------------
+
+            //Get numerical derivatives
+            double[] derivertives = new double[func_values.Length];
+            for(int i=0; i<derivertives.Length-1; i++)
+            {
+                derivertives[i] = (func_values[i + 1] - func_values[i]) / (cropped_times[i + 1] - cropped_times[i]);
+            }
+            derivertives[derivertives.Length - 1] = 0;
+
+            result.Derivatives = derivertives;
+
+            initial_guess = new DenseVector(new double[] { 10000, (double)cropped_times[cropped_threshold_index], 10000 });                 
+            YVals = new DenseVector(derivertives);
+
+            obj_function = (Vector<double> p, Vector<double> x) =>
+            {
+                //p[0]... area
+                //p[1]... mean value
+                //p[2]... standard deviation
+                Vector result_vector = new DenseVector(new double[x.Count]);
+
+                for(int i=0; i<result_vector.Count; i++)
+                {
+                    result_vector[i] = p[0]*Normal.PDF(p[1], p[2], x[i]);
+                }
+               
+                return result_vector;
+            };
+
+            objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
+            solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
+            minimization_result = solver.FindMinimum(objective_model, initial_guess);
+
+            func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
+
+            result.FittedRateDervatives = func_values;
+            
+            //If not converged or mean value is too far away
+            if(minimization_result.ReasonForExit != ExitCondition.Converged ||
+                !minimization_result.MinimizingPoint[1].AlmostEqual(cropped_times[cropped_threshold_index],100E6))
+            {
+                result.Status = StartSignalStatus.DerivativeFittingFailed;
+                return result;
+            }
+
+            //-------------------------------
+            //     R A T E   R E S U L T S
+            //-------------------------------
+
+            //Starttime is point of steepest derivative
+            double local_starttime = minimization_result.MinimizingPoint[1];
+
+            result.StartTime = crop_starttime + (long)local_starttime;
+            result.StartTimeFWHM = minimization_result.MinimizingPoint[2] * 2.35482;
+            
+            if(result.StartTimeFWHM>StartTimeTolerance)
+            {
+                result.Status = StartSignalStatus.SlopeTooLow;
+                return result;
+            }
+
+            result.Status = StartSignalStatus.SlopeOK;
+            return result;
+        }
+
+        public SyncClockResult GetSyncedTimeTags(int packetSize=100000)
         {
             if(_tagger1 == null || _tagger2 == null)
             {
@@ -174,36 +351,75 @@ namespace QKD_Library
             _tagger1.StartCollectingTimeTagsAsync();
             _tagger2.StartCollectingTimeTagsAsync();
 
+
+            //Is global offset defind? If not: Find starting time
+            while (!GlobalOffsetDefined)
+            {
+
+                WriteLog("Global Clock offset undefined. Block signal and release it fast.");
+
+                ResetTimeTaggers();
+                _tagger1.StartCollectingTimeTagsAsync();
+                _tagger2.StartCollectingTimeTagsAsync();
+                while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
+                while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+
+                //FindSignalStartResult startresA = FindSignalStartTime(ttA);
+                FindSignalStartResult startresA = FindSignalStartTime(ttB);
+                FindSignalStartResult startresB = new FindSignalStartResult(); //Dummy for testing;
+
+
+                OnFindSignalStartComplete(new FindSignalStartEventArgs(startresA, startresB));
+
+                if (startresA.Status == StartSignalStatus.SlopeOK && startresB.Status == StartSignalStatus.SlopeOK)
+                {
+                    GlobalOffsetDefined = true;
+                }
+
+            }
+
+
+
+
             WriteLog("Requesting timetags");
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while(!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+                        
+            //Check packet overlap and get new packet if not overlapping
+            Kurolator.CorrResult overlapResult = Kurolator.CheckPacketOverlap(ttA, ttB, (long)ClockSyncTimeWindow, GlobalClockOffset);
+            switch(overlapResult)
+            {
+                case Kurolator.CorrResult.PartnerAhead:
+                    while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
+                    break;
+                case Kurolator.CorrResult.PartnerBehind:
+                    while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+                    break;
+            }
 
-            _tagger1.StopCollectingTimeTags();
-            _tagger2.StopCollectingTimeTags();
-
-            SyncClockResults syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
+            SyncClockResult syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
           
             return syncClockres;
                       
         }
 
-        public void Reset()
+        public void ResetTimeTaggers()
         {
             _tagger1.StopCollectingTimeTags();
-            _tagger2.StopCollectingTimeTags();
+            _tagger2?.StopCollectingTimeTags();
 
             _tagger1.ClearTimeTagBuffer();
-            _tagger2.ClearTimeTagBuffer();
+            _tagger2?.ClearTimeTagBuffer();
 
-            _firstSyncDone = false;
+            GlobalOffsetDefined = false;
         }
 
-        private async Task<SyncClockResults> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
+        private async Task<SyncClockResult> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
         {
             Stopwatch sw = new Stopwatch();
 
-            SyncClockResults syncres = await Task<SyncClockResults>.Run(() =>
+            SyncClockResult syncres = await Task<SyncClockResult>.Run(() =>
             {                           
                 //Initialize
                 WriteLog("Start synchronizing clocks");
@@ -375,7 +591,7 @@ namespace QKD_Library
 
                     DriftCompResult initDriftResult = driftCompResults[driftCompResults.Count / 2];
 
-                    return new SyncClockResults()
+                    return new SyncClockResult()
                     {
                         PeaksFound = false,
                         IsClocksSync = false,
@@ -411,7 +627,7 @@ namespace QKD_Library
                 bool clockInSync = opt_driftResults.Sigma.val <= STD_Tolerance && min_groundlevel < MaxGroundLevel;
                 if(clockInSync) LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
 
-                return new SyncClockResults()
+                return new SyncClockResult()
                 {
                     PeaksFound = true,
                     IsClocksSync = clockInSync,
@@ -507,8 +723,8 @@ namespace QKD_Library
 
     public class SyncClocksCompleteEventArgs : EventArgs
     {
-        public SyncClockResults SyncRes { get; private set;} 
-        public SyncClocksCompleteEventArgs(SyncClockResults syncRes)
+        public SyncClockResult SyncRes { get; private set;} 
+        public SyncClocksCompleteEventArgs(SyncClockResult syncRes)
         {
             SyncRes = syncRes;
         }
@@ -520,6 +736,18 @@ namespace QKD_Library
         public SyncCorrCompleteEventArgs(SyncCorrResults syncRes)
         {
             SyncRes = syncRes;
+        }
+    }
+
+    public class FindSignalStartEventArgs : EventArgs
+    {
+        public FindSignalStartResult ResultA { get; private set; }
+        public FindSignalStartResult ResultB { get; private set; }
+
+        public FindSignalStartEventArgs(FindSignalStartResult resultA, FindSignalStartResult resultB)
+        {
+            ResultA = resultA;
+            ResultB = resultB;
         }
     }
 

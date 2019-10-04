@@ -203,13 +203,31 @@ namespace EQKDServer.ViewModels
         //#################################################
         public MainWindowViewModel()
         {
-            //Create EKQDServer
+            //Create EKQDServer and register Events
             _EQKDServer = new EQKDServerModel(LogMessage);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
             _EQKDServer.densMeas.BasisCompleted += BasisComplete;
             _EQKDServer.StateCorr.LossFunctionAquired += StateCorr_LossFunctionAquired;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
+
+
+            _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
+             {
+                 ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferSize;
+             };
+            _EQKDServer.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
+            {
+                ClientBufferSize = _EQKDServer.ClientTimeTagger.BufferSize;
+                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferSize;
+            };
+            _EQKDServer.SecQNetServer.TimeTagsReceived += (sender, e) =>
+            {
+                ReceivedClientTagsBufferSize = e.BufferSize;
+                ReceivedClientTagsBufferStatus = e.BufferStatus;
+            };
+
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));

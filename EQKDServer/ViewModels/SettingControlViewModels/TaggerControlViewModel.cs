@@ -30,11 +30,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //###########################
         private EQKDServerModel _EQKDServer;
 
-        ChartValues<ObservablePoint> _correlationChartValues;
-        private LineSeries _correlationLineSeries;
-        private Kurolator _correlator;
-
-        private bool _isUpdating;
+        private List<ChartValues<ObservablePoint>> _correlationChartValues;
+        private List<LineSeries> _correlationLineSeries;
 
         #region Properties
         //#############################
@@ -166,10 +163,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 //_EQKDServer.DensMeas.BasisCompleted += BasisComplete;
 
                 //Register Events
-                _EQKDServer.StateCorr.LossFunctionAquired += CostFunctionAquired;
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
                 _EQKDServer.TaggerSynchronization.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
                 _EQKDServer.TaggerSynchronization.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
+                _EQKDServer.TaggerSynchronization.FindSignalStartComplete += TaggerSynchronization_FindSignalStartComplete;
             });
 
            
@@ -178,28 +175,91 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CorrelationCollection = new SeriesCollection();
             CorrelationSectionsCollection = new SectionsCollection();
 
-            _correlationChartValues = new ChartValues<ObservablePoint> { new ObservablePoint(-1000, 100), new ObservablePoint(1000, 100) };
-            _correlationLineSeries = new LineSeries()
+ 
+            _correlationChartValues = new List<ChartValues<ObservablePoint>>
             {
-                Title = "Sync correlations",
-                Values = _correlationChartValues,
-                PointGeometrySize = 0.0,
-                LineSmoothness = 0.0
+                new ChartValues<ObservablePoint>(),
+                new ChartValues<ObservablePoint>(),
+                new ChartValues<ObservablePoint>(),
+                new ChartValues<ObservablePoint>()
             };
-            CorrelationCollection.Add(_correlationLineSeries);
 
+            _correlationLineSeries = new List<LineSeries>{
+                new LineSeries()
+                {
+                    Title = "Rate",
+                    Values = _correlationChartValues[0],
+                    PointGeometrySize = 0.0,
+                    LineSmoothness = 0.0
+                },
+                new LineSeries()
+                {
+                    Title = "Fitted Rate",
+                    Values = _correlationChartValues[1],
+                    PointGeometrySize = 0.0,
+                    LineSmoothness = 0.0
+                },
+                new LineSeries()
+                {
+                    Title = "Derivative",
+                    Values = _correlationChartValues[1],
+                    PointGeometrySize = 0.0,
+                    LineSmoothness = 0.0
+                },
+                new LineSeries()
+                {
+                    Title = "Fitted Derivative",
+                    Values = _correlationChartValues[1],
+                    PointGeometrySize = 0.0,
+                    LineSmoothness = 0.0
+                }
+            };
+
+            CorrelationCollection.AddRange(_correlationLineSeries);
+        }
+
+        private void TaggerSynchronization_FindSignalStartComplete(object sender, FindSignalStartEventArgs e)
+        {
+
+            int[] XIndices = Enumerable.Range(0, e.ResultA.Times.Length).ToArray();
+
+            //Rates
+            _correlationChartValues[0].Clear();
+            _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Rates, (X, Y) => new ObservablePoint(X, Y))));
+
+            //Fitted rates
+            _correlationChartValues[1].Clear();
+            _correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X, Y))));
+
+            //Derivatives
+            _correlationChartValues[2].Clear();
+            _correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.Derivatives, (X, Y) => new ObservablePoint(X, Y))));
+
+            //Fitted Derivatives
+            _correlationChartValues[3].Clear();
+            _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(XIndices.Zip(e.ResultA.FittedRateDervatives, (X, Y) => new ObservablePoint(X, Y))));
+
+
+            CorrelationSectionsCollection.Clear();
+
+            var axisSection = new AxisSection
+            {
+                Value = e.ResultA.StartTime / 1000.0,
+                SectionWidth = 0.1,
+                Stroke = Brushes.Red,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection(new[] { 4d })
+            };
+            CorrelationSectionsCollection.Add(axisSection);
         }
 
         private void TaggerSynchronization_SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
-            if (_isUpdating) return;
-
-            _isUpdating = true;
 
             CorrelationSectionsCollection.Clear();
 
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _correlationChartValues[0].Clear();
+            _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             if (e.SyncRes.Peaks != null)
             {
@@ -218,10 +278,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
 
             //Write new FiberOffset
-            FiberOffset = e.SyncRes.NewFiberOffset;
-            
-
-            _isUpdating = false;
+            FiberOffset = e.SyncRes.NewFiberOffset;         
         }
 
         private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
@@ -245,17 +302,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             FiberOffset = e.StartConfig.FiberOffset;
 
         }
-
-        private void CostFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
-        {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1E3, Y))));
-
-            CorrelationSectionsCollection.Clear();
-        }
-
-        //Event Handler
-       
+    
 
         private void Synchronize(object o)
         {

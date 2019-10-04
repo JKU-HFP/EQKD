@@ -69,26 +69,30 @@
         </StackPanel>
 
 
-        <lvc:CartesianChart Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2"
-                            DisableAnimations="True"
-                            Series="{Binding CorrelationCollection}"
-                            VisualElements="{Binding CorrelationVisualElementsCollection}">
-            
-            <lvc:CartesianChart.AxisY>
-                <lvc:AxesCollection>
-                    <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
-                </lvc:AxesCollection>
-            </lvc:CartesianChart.AxisY>
-      
-            <lvc:CartesianChart.AxisX>
-                <lvc:AxesCollection>
-                    <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
-                </lvc:AxesCollection>
-            </lvc:CartesianChart.AxisX>
+        <DockPanel Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2">
 
-        </lvc:CartesianChart>
+            <lvc:CartesianChart DockPanel.Dock="Left"
+                                MinWidth="300"
+                                DisableAnimations="True"
+                                Series="{Binding CorrelationCollection}"
+                                VisualElements="{Binding CorrelationVisualElementsCollection}">
 
-     
+                <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisY>
+
+                <lvc:CartesianChart.AxisX>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisX>
+
+            </lvc:CartesianChart>
+
+        </DockPanel>
+
         <Button Grid.Row="3" Grid.Column="1" Content="Start Sync" Command="{Binding StartSyncCommand}" />
         <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
 
