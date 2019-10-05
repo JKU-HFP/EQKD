@@ -15,19 +15,19 @@ namespace QKD_Library.Synchronization
         InitialSignalTooHigh,
         ThresholdNotFound,
         SignalFittingFailed,
-        DerivativeFittingFailed,
         SlopeTooLow,
         SlopeOK
     }
     public class SignalStartResult
     {
+        public string ID { get; set; }
         public long[] Times { get; set; }
         public double[] Rates { get; set; }
         public double Threshold { get; set; }
         public double[] FittingTimes { get; set; }
         public double[] FittedRates { get; set; }
         public double Slope { get; set; }
-        public long StartTime { get; set; }
+        public double StartTime { get; set; }
         public long GlobalStartTime { get; set; }
         public SignalStartStatus Status { get; set; } = SignalStartStatus.NotStarted;
     }

@@ -18,22 +18,28 @@ namespace QKD_Library.Synchronization
         //#################################################
         public int AveragingFIFOSize { get; set; } = 30;
         public int RateThreshold { get; set; } = 50000;
-        public double SlopeTolerance { get; set; } = 200;
+        public double SlopeTolerance { get; set; } = 1E-3;
 
         //#################################################
         //##  P R I V A T E S
         //#################################################
 
+        private string _iD = "";
         private Action<string> _loggerCallback;
 
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
 
-        public SignalStartFinder(Action<string> loggercallback = null)
+        public SignalStartFinder(string ID="", Action<string> loggercallback = null)
         {
+            _iD = ID;
             _loggerCallback = loggercallback;
         }
+
+        //#################################################
+        //##  M E T H O D S
+        //#################################################
 
         public static double Rate(IEnumerable<long> buffer)
         {
@@ -46,7 +52,11 @@ namespace QKD_Library.Synchronization
             int threshold_index = 0;
             bool threshold_found = false;
 
-            SignalStartResult result = new SignalStartResult();
+            SignalStartResult result = new SignalStartResult()
+            {
+                ID = _iD,
+                Threshold = RateThreshold
+            };
 
             Queue<long> FIFO = new Queue<long>();
             List<double> rates = new List<double>();
@@ -79,18 +89,19 @@ namespace QKD_Library.Synchronization
                 }
             }
 
-            result.Threshold = RateThreshold;
-
             //No threshold found?
             if (!threshold_found)
             {
                 result.Status = SignalStartStatus.ThresholdNotFound;
+                WriteLog($"Threshold of {RateThreshold} not exeeded.");
+                return result;
             }
 
             //Is signal above threshold in the beginning? 
             if (threshold_index < 2 * AveragingFIFOSize)
             {
                 result.Status = SignalStartStatus.InitialSignalTooHigh;
+                WriteLog($"Inital signal higher than Threshold ({RateThreshold}). Block beam!");
                 return result;
             }
 
@@ -108,47 +119,24 @@ namespace QKD_Library.Synchronization
             //-------------------------------
             //      F I T   S L O P E
             //-------------------------------
-
-            //-----------  1. Fit rate by polynomial -------------
-
-            int polynomial_order = 10;
-
-            Vector<double> initial_guess = new DenseVector(Enumerable.Repeat(1.0, polynomial_order).ToArray());
-
+      
             //Select some points around threshold
             double[] linRegrTimes = cropped_times.Skip(cropped_threshold_index - 5).Take(5).Select(v => (double)v).ToArray();
             double[] linRegrVals = cropped_rates.Skip(cropped_threshold_index - 5).Take(5).ToArray();
 
             result.FittingTimes = linRegrTimes;
 
-            Vector<double> XVals = new DenseVector(linRegrTimes);
-            Vector<double> YVals = new DenseVector(linRegrVals);
+            (double k, double d) linRegression = MathNet.Numerics.Fit.Line(linRegrTimes, linRegrVals).ToValueTuple();
 
-            //FIX LINEAR REGRESSION!!!
-            //!!!!!!!!!!!!!!!!!!!!!!!!!!
+            double[] func_values = linRegrTimes.Select(t => linRegression.k * t + linRegression.d).ToArray();
 
-            Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (p, x) =>
-            {
-                //p[0]... Slope
-                //p[1]... Interceptor
-
-                IEnumerable<double> results = x.Select(val => p[0] * val + p[1]);
-                Vector<double> result_vector = new DenseVector(results.ToArray());
-
-                return result_vector;
-            };
-
-            IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
-            LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
-
-            NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess);
-            double[] func_values = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-
+            result.Slope = linRegression.k;
             result.FittedRates = func_values;
 
-            if (minimization_result.ReasonForExit != ExitCondition.Converged && minimization_result.ReasonForExit != ExitCondition.RelativePoints)
+            if (linRegression.k < 0)
             {
                 result.Status = SignalStartStatus.SignalFittingFailed;
+                WriteLog("Failed to fit slope.");
                 return result;
             }
 
@@ -156,19 +144,19 @@ namespace QKD_Library.Synchronization
             //     R A T E   R E S U L T S
             //-------------------------------
 
-            result.StartTime = cropped_times[cropped_threshold_index];
-            result.GlobalStartTime = times[threshold_index];
-
-            result.Slope = minimization_result.MinimizingPoint[0];
-            WriteLog($"Slope: {result.Slope}");
+            result.StartTime = (RateThreshold-linRegression.d)/linRegression.k;
+            result.GlobalStartTime = (long)Math.Round( crop_starttime + result.StartTime);
 
             result.Status = result.Slope > SlopeTolerance ? SignalStartStatus.SlopeOK : SignalStartStatus.SlopeTooLow;
+
+            WriteLog($"Global Start Time: {result.GlobalStartTime} | Slope: {result.Slope} | Min: {SlopeTolerance} | {(result.Status==SignalStartStatus.SlopeOK ? "Slope OK":"Slope TOO LOW")}");
+            
             return result;
         }
 
         private void WriteLog(string msg)
         {
-            _loggerCallback?.Invoke("SignalStartFinder: " + msg);
+            _loggerCallback?.Invoke($"SignalStartFinder {_iD}: {msg}");
         }
 
     }

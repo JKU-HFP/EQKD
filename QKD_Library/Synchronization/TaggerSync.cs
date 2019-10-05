@@ -155,9 +155,6 @@ namespace QKD_Library.Synchronization
 
 
 
-
-
-
         public SyncClockResult GetSyncedTimeTags(int packetSize = 100000)
         {
             if (_tagger1 == null || _tagger2 == null)
@@ -178,13 +175,14 @@ namespace QKD_Library.Synchronization
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
 
-            _tagger1.StartCollectingTimeTagsAsync();
-            _tagger2.StartCollectingTimeTagsAsync();
-
-
+            //---------------------------------------------------
             //Is global offset defind? If not: Find starting time
+            //---------------------------------------------------
+
             while (!GlobalOffsetDefined)
             {
+                _tagger1.StartCollectingTimeTagsAsync();
+                _tagger2.StartCollectingTimeTagsAsync();
 
                 WriteLog("Global Clock offset undefined. Block signal and release it fast.");
 
@@ -203,17 +201,14 @@ namespace QKD_Library.Synchronization
 
                 ResetTimeTaggers();
 
-                SignalStartFinder serverStartFinder = new SignalStartFinder(_loggerCallback);
+                SignalStartFinder serverStartFinder = new SignalStartFinder("Alice",_loggerCallback);
+                SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttA);
 
-                SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttB);
-                SignalStartResult startresB = new SignalStartResult(); //Dummy for testing;
-
+                SignalStartFinder clientStartFinder = new SignalStartFinder("Bob", _loggerCallback);
+                SignalStartResult startresB = clientStartFinder.FindSignalStartTime(ttB);
 
                 OnOffsetFound(new OffsetFoundEventArgs(startresA, startresB));
-
-                //TEST
-                return new SyncClockResult();
-
+            
                 if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
                 {
                     GlobalOffsetDefined = true;
@@ -222,9 +217,9 @@ namespace QKD_Library.Synchronization
             }
 
 
-
-
-            WriteLog("Requesting timetags");
+            //---------------------------------------------------
+            // Request timetags and perform synchronisation
+            //---------------------------------------------------
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
@@ -242,6 +237,8 @@ namespace QKD_Library.Synchronization
             }
 
             SyncClockResult syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
+
+            //!!PERFORM CORRELATION SYNCHRONISATION HERE!!
 
             return syncClockres;
 

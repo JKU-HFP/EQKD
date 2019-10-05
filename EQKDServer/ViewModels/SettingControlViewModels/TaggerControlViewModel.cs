@@ -157,7 +157,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
-        public SectionsCollection CorrelationSectionsCollection { get; set; }
+        public SectionsCollection CorrelationXSectionsCollection { get; set; }
+        public SectionsCollection CorrelationYSectionsCollection { get; set; }
         public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
 
         //Commands
@@ -187,14 +188,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
                 _EQKDServer.AliceBobSync.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
                 _EQKDServer.AliceBobSync.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
-                _EQKDServer.AliceBobSync.OffsetFound += TaggerSynchronization_FindSignalStartComplete;
+                _EQKDServer.AliceBobSync.OffsetFound += AliceBobSync_FindSignalStartComplete;
             });
 
            
 
             //Initialize Chart elements
             CorrelationCollection = new SeriesCollection();
-            CorrelationSectionsCollection = new SectionsCollection();
+            CorrelationXSectionsCollection = new SectionsCollection();
 
  
             _correlationChartValues = new List<ChartValues<ObservablePoint>>
@@ -206,60 +207,127 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _correlationLineSeries = new List<LineSeries>{
                 new LineSeries()
                 {
-                    Title = "Rate",
+                    Title = "Rate Alice",
                     Values = _correlationChartValues[0],
-                    PointGeometrySize = 0.0,
-                    LineSmoothness = 0.0
+                    PointGeometrySize = 1.0,
+                    LineSmoothness = 0.0,
+                    Stroke = Brushes.Blue
                 },
                 new LineSeries()
                 {
-                    Title = "Fitted Rate",
+                    Title = "Fitted Rate Alice",
                     Values = _correlationChartValues[1],
                     PointGeometrySize = 0.0,
                     LineSmoothness = 0.0,
-                    Fill = null
+                    Fill=Brushes.Transparent,
+                    Stroke=Brushes.Red
+                },
+                new LineSeries()
+                {
+                    Title = "Rate Bob",
+                    Values = _correlationChartValues[0],
+                    PointGeometrySize = 1.0,
+                    LineSmoothness = 0.0,
+                    Stroke = Brushes.Green
+                },
+                new LineSeries()
+                {
+                    Title = "Fitted Bob Alice",
+                    Values = _correlationChartValues[1],
+                    PointGeometrySize = 0.0,
+                    LineSmoothness = 0.0,
+                    Fill=Brushes.Transparent,
+                    Stroke=Brushes.Red
                 }
             };
 
             CorrelationCollection.AddRange(_correlationLineSeries);
         }
 
-        private void TaggerSynchronization_FindSignalStartComplete(object sender, OffsetFoundEventArgs e)
+        private void AliceBobSync_FindSignalStartComplete(object sender, OffsetFoundEventArgs e)
         {
 
-            File.WriteAllLines("FindStartTimeTest.txt", e.ResultA.Times.Zip(e.ResultA.Rates, (x, y) => x.ToString() + "\t" + y.ToString()));
+            if(e.ResultA.Rates!=null) File.WriteAllLines("FindStartTime_Alice.txt", e.ResultA.Times.Zip(e.ResultA.Rates, (x, y) => x.ToString() + "\t" + y.ToString()));
+            if (e.ResultB.Rates != null) File.WriteAllLines("FindStartTime_Bob.txt", e.ResultB.Times.Zip(e.ResultB.Rates, (x, y) => x.ToString() + "\t" + y.ToString()));
 
             int[] XIndices = Enumerable.Range(0, e.ResultA.Times.Length).ToArray();
 
-            //Rates
-            _correlationChartValues[0].Clear();
-            _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.ResultA.Times.Zip(e.ResultA.Rates, (X, Y) => new ObservablePoint(X/1E6, Y))));
+            CorrelationYSectionsCollection.Clear();
 
-            //Fitted rates
-            _correlationChartValues[1].Clear();
-            _correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(e.ResultA.FittingTimes.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X/1E6, Y))));
-
-            CorrChartXMin = e.ResultA.StartTime/1E6 - 1000;
-            CorrChartXMax = double.NaN;
-
-
-            CorrelationSectionsCollection.Clear();
-
-            var axisSection = new AxisSection
+            var thresholdAxisSection = new AxisSection
             {
-                Value = e.ResultA.StartTime / 1000.0,
+                Value = e.ResultA.Threshold,
                 SectionWidth = 0.1,
                 Stroke = Brushes.Red,
                 StrokeThickness = 1,
                 StrokeDashArray = new DoubleCollection(new[] { 4d })
             };
-            CorrelationSectionsCollection.Add(axisSection);
+            CorrelationYSectionsCollection.Add(thresholdAxisSection);
+        
+
+            //ALICE
+
+            //Rates
+            _correlationChartValues[0].Clear();
+            if (e.ResultA.Status > SignalStartStatus.ThresholdNotFound)
+                _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.ResultA.Times.Zip(e.ResultA.Rates, (X, Y) => new ObservablePoint(X/1E6, Y))));
+
+            //Fitted rates
+            _correlationChartValues[1].Clear();
+            if(e.ResultA.Status > SignalStartStatus.SignalFittingFailed)
+            _correlationChartValues[1].AddRange(new ChartValues<ObservablePoint>(e.ResultA.FittingTimes.Zip(e.ResultA.FittedRates, (X, Y) => new ObservablePoint(X/1E6, Y))));
+
+
+            CorrelationXSectionsCollection.Clear();
+
+            if(e.ResultA.StartTime!=0)
+            {
+                var aliceStartAxisSection = new AxisSection
+                {
+                    Value = e.ResultA.StartTime / 1E6,
+                    SectionWidth = 0.1,
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection(new[] { 4d })
+                };
+                CorrelationXSectionsCollection.Add(aliceStartAxisSection);
+            }
+           
+            //BOB
+
+            //Rates
+            _correlationChartValues[2].Clear();
+            if (e.ResultB.Status > SignalStartStatus.ThresholdNotFound)
+                _correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(e.ResultB.Times.Zip(e.ResultB.Rates, (X, Y) => new ObservablePoint(X / 1E6, Y))));
+
+            //Fitted rates
+            _correlationChartValues[3].Clear();
+            if (e.ResultA.Status > SignalStartStatus.SignalFittingFailed)
+                _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(e.ResultB.FittingTimes.Zip(e.ResultB.FittedRates, (X, Y) => new ObservablePoint(X / 1E6, Y))));
+
+
+            CorrChartXMin = Math.Min(e.ResultA.StartTime,e.ResultB.StartTime)/1E6 - 1000;
+            CorrChartXMax = double.NaN;
+
+            if (e.ResultB.StartTime!=0)
+            {
+                var bobStartAxisSection = new AxisSection
+                {
+                    Value = e.ResultB.StartTime / 1E6,
+                    SectionWidth = 0.1,
+                    Stroke = Brushes.Green,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection(new[] { 4d })
+                };
+                CorrelationXSectionsCollection.Add(bobStartAxisSection); 
+            }
+
         }
 
         private void TaggerSynchronization_SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
 
-            CorrelationSectionsCollection.Clear();
+            CorrelationXSectionsCollection.Clear();
 
             _correlationChartValues[0].Clear();
             _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
@@ -276,7 +344,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                         StrokeThickness = 1,
                         StrokeDashArray = new DoubleCollection(new[] { 4d })
                     };
-                    CorrelationSectionsCollection.Add(axisSection);
+                    CorrelationXSectionsCollection.Add(axisSection);
                 }
             }
 
