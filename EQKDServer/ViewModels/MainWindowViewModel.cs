@@ -28,6 +28,8 @@ using TimeTagger_Library.Correlation;
 using QKD_Library;
 using EQKDServer.Views.SettingControls;
 using EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels;
+using QKD_Library.Synchronization;
+using QKD_Library.Characterization;
 
 namespace EQKDServer.ViewModels
 {
@@ -206,9 +208,9 @@ namespace EQKDServer.ViewModels
             //Create EKQDServer and register Events
             _EQKDServer = new EQKDServerModel(LogMessage);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
-            _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
-            _EQKDServer.densMeas.BasisCompleted += BasisComplete;
-            _EQKDServer.StateCorr.LossFunctionAquired += StateCorr_LossFunctionAquired;
+            _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
+            _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
+            _EQKDServer.FiberCorrection.LossFunctionAquired += StateCorr_LossFunctionAquired;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
 

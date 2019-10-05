@@ -74,14 +74,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BitmapEncryption.cs" />
-    <Compile Include="DMBasis.cs" />
-    <Compile Include="DensityMatrixMeasurement.cs" />
+    <Compile Include="Characterization\DMBasis.cs" />
+    <Compile Include="Characterization\DensityMatrix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuantumKey.cs" />
+    <Compile Include="Synchronization\SignalStartFinder.cs" />
+    <Compile Include="Synchronization\SignalStartResult.cs" />
     <Compile Include="StateCorrection.cs" />
-    <Compile Include="Stokes.cs" />
-    <Compile Include="Synchronization.cs" />
-    <Compile Include="SyncResults.cs" />
+    <Compile Include="Characterization\Stokes.cs" />
+    <Compile Include="Synchronization\TaggerSync.cs" />
+    <Compile Include="Synchronization\SyncResults.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj">
@@ -104,5 +106,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

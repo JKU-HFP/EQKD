@@ -1,5 +1,7 @@
 ﻿using Extensions_Library;
 using QKD_Library;
+using QKD_Library.Characterization;
+using QKD_Library.Synchronization;
 using SecQNet;
 using Stage_Library;
 using Stage_Library.NewPort;
@@ -36,11 +38,10 @@ namespace EQKDServer.Models
         //----  P R O P E R T I E S
         //-----------------------------------
 
-
         //Synchronization and State correction
-        public Synchronization TaggerSynchronization;
-        public StateCorrection StateCorr;
-        public DensityMatrixMeasurement densMeas;
+        public TaggerSync AliceBobSync { get; private set; }
+        public StateCorrection FiberCorrection { get; private set; }
+        public DensityMatrix AliceBobDensMatrix { get; private set; }
         public bool IsSyncActive { get; private set; } = false;
 
         //SecQNet Connection
@@ -146,9 +147,9 @@ namespace EQKDServer.Models
             //_QWP_D.Offset = 33.15;
                
 
-            TaggerSynchronization = new Synchronization(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
-            StateCorr = new StateCorrection(TaggerSynchronization, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
-            densMeas = new DensityMatrixMeasurement(TaggerSynchronization, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
+            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
+            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
         }
 
         //--------------------------------------
@@ -168,7 +169,7 @@ namespace EQKDServer.Models
 
             IsSyncActive = true;
 
-            TaggerSynchronization.ResetTimeTaggers();
+            AliceBobSync.ResetTimeTaggers();
 
                         
 
@@ -176,7 +177,7 @@ namespace EQKDServer.Models
           {
               //while (!_cts.Token.IsCancellationRequested)
               //{
-                 SyncClockResult syncClockRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+                 SyncClockResult syncClockRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
               //File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
@@ -230,7 +231,7 @@ namespace EQKDServer.Models
                    };
 
                    //Get Key Correlations
-                   SyncClockResult syncRes = TaggerSynchronization.GetSyncedTimeTags(PacketSize);
+                   SyncClockResult syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
                    Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
                    Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
@@ -279,7 +280,7 @@ namespace EQKDServer.Models
                        };
 
                        //Get Key Correlations
-                       TimeTags tt = TaggerSynchronization.GetSingleTimeTags(1, PacketSize);
+                       TimeTags tt = AliceBobSync.GetSingleTimeTags(1, PacketSize);
 
                        long tspan = tt.time.Last() - tt.time.First();
 
@@ -387,13 +388,13 @@ namespace EQKDServer.Models
             //Get Config Data
             _currentServerSettings.PacketSize = PacketSize;
 
-            _currentServerSettings.LinearDriftCoefficient = TaggerSynchronization.LinearDriftCoefficient;
-            _currentServerSettings.LinearDriftCoeff_NumVar = TaggerSynchronization.LinearDriftCoeff_NumVar;
-            _currentServerSettings.LinearDriftCoeff_Var = TaggerSynchronization.LinearDriftCoeff_Var;
-            _currentServerSettings.TimeWindow = TaggerSynchronization.ClockSyncTimeWindow;
-            _currentServerSettings.TimeBin = TaggerSynchronization.ClockTimeBin;
+            _currentServerSettings.LinearDriftCoefficient = AliceBobSync.LinearDriftCoefficient;
+            _currentServerSettings.LinearDriftCoeff_NumVar = AliceBobSync.LinearDriftCoeff_NumVar;
+            _currentServerSettings.LinearDriftCoeff_Var = AliceBobSync.LinearDriftCoeff_Var;
+            _currentServerSettings.TimeWindow = AliceBobSync.ClockSyncTimeWindow;
+            _currentServerSettings.TimeBin = AliceBobSync.ClockTimeBin;
 
-            _currentServerSettings.FiberOffset = TaggerSynchronization.FiberOffset;
+            _currentServerSettings.FiberOffset = AliceBobSync.FiberOffset;
 
             //Write Config file
             SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);

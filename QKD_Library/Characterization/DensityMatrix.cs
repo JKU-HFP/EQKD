@@ -11,10 +11,11 @@ using TimeTagger_Library;
 using System.Diagnostics;
 using Extensions_Library;
 using System.IO;
+using QKD_Library.Synchronization;
 
-namespace QKD_Library
+namespace QKD_Library.Characterization
 {
-    public class DensityMatrixMeasurement
+    public class DensityMatrix
     {
         //#################################################
         //##  C O N S T A N T S 
@@ -83,7 +84,7 @@ namespace QKD_Library
             new double[] { 22.5, 90, 22.5,0}, //xR 35
             new double[] { 22.5, 90, 22.5, 90}, //xL 36
         };
-        
+
 
 
         //#################################################
@@ -106,7 +107,7 @@ namespace QKD_Library
         //#################################################
         //##  P R I V A T E S 
         //#################################################
-        private Synchronization _sync;
+        private TaggerSync _sync;
         private IRotationStage _HWP_A;
         private IRotationStage _QWP_A;
         private IRotationStage _HWP_B;
@@ -118,12 +119,12 @@ namespace QKD_Library
 
         private string _logFolder = "";
         private string _currLogfile = "";
-        private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
+        private bool writeLog { get => !string.IsNullOrEmpty(_logFolder); }
 
         //#################################################
         //##  E V E N T S
         //#################################################
-        public event EventHandler<BasisCompletedEventArgs> BasisCompleted;       
+        public event EventHandler<BasisCompletedEventArgs> BasisCompleted;
         private void OnBasisCompleted(BasisCompletedEventArgs e)
         {
             BasisCompleted?.Raise(this, e);
@@ -139,7 +140,7 @@ namespace QKD_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public DensityMatrixMeasurement(Synchronization sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
+        public DensityMatrix(TaggerSync sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
         {
             _sync = sync;
 
@@ -159,15 +160,15 @@ namespace QKD_Library
         {
             //Use standard basis if no other given
             List<double[]> basisConfigs = StdBasis36;
-            
-            if(!basisConfigs.TrueForAll(p => p.Count() == 4))
+
+            if (!basisConfigs.TrueForAll(p => p.Count() == 4))
             {
                 WriteLog("Wrong Basis format.");
                 return;
             }
 
             //Set Log folder
-            if (!String.IsNullOrEmpty(LogFolder))
+            if (!string.IsNullOrEmpty(LogFolder))
             {
                 _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
@@ -192,15 +193,15 @@ namespace QKD_Library
             WriteLog("Calculating relative peak areas");
 
             //Report
-            stopwatch.Stop();    
-            OnDensityMatrixCompleted(new DensityMatrixCompletedEventArgs(_basisMeasurements.Select(p=> p.RelPeakArea).ToList()));
+            stopwatch.Stop();
+            OnDensityMatrixCompleted(new DensityMatrixCompletedEventArgs(_basisMeasurements.Select(p => p.RelPeakArea).ToList()));
 
             _currLogfile = Path.Combine(_logFolder, $"Relative_Peak_Areas.txt");
-            File.WriteAllLines(_currLogfile, _basisMeasurements.Select( p=> p.RelPeakArea.val.ToString()+"\t"+p.RelPeakArea.err.ToString()).ToArray());
+            File.WriteAllLines(_currLogfile, _basisMeasurements.Select(p => p.RelPeakArea.val.ToString() + "\t" + p.RelPeakArea.err.ToString()).ToArray());
 
             WriteLog($"Recording density matrix complete in {stopwatch.Elapsed}.");
         }
-        
+
         public void CancelMeasurement()
         {
             _cts.Cancel();
@@ -216,42 +217,46 @@ namespace QKD_Library
             {
                 if (ct.IsCancellationRequested) return false;
 
-                WriteLog("Collecting coincidences in configuration Nr." + index + $"({Std36Basis_Names[index-1]})" + ": " + basis.BasisConfig[0] + "," + basis.BasisConfig[1] + "," + basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
+                WriteLog("Collecting coincidences in configuration Nr." + index + $"({Std36Basis_Names[index - 1]})" + ": " + basis.BasisConfig[0] + "," + basis.BasisConfig[1] + "," + basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
                 stopwatch.Restart();
 
                 //Asynchronously Rotate stages to position
-                Task hwpA_Task = Task.Run( () => {
+                Task hwpA_Task = Task.Run(() =>
+                {
                     _HWP_A.Move_Absolute(basis.BasisConfig[0]);
-                    });
+                });
 
-                Task qwpA_Task = Task.Run( () => {
+                Task qwpA_Task = Task.Run(() =>
+                {
                     _QWP_A.Move_Absolute(basis.BasisConfig[1]);
-                    });
+                });
 
-                Task hwpB_Task = Task.Run(() => {
+                Task hwpB_Task = Task.Run(() =>
+                {
                     _HWP_B.Move_Absolute(basis.BasisConfig[2]);
-                    });
+                });
 
-                Task qwpB_Task = Task.Run(() => {
+                Task qwpB_Task = Task.Run(() =>
+                {
                     _QWP_B.Move_Absolute(basis.BasisConfig[3]);
-                    });
+                });
 
                 //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
                 //Get TimeTags
-                TimeTags tt = _sync.GetSingleTimeTags(0,PacketSize);                
+                TimeTags tt = _sync.GetSingleTimeTags(0, PacketSize);
 
                 //Create Histogram
-                basis.CreateHistogram(tt,OffsetChanB);
+                basis.CreateHistogram(tt, OffsetChanB);
 
                 basis.RelPeakArea = basis.CrossCorrHistogram.GetRelativeMiddlePeakArea();
 
                 //Report
-                stopwatch.Stop();             
+                stopwatch.Stop();
                 OnBasisCompleted(new BasisCompletedEventArgs(basis.CrossCorrHistogram.Histogram_X, basis.CrossCorrHistogram.Histogram_Y, basis.Peaks));
 
-                if(writeLog)
+                if (writeLog)
                 {
                     _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}.txt");
                     File.WriteAllLines(_currLogfile, basis.CrossCorrHistogram.Histogram_X.Zip(basis.CrossCorrHistogram.Histogram_Y, (x, y) => x.ToString() + "\t" + y.ToString()).ToArray());
@@ -263,10 +268,10 @@ namespace QKD_Library
 
             return true;
         }
-        private void WriteLog(string msg, bool doLog=false)
+        private void WriteLog(string msg, bool doLog = false)
         {
-            _loggerCallback?.Invoke("Density Matrix Measurement: "+msg);
-            if (doLog && !String.IsNullOrEmpty(_currLogfile)) File.AppendAllLines(_currLogfile, new string[] { msg });
+            _loggerCallback?.Invoke("Density Matrix Measurement: " + msg);
+            if (doLog && !string.IsNullOrEmpty(_currLogfile)) File.AppendAllLines(_currLogfile, new string[] { msg });
         }
 
     }

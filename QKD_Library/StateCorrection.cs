@@ -15,6 +15,7 @@ using TimeTagger_Library.TimeTagger;
 using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
+using QKD_Library.Synchronization;
 
 namespace QKD_Library
 {
@@ -91,7 +92,7 @@ namespace QKD_Library
         //##  P R I V A T E S
         //#################################################
 
-        Synchronization _taggerSync;
+        TaggerSync _taggerSync;
         //Waveplates in order
         //0... QWP
         //1... HWP
@@ -135,7 +136,7 @@ namespace QKD_Library
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public StateCorrection(Synchronization taggerSync, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
+        public StateCorrection(TaggerSync taggerSync, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
         {
             _taggerSync = taggerSync;
             _rotationStages = rotationStages;

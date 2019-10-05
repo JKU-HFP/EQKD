@@ -17,9 +17,9 @@ using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
-using QKD_Library;
 using System.IO;
 using System.Windows.Media;
+using QKD_Library.Synchronization;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -185,9 +185,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
                 //Register Events
                 _EQKDServer.ServerConfigRead += _EQKDServer_ServerConfigRead;
-                _EQKDServer.TaggerSynchronization.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
-                _EQKDServer.TaggerSynchronization.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
-                _EQKDServer.TaggerSynchronization.FindSignalStartComplete += TaggerSynchronization_FindSignalStartComplete;
+                _EQKDServer.AliceBobSync.SyncClocksComplete += TaggerSynchronization_SyncClocksComplete;
+                _EQKDServer.AliceBobSync.SyncCorrComplete += TaggerSynchronization_SyncCorrComplete;
+                _EQKDServer.AliceBobSync.OffsetFound += TaggerSynchronization_FindSignalStartComplete;
             });
 
            
@@ -224,7 +224,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CorrelationCollection.AddRange(_correlationLineSeries);
         }
 
-        private void TaggerSynchronization_FindSignalStartComplete(object sender, FindSignalStartEventArgs e)
+        private void TaggerSynchronization_FindSignalStartComplete(object sender, OffsetFoundEventArgs e)
         {
 
             File.WriteAllLines("FindStartTimeTest.txt", e.ResultA.Times.Zip(e.ResultA.Rates, (x, y) => x.ToString() + "\t" + y.ToString()));
@@ -311,13 +311,13 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         {
             _EQKDServer.PacketSize = PacketSize;
 
-            _EQKDServer.TaggerSynchronization.ClockTimeBin = Resolution;
-            _EQKDServer.TaggerSynchronization.ClockSyncTimeWindow = TimeWindow;
-            _EQKDServer.TaggerSynchronization.LinearDriftCoefficient = LinearDriftCoefficient;
-            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
-            _EQKDServer.TaggerSynchronization.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
+            _EQKDServer.AliceBobSync.ClockTimeBin = Resolution;
+            _EQKDServer.AliceBobSync.ClockSyncTimeWindow = TimeWindow;
+            _EQKDServer.AliceBobSync.LinearDriftCoefficient = LinearDriftCoefficient;
+            _EQKDServer.AliceBobSync.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
+            _EQKDServer.AliceBobSync.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
 
-            _EQKDServer.TaggerSynchronization.FiberOffset = FiberOffset;
+            _EQKDServer.AliceBobSync.FiberOffset = FiberOffset;
 
             _EQKDServer.StartSynchronizeAsync();
         }

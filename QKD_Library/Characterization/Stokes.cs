@@ -10,7 +10,7 @@ using Stage_Library;
 using System.IO;
 using System.Diagnostics;
 
-namespace QKD_Library
+namespace QKD_Library.Characterization
 {
     public class Stokes
     {
@@ -77,7 +77,7 @@ namespace QKD_Library
                 _powermeter = new TLPM(firstPowermeterFound, false, false);  //  For valid Ressource_Name see NI-Visa documentation.
 
                 int err = _powermeter.measPower(out powerValue);
-        
+
                 WriteLog(powerValue.ToString());
 
                 IsConnected = true;
@@ -98,7 +98,7 @@ namespace QKD_Library
 
         public double GetPower()
         {
-            if(!IsConnected)
+            if (!IsConnected)
             {
                 WriteLog("Powermeter not connected");
                 return -1.0;
@@ -112,14 +112,14 @@ namespace QKD_Library
 
         public void SetZero()
         {
-           // _powermeter.reinitSensor();
+            // _powermeter.reinitSensor();
         }
 
 
 
         public async Task GetStokesAsync(string filename = "Stokes.txt")
         {
-            if(!IsConnected)
+            if (!IsConnected)
             {
                 WriteLog("Powermeter not ready");
                 return;

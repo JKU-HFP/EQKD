@@ -6,40 +6,8 @@ using System.Threading.Tasks;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 
-namespace QKD_Library
+namespace QKD_Library.Synchronization
 {
-    //#################################################
-    //##  E N U M E R A T O R S
-    //#################################################
-
-    public enum StartSignalStatus
-    {
-        NotStarted,
-        InitialSignalTooHigh,
-        ThresholdNotFound,
-        SignalFittingFailed,
-        DerivativeFittingFailed,
-        SlopeTooLow,
-        SlopeOK
-    }
-
-    //#################################################
-    //##  R E S U L T S
-    //#################################################
-
-    public class FindSignalStartResult
-    {
-        public long[] Times { get; set; }
-        public double[] Rates { get; set; }
-        public double Threshold { get; set; }
-        public double[] FittingTimes { get; set; }
-        public double[] FittedRates { get; set; }
-        public double Slope { get; set; }
-        public long StartTime { get; set; }
-        public long GlobalStartTime { get; set; }
-        public StartSignalStatus Status { get; set; } = StartSignalStatus.NotStarted;
-    }
-
     public class SyncClockResult
     {
         public bool PeaksFound { get; set; }
