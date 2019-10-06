@@ -326,30 +326,20 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private void TaggerSynchronization_SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
-
-            CorrelationXSectionsCollection.Clear();
-
-            _correlationChartValues[0].Clear();
+            _correlationChartValues.ForEach(cv => cv.Clear());
             _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            if (e.SyncRes.Peaks != null)
-            {
-                foreach (Peak p in e.SyncRes.Peaks)
-                {
-                    var axisSection = new AxisSection
-                    {
-                        Value = p.MeanTime / 1000.0,
-                        SectionWidth = 0.1,
-                        Stroke = p.MeanTime==e.SyncRes.CorrPeakPos ? Brushes.Red : Brushes.Blue,
-                        StrokeThickness = 1,
-                        StrokeDashArray = new DoubleCollection(new[] { 4d })
-                    };
-                    CorrelationXSectionsCollection.Add(axisSection);
-                }
-            }
 
-            //Write new FiberOffset
-            FiberOffset = e.SyncRes.NewFiberOffset;         
+            CorrelationXSectionsCollection.Clear();  
+            var axisSection = new AxisSection
+            {
+                Value = e.SyncRes.CorrPeakPos / 1000.0,
+                SectionWidth = 0.1,
+                Stroke = Brushes.Red,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection(new[] { 4d })
+            };
+            CorrelationXSectionsCollection.Add(axisSection);
         }
 
         private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
@@ -384,8 +374,6 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.AliceBobSync.LinearDriftCoefficient = LinearDriftCoefficient;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
-
-            _EQKDServer.AliceBobSync.FiberOffset = FiberOffset;
 
             _EQKDServer.StartSynchronizeAsync();
         }

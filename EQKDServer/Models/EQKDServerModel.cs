@@ -177,7 +177,7 @@ namespace EQKDServer.Models
           {
               //while (!_cts.Token.IsCancellationRequested)
               //{
-                 SyncClockResult syncClockRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+              TaggerSyncResults syncClockRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
               //File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
@@ -231,7 +231,8 @@ namespace EQKDServer.Models
                    };
 
                    //Get Key Correlations
-                   SyncClockResult syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                   TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                   if (!syncRes.IsSync) return;
 
                    Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
                    Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
@@ -393,8 +394,6 @@ namespace EQKDServer.Models
             _currentServerSettings.LinearDriftCoeff_Var = AliceBobSync.LinearDriftCoeff_Var;
             _currentServerSettings.TimeWindow = AliceBobSync.ClockSyncTimeWindow;
             _currentServerSettings.TimeBin = AliceBobSync.ClockTimeBin;
-
-            _currentServerSettings.FiberOffset = AliceBobSync.FiberOffset;
 
             //Write Config file
             SaveConfigXMLFile(_currentServerSettings, _serverSettings_XMLFilename);

@@ -28,6 +28,9 @@ namespace QKD_Library.Synchronization
         //Clock Synchronisation
         public bool GlobalOffsetDefined { get; private set; } = false;
         public ulong ClockSyncTimeWindow { get; set; } = 100000;
+        /// <summary>
+        /// Defined by: time ALICE - time BOB
+        /// </summary>
         public long GlobalClockOffset { get; set; } = 0;
 
         public double LinearDriftCoefficient { get; set; } = 0;
@@ -45,9 +48,7 @@ namespace QKD_Library.Synchronization
         /// <summary>
         /// Offset by relative fiber distance of Alice and Bob
         /// </summary>
-        public long FiberOffset { get; set; } = 0;
         public ulong CorrSyncTimeWindow { get; set; } = 100000;
-        public long CorrPeakOffset_Tolerance { get; set; } = 2000;
 
         //#################################################
         //##  P R I V A T E S
@@ -62,7 +63,9 @@ namespace QKD_Library.Synchronization
         private Kurolator _corrKurolator;
         private Histogram _corrHist;
 
-        private long _bobLastStopTime = 0;
+        private CorrSyncStatus _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
+        private long _coarseTimeOffset = 0;
+        private int _numCoarseSearches = 0;
 
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         {
@@ -155,7 +158,7 @@ namespace QKD_Library.Synchronization
 
 
 
-        public SyncClockResult GetSyncedTimeTags(int packetSize = 100000)
+        public TaggerSyncResults GetSyncedTimeTags(int packetSize = 100000)
         {
             if (_tagger1 == null || _tagger2 == null)
             {
@@ -176,7 +179,7 @@ namespace QKD_Library.Synchronization
             _tagger2.ClearTimeTagBuffer();
 
             //---------------------------------------------------
-            //Is global offset defind? If not: Find starting time
+            //Is global offset defined? If not: Find starting time
             //---------------------------------------------------
 
             while (!GlobalOffsetDefined)
@@ -211,6 +214,7 @@ namespace QKD_Library.Synchronization
             
                 if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
                 {
+                    GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
                     GlobalOffsetDefined = true;
                 }
 
@@ -236,12 +240,40 @@ namespace QKD_Library.Synchronization
                     break;
             }
 
-            SyncClockResult syncClockres = SyncClocksAsync(ttA, ttB).GetAwaiter().GetResult();
+            //Try to synchronize clock
+            int clockSyncRetries = 10;
+            int curr_tries = 1;
 
-            //!!PERFORM CORRELATION SYNCHRONISATION HERE!!
+            TaggerSyncResults result = new TaggerSyncResults()
+            {
+                TimeTags_Alice = ttA,
+                CompTimeTags_Bob = ttB
+            };
 
-            return syncClockres;
+            SyncClockResult syncClockRes;
 
+            while (true)
+            {
+                if (curr_tries >= 2) WriteLog($"Retrying clock synchronization {curr_tries}/{clockSyncRetries}");
+                syncClockRes = SyncClocks(ttA, ttB);
+                if (syncClockRes.IsClocksSync) break;                
+
+                if(++curr_tries > clockSyncRetries)
+                {
+                    WriteLog("Clock synchronization failed.");
+                    return result;
+                }
+            }
+
+            //Final synchronization by correlation finding
+            SyncCorrResults corrSyncRes = SyncCorrelation(ttA, syncClockRes.CompTimeTags_Bob);
+                        
+            result.IsSync = corrSyncRes.IsCorrSync;
+
+            //Correct TimeTags if Offset is defined
+            if (GlobalOffsetDefined) result.CompTimeTags_Bob = new TimeTags(ttB.chan, ttB.time.Select(t => t + GlobalClockOffset).ToArray()); //SIGN OK?
+
+            return result;
         }
 
         public void ResetTimeTaggers()
@@ -253,306 +285,477 @@ namespace QKD_Library.Synchronization
             _tagger2?.ClearTimeTagBuffer();
 
             GlobalOffsetDefined = false;
+            _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
         }
 
-        private async Task<SyncClockResult> SyncClocksAsync(TimeTags ttAlice, TimeTags ttBob)
+        private SyncClockResult SyncClocks(TimeTags ttAlice, TimeTags ttBob)
         {
             Stopwatch sw = new Stopwatch();
 
-            SyncClockResult syncres = await Task.Run(() =>
+            //Initialize
+            WriteLog("Start synchronizing clocks");
+
+            sw.Start();
+
+            //Get packet timespan
+            var alice_first = ttAlice.time[0];
+            var alice_last = ttAlice.time[ttAlice.time.Length - 1];
+            var bob_first = ttBob.time[0];
+            var bob_last = ttBob.time[ttBob.time.Length - 1];
+            var alice_diff = alice_last - alice_first;
+            var bob_diff = bob_last - bob_first;
+
+            TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
+
+
+            GlobalClockOffset = alice_first - bob_first;
+
+            //----------------------------------------------------------------
+            //Compensate Bobs tags for a variation of linear drift coefficients
+            //-----------------------------------------------------------------
+
+            int[] variation_steps = Generate.LinearRangeInt32(-LinearDriftCoeff_NumVar, LinearDriftCoeff_NumVar);
+            List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient + s * LinearDriftCoeff_Var).ToList();
+            List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => (long)(t + (t - bob_first) * c)).ToArray()).ToList();
+            List<TimeTags> ttBob_comp_list = comp_times_list.Select((ct) => new TimeTags(ttBob.chan, ct)).ToList();
+
+            //------------------------------------------------------------------------------
+            //Generate Histograms and Fittings for all Compensation Configurations
+            //------------------------------------------------------------------------------
+            List<DriftCompResult> driftCompResults = new List<DriftCompResult>() { };
+
+            //Channel configuration
+            byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
+            byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
+
+            for (int drift_index = 0; drift_index < variation_steps.Length; drift_index++)
             {
-                //Initialize
-                WriteLog("Start synchronizing clocks");
+                DriftCompResult driftCompResult = new DriftCompResult(drift_index);
 
-                sw.Start();
+                Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)ClockTimeBin);
+                _clockKurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
+                _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset);
 
-                //Get packet timespan
-                var alice_first = ttAlice.time[0];
-                var alice_last = ttAlice.time[ttAlice.time.Length - 1];
-                var bob_first = ttBob.time[0];
-                var bob_last = ttBob.time[ttBob.time.Length - 1];
-                var alice_diff = alice_last - alice_first;
-                var bob_diff = bob_last - bob_first;
+                //----- Analyse peaks ----
 
-                TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
+                List<Peak> peaks = hist.GetPeaks(peakBinning: 2000);
 
-
-                GlobalClockOffset = alice_first - bob_first;
-
-                //----------------------------------------------------------------
-                //Compensate Bobs tags for a variation of linear drift coefficients
-                //-----------------------------------------------------------------
-
-                int[] variation_steps = Generate.LinearRangeInt32(-LinearDriftCoeff_NumVar, LinearDriftCoeff_NumVar);
-                List<double> linDriftCoefficients = variation_steps.Select(s => LinearDriftCoefficient + s * LinearDriftCoeff_Var).ToList();
-                List<long[]> comp_times_list = linDriftCoefficients.Select((c) => ttBob.time.Select(t => (long)(t + (t - bob_first) * c)).ToArray()).ToList();
-                List<TimeTags> ttBob_comp_list = comp_times_list.Select((ct) => new TimeTags(ttBob.chan, ct)).ToList();
-
-                //------------------------------------------------------------------------------
-                //Generate Histograms and Fittings for all Compensation Configurations
-                //------------------------------------------------------------------------------
-                List<DriftCompResult> driftCompResults = new List<DriftCompResult>() { };
-
-                //Channel configuration
-                byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
-                byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
-
-                for (int drift_index = 0; drift_index < variation_steps.Length; drift_index++)
+                //Number of peaks plausible?
+                int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod) + 1;
+                if (peaks.Count < numExpectedPeaks - 1 || peaks.Count > numExpectedPeaks + 1)
                 {
-                    DriftCompResult driftCompResult = new DriftCompResult(drift_index);
+                    //Return standard result
 
-                    Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)ClockTimeBin);
-                    _clockKurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
-                    _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset + FiberOffset);
-
-                    //----- Analyse peaks ----
-
-                    List<Peak> peaks = hist.GetPeaks(peakBinning: 2000);
-
-                    //Number of peaks plausible?
-                    int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod) + 1;
-                    if (peaks.Count < numExpectedPeaks - 1 || peaks.Count > numExpectedPeaks + 1)
-                    {
-                        //Return standard result
-
-                        driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
-                        driftCompResult.IsFitSuccessful = false;
-                        driftCompResult.HistogramX = hist.Histogram_X;
-                        driftCompResult.HistogramY = hist.Histogram_Y;
-                        driftCompResult.Peaks = peaks;
-                        driftCompResult.MiddlePeak = null;
-                        driftCompResult.FittedMeanTime = 0;
-                        driftCompResult.Sigma = (-1, -1);
-                    }
-                    else
-                    {
-                        //FITTING
-
-                        //Get Middle Peak
-                        Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
-
-                        //Fit peaks
-                        Vector<double> initial_guess = new DenseVector(new double[] { MiddlePeak.MeanTime, 30, 500, 0 });
-                        Vector<double> lower_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime - ExcitationPeriod / 2, 5, 200, 0 });
-                        Vector<double> upper_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime + ExcitationPeriod / 2, 50000000, ExcitationPeriod * 0.75, 100 });
-
-                        Vector<double> XVals = new DenseVector(hist.Histogram_X.Select(x => (double)x).ToArray());
-                        Vector<double> YVals = new DenseVector(hist.Histogram_Y.Select(y => (double)y).ToArray());
-
-                        Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
-                        {
-                            //Parameter Vector:
-                            //0 ... mean value
-                            //1 ... height
-                            //2 ... std deviation
-                            //3 ... ground level
-
-                            Vector<double> result_vector = new DenseVector(x.Count);
-
-                            int[] x0_range = Generate.LinearRangeInt32(-numExpectedPeaks / 2, numExpectedPeaks / 2);
-                            double[] x0_vals = x0_range.Select(xv => p[0] + xv * (double)ExcitationPeriod).ToArray();
-
-                            for (int i = 0; i < x.Count; i++)
-                            {
-                                result_vector[i] = p[3] + x0_vals.Select(xv => p[1] * Normal.PDF(xv, p[2], x[i])).Sum();
-                            }
-
-                            return result_vector;
-                        };
-
-                        IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
-
-                        LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
-                        NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess, lowerBound: lower_bound, upperBound: upper_bound);
-
-                        //CHECK CONCIDENCES IN BETWEEN PEAKS
-                        long BetweenCoinc = 0;
-
-                        foreach (var peak in peaks.Except(new List<Peak> { MiddlePeak }).Skip(1).Take(peaks.Count - 3))
-                        {
-                            int sign = peak.MeanTime < MiddlePeak.MeanTime ? 1 : -1;
-
-                            long sum_coinc = 0;
-                            int start_ind = peak.MeanIndex + sign * (int)((long)ExcitationPeriod / (2 * hist.Hist_Resolution));
-                            long start_time = hist.Histogram_X[start_ind];
-                            //Search backwards
-                            int ind = start_ind;
-                            while (hist.Histogram_X[ind] >= start_time - GroundlevelTimebin && ind > 0)
-                            {
-                                sum_coinc += hist.Histogram_Y[ind];
-                                ind--;
-                            }
-                            //Search foward
-                            ind = start_ind + 1;
-                            while (hist.Histogram_X[ind] <= start_time + GroundlevelTimebin && ind < hist.Histogram_X.Length - 2)
-                            {
-                                sum_coinc += hist.Histogram_Y[ind];
-                                ind++;
-                            }
-                            BetweenCoinc += sum_coinc;
-                        }
-
-                        //Write results                                               
-                        driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
-
-                        driftCompResult.IsFitSuccessful = minimization_result.ReasonForExit ==
-                        ExitCondition.Converged || minimization_result.ReasonForExit == ExitCondition.RelativePoints;
-                        driftCompResult.NumIterations = minimization_result.Iterations;
-                        driftCompResult.GroundLevel = BetweenCoinc;// minimization_result.MinimizingPoint[3];
-                        driftCompResult.HistogramX = hist.Histogram_X;
-                        driftCompResult.HistogramY = hist.Histogram_Y;
-                        driftCompResult.Peaks = peaks;
-                        driftCompResult.MiddlePeak = MiddlePeak;
-                        //if (driftCompResult.IsFitSuccessful)
-                        if (driftCompResult.IsFitSuccessful)
-                        {
-                            driftCompResult.HistogramYFit = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
-                            driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[0];
-                            driftCompResult.Sigma = (minimization_result.MinimizingPoint[2], minimization_result.StandardErrors[2]);
-                        }
-                    }
-
-                    driftCompResults.Add(driftCompResult);
-
-
+                    driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
+                    driftCompResult.IsFitSuccessful = false;
+                    driftCompResult.HistogramX = hist.Histogram_X;
+                    driftCompResult.HistogramY = hist.Histogram_Y;
+                    driftCompResult.Peaks = peaks;
+                    driftCompResult.MiddlePeak = null;
+                    driftCompResult.FittedMeanTime = 0;
+                    driftCompResult.Sigma = (-1, -1);
                 }
-
-                sw.Stop();
-
-                //------------------------------------------------------------------------------
-                // Rate fitting results
-                //------------------------------------------------------------------------------
-
-                //No fitting found
-                if (driftCompResults.Where(r => r.IsFitSuccessful == true).Count() <= 0)
+                else
                 {
+                    //FITTING
 
-                    WriteLog($"Sync failed in {sw.Elapsed} | TimeSpan: {packettimespan} |DriftCoeff {LinearDriftCoefficient}");
+                    //Get Middle Peak
+                    Peak MiddlePeak = peaks.Where(p => Math.Abs(p.MeanTime) == peaks.Select(a => Math.Abs(a.MeanTime)).Min()).FirstOrDefault();
 
-                    DriftCompResult initDriftResult = driftCompResults[driftCompResults.Count / 2];
+                    //Fit peaks
+                    Vector<double> initial_guess = new DenseVector(new double[] { MiddlePeak.MeanTime, 30, 500, 0 });
+                    Vector<double> lower_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime - ExcitationPeriod / 2, 5, 200, 0 });
+                    Vector<double> upper_bound = new DenseVector(new double[] { (double)MiddlePeak.MeanTime + ExcitationPeriod / 2, 50000000, ExcitationPeriod * 0.75, 100 });
 
-                    return new SyncClockResult()
+                    Vector<double> XVals = new DenseVector(hist.Histogram_X.Select(x => (double)x).ToArray());
+                    Vector<double> YVals = new DenseVector(hist.Histogram_Y.Select(y => (double)y).ToArray());
+
+                    Func<Vector<double>, Vector<double>, Vector<double>> obj_function = (Vector<double> p, Vector<double> x) =>
                     {
-                        PeaksFound = false,
-                        IsClocksSync = false,
-                        HistogramX = initDriftResult.HistogramX,
-                        HistogramY = initDriftResult.HistogramY,
-                        Peaks = initDriftResult.Peaks,
-                        HistogramYFit = initDriftResult.HistogramYFit,
-                        GroundLevel = (initDriftResult.GroundLevel, 0),
-                        NewLinearDriftCoeff = initDriftResult.LinearDriftCoeff,
-                        CompTimeTags_Bob = ttBob_comp_list[initDriftResult.Index],
-                        MiddlePeak = initDriftResult.MiddlePeak,
-                        ProcessingTime = sw.Elapsed,
-                        TimeTags_Alice = ttAlice,
-                        TimeTags_Bob = ttBob
+                        //Parameter Vector:
+                        //0 ... mean value
+                        //1 ... height
+                        //2 ... std deviation
+                        //3 ... ground level
+
+                        Vector<double> result_vector = new DenseVector(x.Count);
+
+                        int[] x0_range = Generate.LinearRangeInt32(-numExpectedPeaks / 2, numExpectedPeaks / 2);
+                        double[] x0_vals = x0_range.Select(xv => p[0] + xv * (double)ExcitationPeriod).ToArray();
+
+                        for (int i = 0; i < x.Count; i++)
+                        {
+                            result_vector[i] = p[3] + x0_vals.Select(xv => p[1] * Normal.PDF(xv, p[2], x[i])).Sum();
+                        }
+
+                        return result_vector;
                     };
+
+                    IObjectiveModel objective_model = ObjectiveFunction.NonlinearModel(obj_function, XVals, YVals);
+
+                    LevenbergMarquardtMinimizer solver = new LevenbergMarquardtMinimizer(maximumIterations: 100);
+                    NonlinearMinimizationResult minimization_result = solver.FindMinimum(objective_model, initial_guess, lowerBound: lower_bound, upperBound: upper_bound);
+
+                    //CHECK CONCIDENCES IN BETWEEN PEAKS
+                    long BetweenCoinc = 0;
+
+                    foreach (var peak in peaks.Except(new List<Peak> { MiddlePeak }).Skip(1).Take(peaks.Count - 3))
+                    {
+                        int sign = peak.MeanTime < MiddlePeak.MeanTime ? 1 : -1;
+
+                        long sum_coinc = 0;
+                        int start_ind = peak.MeanIndex + sign * (int)((long)ExcitationPeriod / (2 * hist.Hist_Resolution));
+                        long start_time = hist.Histogram_X[start_ind];
+                        //Search backwards
+                        int ind = start_ind;
+                        while (hist.Histogram_X[ind] >= start_time - GroundlevelTimebin && ind > 0)
+                        {
+                            sum_coinc += hist.Histogram_Y[ind];
+                            ind--;
+                        }
+                        //Search foward
+                        ind = start_ind + 1;
+                        while (hist.Histogram_X[ind] <= start_time + GroundlevelTimebin && ind < hist.Histogram_X.Length - 2)
+                        {
+                            sum_coinc += hist.Histogram_Y[ind];
+                            ind++;
+                        }
+                        BetweenCoinc += sum_coinc;
+                    }
+
+                    //Write results                                               
+                    driftCompResult.LinearDriftCoeff = linDriftCoefficients[drift_index];
+
+                    driftCompResult.IsFitSuccessful = minimization_result.ReasonForExit ==
+                    ExitCondition.Converged || minimization_result.ReasonForExit == ExitCondition.RelativePoints;
+                    driftCompResult.NumIterations = minimization_result.Iterations;
+                    driftCompResult.GroundLevel = BetweenCoinc;// minimization_result.MinimizingPoint[3];
+                    driftCompResult.HistogramX = hist.Histogram_X;
+                    driftCompResult.HistogramY = hist.Histogram_Y;
+                    driftCompResult.Peaks = peaks;
+                    driftCompResult.MiddlePeak = MiddlePeak;
+                    //if (driftCompResult.IsFitSuccessful)
+                    if (driftCompResult.IsFitSuccessful)
+                    {
+                        driftCompResult.HistogramYFit = obj_function(minimization_result.MinimizingPoint, XVals).ToArray();
+                        driftCompResult.FittedMeanTime = minimization_result.MinimizingPoint[0];
+                        driftCompResult.Sigma = (minimization_result.MinimizingPoint[2], minimization_result.StandardErrors[2]);
+                    }
                 }
 
-                //Find best fit
-                //double min_sigma = driftCompResults.Where(d => d.IsFitSuccessful && d.Sigma.val>0).Select(d => d.Sigma.val).Min();
-                //DriftCompResult opt_driftResults = driftCompResults.Where(d => d.Sigma.val == min_sigma).FirstOrDefault();
+                driftCompResults.Add(driftCompResult);
 
-                double min_groundlevel = driftCompResults.Where(d => d.IsFitSuccessful).Select(d => d.GroundLevel).Min();
-                DriftCompResult opt_driftResults = driftCompResults.Where(d => d.GroundLevel == min_groundlevel).FirstOrDefault();
 
-                //Write statistics
-
-                WriteLog($"Sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| Fitted FWHM: {opt_driftResults.Sigma.val:F2}({opt_driftResults.Sigma.err:F2})" +
-                         $" | Pos: {opt_driftResults.MiddlePeak.MeanTime:F2} | Fitted pos: {opt_driftResults.FittedMeanTime:F2} | new DriftCoeff {opt_driftResults.LinearDriftCoeff}({LinearDriftCoefficient - opt_driftResults.LinearDriftCoeff})");
-
-                //Define new Drift Coefficient
-
-                double MaxGroundLevel = GroundlevelTolerance * opt_driftResults.MiddlePeak.Area * opt_driftResults.Peaks.Count;
-                bool clockInSync = opt_driftResults.Sigma.val <= STD_Tolerance && min_groundlevel < MaxGroundLevel;
-                if (clockInSync) LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
-
-                return new SyncClockResult()
-                {
-                    PeaksFound = true,
-                    IsClocksSync = clockInSync,
-                    HistogramX = opt_driftResults.HistogramX,
-                    HistogramY = opt_driftResults.HistogramY,
-                    HistogramYFit = opt_driftResults.HistogramYFit,
-                    NumIterations = opt_driftResults.NumIterations,
-                    GroundLevel = (opt_driftResults.GroundLevel, MaxGroundLevel),
-                    Sigma = opt_driftResults.Sigma,
-                    NewLinearDriftCoeff = LinearDriftCoefficient,
-                    Peaks = opt_driftResults.Peaks,
-                    MiddlePeak = opt_driftResults.MiddlePeak,
-                    CompTimeTags_Bob = ttBob_comp_list[opt_driftResults.Index],
-                    ProcessingTime = sw.Elapsed,
-                    TimeTags_Alice = ttAlice,
-                    TimeTags_Bob = ttBob
-                };
-
-            });
-
-            OnSyncClocksComplete(new SyncClocksCompleteEventArgs(syncres));
-
-            return syncres;
-        }
-
-        public async Task<SyncCorrResults> SyncCorrelationAsync(TimeTags ttAlice, TimeTags ttBob)
-        {
-            if (_corrKurolator == null)
-            {
-                _corrHist = new Histogram(_corrChanConfig, CorrSyncTimeWindow, (long)CorrTimeBin);
-                _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, CorrSyncTimeWindow);
             }
 
-            SyncCorrResults syncRes = await Task.Run(() =>
-           {
-               Stopwatch sw = new Stopwatch();
-               sw.Start();
+            sw.Stop();
 
-               _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + FiberOffset);
+            //------------------------------------------------------------------------------
+            // Rate fitting results
+            //------------------------------------------------------------------------------
 
-               //Find correlated peak
-               List<Peak> peaks = _corrHist.GetPeaks(peakBinning: 2000);
-               double av_area = peaks.Select(p => p.Area).Average();
-               double av_area_err = Math.Sqrt(av_area);
+            DriftCompResult initDriftResult = driftCompResults[driftCompResults.Count / 2];
 
-               //Find peak most outside the average
-               double max_deviation = peaks.Select(a => Math.Abs(a.Area - av_area)).Max();
-               Peak CorrPeak = peaks.Where(p => Math.Abs(p.Area - av_area) == max_deviation).FirstOrDefault();
+            SyncClockResult result = new SyncClockResult()
+            {
+                PeaksFound = false,
+                IsClocksSync = false,
+                HistogramX = initDriftResult.HistogramX,
+                HistogramY = initDriftResult.HistogramY,
+                Peaks = initDriftResult.Peaks,
+                HistogramYFit = initDriftResult.HistogramYFit,
+                GroundLevel = (initDriftResult.GroundLevel, 0),
+                NewLinearDriftCoeff = initDriftResult.LinearDriftCoeff,
+                CompTimeTags_Bob = ttBob_comp_list[initDriftResult.Index],
+                MiddlePeak = initDriftResult.MiddlePeak,
+                ProcessingTime = sw.Elapsed,
+                TimeTags_Alice = ttAlice,
+                TimeTags_Bob = ttBob
+            };
 
-               //Is peak area statistically significant?
-               bool isCorrSync = false;
-               bool corrPeakFound = false;
+            //No fitting found
+            if (driftCompResults.Where(r => r.IsFitSuccessful == true).Count() <= 0)
+            {
 
-               TimeTags comptimetags_Bob = null;
+                WriteLog($"Clock Sync failed in {sw.Elapsed} | TimeSpan: {packettimespan} |DriftCoeff {LinearDriftCoefficient}");
+                return result;
+            }
 
-               if (Math.Abs(CorrPeak.Area - av_area) > 2 * av_area_err)
-               {
-                   corrPeakFound = true;
-                   if (Math.Abs(CorrPeak.MeanTime) < CorrPeakOffset_Tolerance) isCorrSync = true;
+            //FIND BEST FIT
+            double min_groundlevel = driftCompResults.Where(d => d.IsFitSuccessful).Select(d => d.GroundLevel).Min();
+            DriftCompResult opt_driftResults = driftCompResults.Where(d => d.GroundLevel == min_groundlevel).FirstOrDefault();
 
-                   //FiberOffset += CorrPeak.MeanTime;
+            //Write statistics
 
-                   //Correct Bobs tags
-                   comptimetags_Bob = new TimeTags(ttBob.chan, ttBob.time.Select(t => t - (GlobalClockOffset + FiberOffset)).ToArray());
-               }
+            WriteLog($"Clock sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| Fitted FWHM: {opt_driftResults.Sigma.val:F2}({opt_driftResults.Sigma.err:F2})" +
+                        $" | Pos: {opt_driftResults.MiddlePeak.MeanTime:F2} | Fitted pos: {opt_driftResults.FittedMeanTime:F2} | new DriftCoeff {opt_driftResults.LinearDriftCoeff}({LinearDriftCoefficient - opt_driftResults.LinearDriftCoeff})");
 
-               sw.Stop();
+            //Define new Drift Coefficient
 
-               return new SyncCorrResults()
-               {
-                   HistogramX = _corrHist.Histogram_X,
-                   HistogramY = _corrHist.Histogram_Y,
-                   Peaks = peaks,
-                   CorrPeakPos = CorrPeak.MeanTime,
-                   CorrPeakFound = corrPeakFound,
-                   NewFiberOffset = FiberOffset,
-                   IsCorrSync = isCorrSync,
-                   CompTimeTags_Bob = comptimetags_Bob,
-                   ProcessingTime = sw.Elapsed
-               };
-           });
+            double MaxGroundLevel = GroundlevelTolerance * opt_driftResults.MiddlePeak.Area * opt_driftResults.Peaks.Count;
+            bool clockInSync = opt_driftResults.Sigma.val <= STD_Tolerance && min_groundlevel < MaxGroundLevel;
+            if (clockInSync) LinearDriftCoefficient = opt_driftResults.LinearDriftCoeff;
 
-            OnSyncCorrComplete(new SyncCorrCompleteEventArgs(syncRes));
 
-            return syncRes;
+            result.PeaksFound = true;
+            result.IsClocksSync = clockInSync;
+            result.HistogramX = opt_driftResults.HistogramX;
+            result.HistogramY = opt_driftResults.HistogramY;
+            result.HistogramYFit = opt_driftResults.HistogramYFit;
+            result.NumIterations = opt_driftResults.NumIterations;
+            result.GroundLevel = (opt_driftResults.GroundLevel, MaxGroundLevel);
+            result.Sigma = opt_driftResults.Sigma;
+            result.NewLinearDriftCoeff = LinearDriftCoefficient;
+            result.Peaks = opt_driftResults.Peaks;
+            result.MiddlePeak = opt_driftResults.MiddlePeak;
+            result.CompTimeTags_Bob = ttBob_comp_list[opt_driftResults.Index];
+
+            OnSyncClocksComplete(new SyncClocksCompleteEventArgs(result));
+
+            return result;
+        }
+
+        private SyncCorrResults SyncCorrelation(TimeTags ttAlice, TimeTags ttBob)
+        {
+            SyncCorrResults results = new SyncCorrResults();
+
+            double coarseCorrelationSignificance = 0.5;
+            int maxNumCoarseSearches = 10;
+
+            ulong FineTimeWindow = 10 * ExcitationPeriod;
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            //Main state machine
+            while (true)
+            {
+               // State Machine
+                switch (_corrsyncStatus)
+                {
+                    //-----------------------------------------
+                    // Find coarse time by large search radius
+                    //-----------------------------------------
+
+                    case CorrSyncStatus.SearchingCoarseRange:
+
+
+                        while (_numCoarseSearches <= maxNumCoarseSearches && _corrsyncStatus == CorrSyncStatus.SearchingCoarseRange)
+                        {
+                            SyncCorrResults coarseResults = new SyncCorrResults();
+
+                            //Find coarse correlation by antibunching at all channels
+                            ulong coarseTimewindow = 10000 * ExcitationPeriod;
+                            _corrHist = new Histogram(_clockChanConfig, coarseTimewindow, (long)ExcitationPeriod);
+
+                            _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, coarseTimewindow);
+                            _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + _coarseTimeOffset);
+
+                            coarseResults.HistogramX = _corrHist.Histogram_X.ToList();
+                            coarseResults.HistogramY = _corrHist.Histogram_Y.ToList();
+
+                            long minPoint = coarseResults.HistogramY.Min();
+                            long maxPoint = coarseResults.HistogramY.Max();
+
+                            bool minPointsignificant = minPoint < coarseCorrelationSignificance * coarseResults.HistogramY.Average();
+                            bool maxPointsignificant = maxPoint > coarseCorrelationSignificance * coarseResults.HistogramY.Average();
+
+                            //Is Extremum significant?
+                            if (minPointsignificant || maxPointsignificant)
+                            {
+                                int ind = minPointsignificant ?
+                                    coarseResults.HistogramY.FindIndex(y => y == minPoint) :
+                                    coarseResults.HistogramY.FindIndex(y => y == maxPoint);
+
+                                coarseResults.CorrPeakPos = coarseResults.HistogramX[ind];
+                                
+                                GlobalClockOffset -= coarseResults.CorrPeakPos; //IS SIGN CORRECT?
+
+                                _coarseTimeOffset = 0;
+                                _numCoarseSearches = 0;
+                                _corrsyncStatus = CorrSyncStatus.SearchingCorrPeak;
+
+                                WriteLog($"Coarse correlations found at {coarseResults.CorrPeakPos} after {sw.Elapsed}");
+                            }
+                            //If not: Change search range
+                            else
+                            {
+                                //alternately vary search window                      
+                                _coarseTimeOffset = (-1) * _numCoarseSearches % 2 * (_numCoarseSearches / 2 + 1) * (long)coarseTimewindow;
+                                _numCoarseSearches++;
+                            }
+
+                            coarseResults.Status = _corrsyncStatus;
+                            OnSyncCorrComplete(new SyncCorrCompleteEventArgs(coarseResults));
+
+                            //No correlation found
+                            if (_numCoarseSearches > maxNumCoarseSearches)
+                            {
+                                _corrsyncStatus = CorrSyncStatus.NoCorrelationFound;
+                                results = coarseResults;
+
+                                WriteLog($"No coarse correlations found after {sw.Elapsed}. Synchronization FAILED");
+                            }
+                        }
+                        break;
+
+                    //-----------------------------------------
+                    // Find correlated peak
+                    //-----------------------------------------
+                    case CorrSyncStatus.SearchingCorrPeak:
+
+                        SyncCorrResults res = new SyncCorrResults();
+   
+                        _corrHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
+
+                        _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, FineTimeWindow);
+                        _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
+
+                        res.HistogramX = _corrHist.Histogram_X.ToList();
+                        res.HistogramY = _corrHist.Histogram_Y.ToList();
+
+                        List<Peak> peaks = _corrHist.GetPeaks();
+                        res.Peaks = peaks;
+
+                        //Find maximum distance between the peaks
+                        List<long> peakDists = new List<long>();
+                        for (int i=0; i<peaks.Count-1;i++)
+                        {
+                            peakDists.Add(peaks[i + 1].MeanTime - peaks[i].MeanTime);
+                        }
+
+                        List<long> LongDistances = peakDists.Where(d => d > 1.5 * ExcitationPeriod).ToList();
+                        
+                        //Multiple peaks missed --> error
+                        if(LongDistances.Count>=2)
+                        {
+                            _corrsyncStatus = CorrSyncStatus.NoCorrelationFound;
+                            WriteLog($"No correlated peak found after {sw.Elapsed}");
+                        }
+                        //One distinct strong antibunching found
+                        else if(LongDistances.Count()==1)
+                        {
+                            int ind = peakDists.FindIndex(d => d == LongDistances.First());
+                            res.CorrPeakPos = peaks[ind].MeanTime + (long)ExcitationPeriod / 2;
+
+                            GlobalClockOffset -= res.CorrPeakPos; //IS SIGN CORRECT?
+
+                            _corrsyncStatus = CorrSyncStatus.TrackingPeak;
+                            WriteLog($"Strong antibunching found at {res.CorrPeakPos} after {sw.Elapsed}");
+                        }
+                        //Search for bunching/antibunching
+                        else
+                        {
+                            double average_area = peaks.Select(p => p.Area).Average();
+                            List<double> visibilities = peaks.Select(p => Math.Abs((p.Area - average_area) / (p.Area + average_area))).ToList();
+                            double max_visibility = visibilities.Max();
+                            int ind_max = visibilities.FindIndex(v => v == max_visibility);
+
+                            //Is deviation significant?
+                            if(max_visibility > 0.5)
+                            {
+                                res.CorrPeakPos = peaks[ind_max].MeanTime;
+
+                                GlobalClockOffset -= res.CorrPeakPos; //IS SIGN CORRECT?
+
+                                _corrsyncStatus = CorrSyncStatus.TrackingPeak;
+                                WriteLog($"Correlated peak found at {res.CorrPeakPos} after {sw.Elapsed}");
+                            }
+                            else
+                            {
+                                //Go back to coarse searching
+                                _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
+                                WriteLog($"No correlated peak found after {sw.Elapsed}");
+                            }
+                        }
+
+                        OnSyncCorrComplete(new SyncCorrCompleteEventArgs(res));
+                        results = res;
+
+                        break;
+
+                    //-----------------------------------------
+                    // Track middlepeak
+                    //-----------------------------------------
+                    case CorrSyncStatus.TrackingPeak:
+
+                        SyncCorrResults trackingRes = new SyncCorrResults();
+
+                        _corrHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
+
+                        _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, FineTimeWindow);
+                        _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
+
+                        trackingRes.HistogramX = _corrHist.Histogram_X.ToList();
+                        trackingRes.HistogramY = _corrHist.Histogram_Y.ToList();
+
+                        List<Peak> trackedPeaks = _corrHist.GetPeaks();
+                        trackingRes.Peaks = trackedPeaks;
+
+                        //Track peak closest to zero
+                        long mindist = trackedPeaks.Select(p => p.MeanTime).Min();
+                       
+                        Peak MiddlePeak = trackedPeaks.Where(p => p.MeanTime == mindist).FirstOrDefault();
+
+                        //Is middlepeak around zero? --> DONE
+                        if( ((double) MiddlePeak.MeanTime).AlmostEqual(0,ExcitationPeriod/10) )
+                        {
+                            trackingRes.CorrPeakPos = MiddlePeak.MeanTime;
+                            trackingRes.IsCorrSync = true;
+
+                            WriteLog($"Peak tracked at {trackingRes.CorrPeakPos} after {sw.Elapsed}");
+                        }
+                        //If not, is it strong antibunching?
+                        else
+                        {
+                            //Get neighbour peak around zero
+                            int middlepeakindex = trackedPeaks.FindIndex(p => p == MiddlePeak);
+
+                            Peak neighbourPeak = null;
+                            if (MiddlePeak.MeanTime < 0 && middlepeakindex < trackedPeaks.Count - 1) neighbourPeak = trackedPeaks[middlepeakindex + 1];
+                            else if (MiddlePeak.MeanTime >= 0 && middlepeakindex > 0) neighbourPeak = trackedPeaks[middlepeakindex - 1];
+                            else //Impossible error state
+                            {                           
+                                _corrsyncStatus = CorrSyncStatus.SearchingCorrPeak;
+                                WriteLog($"Peak tracking failed after {sw.Elapsed} (non-plausible peak distances)");
+                                break;
+                            }
+
+                            //Is the mean value in the middle and the distance is about 2 excitation cycles?
+                            long mean_value = (MiddlePeak.MeanTime + neighbourPeak.MeanTime) / 2;
+                            long distance = Math.Abs(MiddlePeak.MeanTime - neighbourPeak.MeanTime);
+
+                            if ( mean_value < (long)ExcitationPeriod/10 && distance > 1.5*ExcitationPeriod )
+                            {
+                                trackingRes.CorrPeakPos = mean_value;
+                                trackingRes.IsCorrSync = true;
+                                WriteLog($"Peak tracked at {trackingRes.CorrPeakPos} after {sw.Elapsed}");
+                            }
+                            //If not, go back to finding correlation
+                            else
+                            {
+                                _corrsyncStatus = CorrSyncStatus.SearchingCorrPeak;
+                                WriteLog($"Peak tracking failed after {sw.Elapsed}");
+                            }
+
+                        }
+
+                        GlobalClockOffset -= trackingRes.CorrPeakPos; //IS SIGN CORRECT?
+                        OnSyncCorrComplete(new SyncCorrCompleteEventArgs(trackingRes));
+
+                        results = trackingRes;
+
+                        break;
+                }
+
+                if (_corrsyncStatus == CorrSyncStatus.NoCorrelationFound ||
+                   _corrsyncStatus == CorrSyncStatus.TrackingPeak)
+                    break;
+            }
+
+            sw.Stop();
+
+            return results;
         }
 
         private void WriteLog(string msg)

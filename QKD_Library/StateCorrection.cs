@@ -328,9 +328,9 @@ namespace QKD_Library
 
             if(NumTagger==2)
             {
-                SyncClockResult syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
+                TaggerSyncResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
 
-                if (!syncRes.IsClocksSync) return (-1, 0);
+                if (!syncRes.IsSync) return (-1, 0);
 
                 tt1 = syncRes.TimeTags_Alice;
                 tt2 = syncRes.CompTimeTags_Bob;
