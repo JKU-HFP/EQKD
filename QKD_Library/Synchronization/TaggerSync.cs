@@ -178,31 +178,24 @@ namespace QKD_Library.Synchronization
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
 
+            _tagger1.StartCollectingTimeTagsAsync();
+            _tagger2.StartCollectingTimeTagsAsync();
             //---------------------------------------------------
             //Is global offset defined? If not: Find starting time
             //---------------------------------------------------
 
             while (!GlobalOffsetDefined)
             {
-                _tagger1.StartCollectingTimeTagsAsync();
-                _tagger2.StartCollectingTimeTagsAsync();
-
                 WriteLog("Global Clock offset undefined. Block signal and release it fast.");
 
-                _tagger1.PacketSize = 200000;
-                _tagger2.PacketSize = 200000;
+                _tagger1.ClearTimeTagBuffer();
+                _tagger2.ClearTimeTagBuffer();
 
-
-                ResetTimeTaggers();
-                _tagger1.StartCollectingTimeTagsAsync();
-                _tagger2.StartCollectingTimeTagsAsync();
                 //while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
                 while (!_tagger2.GetNextTimeTags(out ttB))
                 {
                     Thread.Sleep(10);
                 }
-
-                ResetTimeTaggers();
 
                 SignalStartFinder serverStartFinder = new SignalStartFinder("Alice",_loggerCallback);
                 SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttA);
@@ -527,10 +520,10 @@ namespace QKD_Library.Synchronization
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            //Main state machine
+            // MAIN STATE MACHINE
             while (true)
             {
-               // State Machine
+              
                 switch (_corrsyncStatus)
                 {
                     //-----------------------------------------
@@ -764,6 +757,9 @@ namespace QKD_Library.Synchronization
         }
     }
 
+    //##################################
+    // E V E N T   A R G S
+    //##################################
     public class SyncClocksCompleteEventArgs : EventArgs
     {
         public SyncClockResult SyncRes { get; private set; }

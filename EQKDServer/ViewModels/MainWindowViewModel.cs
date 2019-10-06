@@ -212,6 +212,7 @@ namespace EQKDServer.ViewModels
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
             _EQKDServer.FiberCorrection.LossFunctionAquired += StateCorr_LossFunctionAquired;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
+            _EQKDServer.ServerTimeTagger.TimeTaggerConnected += ServerTimeTagger_TimeTaggerConnected;
 
 
             _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
@@ -271,6 +272,11 @@ namespace EQKDServer.ViewModels
             };
         }
 
+        private void ServerTimeTagger_TimeTaggerConnected(object sender, TimeTagger_Library.TimeTagger.TimeTaggerConnectedEventArgs e)
+        {
+            _channelViewModel = new ChannelViewModel();
+        }
+
         private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
         {
             _correlationChartValues.Clear();
@@ -291,14 +297,15 @@ namespace EQKDServer.ViewModels
 
         private void On_OpenCountrateWindowCommand(object obj)
         {
+            //No viewmodel available
+            if (_channelViewModel == null) return;
+
             if (_channelView != null) if (_channelView.IsVisible) return;
             
             _channelView = new TimeTaggerChannelView();
-            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer);
             _channelView.DataContext = _channelViewModel;
             _channelView.Title = "TimeTagger Stats";
-            _channelView.Show();
-            
+            _channelView.Show();        
         }
 
         private void LogMessage(string mess)
