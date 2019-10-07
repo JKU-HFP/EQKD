@@ -22,6 +22,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
 
         public ChannelViewModel(ITimeTagger timetagger)
         {
+            if (timetagger == null) return;
+
             _timetagger = timetagger;
             ChanDiag = new ObservableCollection<ChannelDiagnosis> ( Enumerable.Range(0,_timetagger.NumChannels).Select(i => new ChannelDiagnosis(i)) );      
 

@@ -212,18 +212,17 @@ namespace EQKDServer.ViewModels
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
             _EQKDServer.FiberCorrection.LossFunctionAquired += StateCorr_LossFunctionAquired;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
-            _EQKDServer.ServerTimeTagger.TimeTaggerConnected += ServerTimeTagger_TimeTaggerConnected;
 
 
             _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
              {
                  ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
-                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferSize;
+                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
              };
             _EQKDServer.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
             {
                 ClientBufferSize = _EQKDServer.ClientTimeTagger.BufferSize;
-                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferSize;
+                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferFillStatus;
             };
             _EQKDServer.SecQNetServer.TimeTagsReceived += (sender, e) =>
             {

@@ -95,7 +95,7 @@ namespace EQKDServer.Models
             ServerTimeTagger = new HydraHarp(_loggerCallback)
             {
                 DiscriminatorLevel = 250,
-                MeasurementMode = HydraHarp.Mode.MODE_T3,
+                MeasurementMode = HydraHarp.Mode.MODE_T2,
                 PacketSize = 500000
             };
             ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
@@ -201,11 +201,11 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            //await densMeas.MeasurePeakAreasAsync();
+            await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
             //await StateCorr.StartOptimizationAsync();
 
-            await StartKeyGeneration();
+            //await StartKeyGeneration();
         }
 
         public async Task StartKeyGeneration()

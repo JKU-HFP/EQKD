@@ -151,7 +151,7 @@ namespace QKD_Library.Synchronization
             TimeTags tt = null;
             while (!tagger.GetNextTimeTags(out tt)) Thread.Sleep(10);
 
-            tagger.StopCollectingTimeTags();
+            ResetTimeTaggers();
 
             return tt;
         }
