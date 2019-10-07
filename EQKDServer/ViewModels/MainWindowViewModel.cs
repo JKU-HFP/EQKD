@@ -282,11 +282,7 @@ namespace EQKDServer.ViewModels
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
-
-            CorrChartXMin = e.HistogramX[0] / 1000.0;
-            CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
+            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);
         }
 
         private void On_OpenCountrateWindowCommand(object obj)
@@ -346,6 +342,7 @@ namespace EQKDServer.ViewModels
 
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
+            _EQKDServer.ReadServerConfig();
 
             LogMessage("Application started");
         }

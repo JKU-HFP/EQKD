@@ -39,7 +39,7 @@ namespace QKD_Library.Synchronization
 
         public double STD_Tolerance { get; set; } = 1700;
         public long GroundlevelTimebin { get; set; } = 2000;
-        public double GroundlevelTolerance { get; set; } = 0.02;
+        public double GroundlevelTolerance { get; set; } = 0.1;
         public double PVal { get; set; } = 0;
         public ulong ExcitationPeriod { get; set; } = 12500; //200000000; 
 
@@ -70,16 +70,16 @@ namespace QKD_Library.Synchronization
         List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         {
             //Clear Basis
-            //(0,5),(0,6),(0,7),(0,8),
-            //(1,5),(1,6),(1,7),(1,8),
-            //(2,5),(2,6),(2,7),(2,8),
-            //(3,5),(3,6),(3,7),(3,8),
+            (0,5),(0,6),(0,7),(0,8),
+            (1,5),(1,6),(1,7),(1,8),
+            (2,5),(2,6),(2,7),(2,8),
+            (3,5),(3,6),(3,7),(3,8),
 
            // Obscured Basis
             //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
 
             //Funky generator
-            (1,5)
+            //(1,5)
         };
         //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         //        {
@@ -158,6 +158,47 @@ namespace QKD_Library.Synchronization
 
 
 
+        private long GetGlobalOffset()
+        {
+
+            TimeTags ttA = null;
+            TimeTags ttB = null;
+
+            while (!GlobalOffsetDefined)
+            {
+                WriteLog("Global Clock offset undefined. Block signal and release it fast.");
+
+                ResetTimeTaggers();
+
+                _tagger1.PacketSize = _tagger2.PacketSize = 200000;
+
+                _tagger1.StartCollectingTimeTagsAsync();
+                _tagger2.StartCollectingTimeTagsAsync();
+
+                while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
+                while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+
+                SignalStartFinder serverStartFinder = new SignalStartFinder("Alice", _loggerCallback);
+                SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttA);
+
+                SignalStartFinder clientStartFinder = new SignalStartFinder("Bob", _loggerCallback);
+                SignalStartResult startresB = clientStartFinder.FindSignalStartTime(ttB);
+
+                if (startresA.Status < SignalStartStatus.SignalFittingFailed || startresB.Status < SignalStartStatus.SignalFittingFailed) continue;
+
+                OnOffsetFound(new OffsetFoundEventArgs(startresA, startresB));
+
+                if(true)
+                //if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
+                {
+                    GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
+                    GlobalOffsetDefined = true;
+                }
+                return 0;
+            }
+            return 0;
+        }
+
         public TaggerSyncResults GetSyncedTimeTags(int packetSize = 100000)
         {
             if (_tagger1 == null || _tagger2 == null)
@@ -174,49 +215,22 @@ namespace QKD_Library.Synchronization
             //Refresh sync rate
             _tagger2.SyncRate = _tagger1.SyncRate;
 
-            //Collect Timetags
-            _tagger1.ClearTimeTagBuffer();
-            _tagger2.ClearTimeTagBuffer();
 
             _tagger1.StartCollectingTimeTagsAsync();
             _tagger2.StartCollectingTimeTagsAsync();
+
             //---------------------------------------------------
             //Is global offset defined? If not: Find starting time
             //---------------------------------------------------
 
-            while (!GlobalOffsetDefined)
-            {
-                WriteLog("Global Clock offset undefined. Block signal and release it fast.");
-
-                _tagger1.ClearTimeTagBuffer();
-                _tagger2.ClearTimeTagBuffer();
-
-                //while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
-                while (!_tagger2.GetNextTimeTags(out ttB))
-                {
-                    Thread.Sleep(10);
-                }
-
-                SignalStartFinder serverStartFinder = new SignalStartFinder("Alice",_loggerCallback);
-                SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttA);
-
-                SignalStartFinder clientStartFinder = new SignalStartFinder("Bob", _loggerCallback);
-                SignalStartResult startresB = clientStartFinder.FindSignalStartTime(ttB);
-
-                OnOffsetFound(new OffsetFoundEventArgs(startresA, startresB));
-            
-                if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
-                {
-                    GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
-                    GlobalOffsetDefined = true;
-                }
-
-            }
-
+            if (!GlobalOffsetDefined) GetGlobalOffset();
 
             //---------------------------------------------------
             // Request timetags and perform synchronisation
             //---------------------------------------------------
+
+            _tagger1.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
@@ -234,7 +248,7 @@ namespace QKD_Library.Synchronization
             }
 
             //Try to synchronize clock
-            int clockSyncRetries = 10;
+            int clockSyncRetries = 1;
             int curr_tries = 1;
 
             TaggerSyncResults result = new TaggerSyncResults()
@@ -256,6 +270,9 @@ namespace QKD_Library.Synchronization
                     WriteLog("Clock synchronization failed.");
                     return result;
                 }
+
+                //!!!!!!!!!!!DEBUG DELAY!!!!!!!!!!!!
+                Thread.Sleep(500);
             }
 
             //Final synchronization by correlation finding

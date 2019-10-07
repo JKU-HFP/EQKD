@@ -92,23 +92,27 @@ namespace EQKDServer.Models
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
             //Instanciate TimeTaggers
-            ServerTimeTagger = new HydraHarp(_loggerCallback)
+            HydraHarp hydra = new HydraHarp(_loggerCallback)
             {
                 DiscriminatorLevel = 250,
-                MeasurementMode = HydraHarp.Mode.MODE_T2,
+                MeasurementMode = HydraHarp.Mode.MODE_T3,
                 PacketSize = 500000
             };
-            ServerTimeTagger.Connect(new List<long> { 0, -14464, -12160, -4736 }); //Normal
+            hydra.Connect(new List<long> { 0, -3636, -1332, -4148 }); //Normal
             //ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
 
-            ClientTimeTagger = new SITimeTagger(_loggerCallback)
+            SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
-                RefChan = 0
+                RefChan = 1
             };
-            ClientTimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
 
 
             //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
+
+            ServerTimeTagger = hydra;
+            ClientTimeTagger = sitagger;
+
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -201,9 +205,9 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            //await StateCorr.StartOptimizationAsync();
+            await FiberCorrection.StartOptimizationAsync();
 
             //await StartKeyGeneration();
         }

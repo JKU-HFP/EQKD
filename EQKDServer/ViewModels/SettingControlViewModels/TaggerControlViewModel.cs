@@ -202,6 +202,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _correlationChartValues = new List<ChartValues<ObservablePoint>>
             {
                 new ChartValues<ObservablePoint>(),
+                new ChartValues<ObservablePoint>(),
+                new ChartValues<ObservablePoint>(),
                 new ChartValues<ObservablePoint>()
             };
 
@@ -226,7 +228,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 new LineSeries()
                 {
                     Title = "Rate Bob",
-                    Values = _correlationChartValues[0],
+                    Values = _correlationChartValues[2],
                     PointGeometrySize = 1.0,
                     LineSmoothness = 0.0,
                     Stroke = Brushes.Green
@@ -234,7 +236,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 new LineSeries()
                 {
                     Title = "Fitted Bob Alice",
-                    Values = _correlationChartValues[1],
+                    Values = _correlationChartValues[3],
                     PointGeometrySize = 0.0,
                     LineSmoothness = 0.0,
                     Fill=Brushes.Transparent,
@@ -307,7 +309,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(e.ResultB.FittingTimes.Zip(e.ResultB.FittedRates, (X, Y) => new ObservablePoint(X / 1E6, Y))));
 
 
-            CorrChartXMin = Math.Min(e.ResultA.StartTime,e.ResultB.StartTime)/1E6 - 1000;
+            CorrChartXMin = Math.Min(e.ResultA.StartTime,e.ResultB.StartTime)/1E6 - 2000;
             CorrChartXMax = double.NaN;
 
             if (e.ResultB.StartTime!=0)

@@ -34,7 +34,7 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 1;
+        public int NumTagger { get; set; } = 0;
 
         /// <summary>
         /// Maximum iteration for nonlinear Solver
@@ -45,8 +45,8 @@ namespace QKD_Library
         /// Desired accuracy in degree
         /// </summary>
         public double Accurracy { get; set; } = 0.2;
-        public double[] MinPos { get;  set; } = new double[] { 72, 52, -20 };
-        public double[] MinPosAcc { get; set; } = new double[] { 20, 20, 20 };
+        public double[] MinPos { get;  set; } = new double[] { 45, 45 , 45 };
+        public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
         /// Perform initial "brute force" optimization
@@ -58,7 +58,7 @@ namespace QKD_Library
         /// <summary>
         /// Integration time in seconds
         /// </summary>
-        public int PacketSize { get; set; } = 2000000;
+        public int PacketSize { get; set; } = 1000000;
 
 
         /// <summary>
@@ -114,6 +114,7 @@ namespace QKD_Library
         private List<(byte cA, byte cB)> _corrConfig1Tagger = new List<(byte cA, byte cB)>
         {
             (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad 
+            //(3,8),(4,7) //da, ad
         };
 
 
@@ -145,6 +146,12 @@ namespace QKD_Library
 
         public async Task StartOptimizationAsync()
         {
+            if( _rotationStages.Any( r => r==null || !r.StageReady) )
+            {
+                WriteLog("Rotation stages not ready");
+                return;
+            }
+
             _cts = new CancellationTokenSource();
 
             if(!String.IsNullOrEmpty(LogFolder))
@@ -342,10 +349,10 @@ namespace QKD_Library
      
             corr.AddCorrelations(tt1,tt2,0);
 
-            hist.GetPeaks(6250, 0.1, true, TimeBin);
+            List<Peak> peaks = hist.GetPeaks(6250, 0.1, true, TimeBin);
             var loss = hist.GetRelativeMiddlePeakArea();
 
-            OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss));
+            OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss, peaks));
 
             return loss;
         }
@@ -363,12 +370,14 @@ namespace QKD_Library
         public long[] HistogramX { get; private set; }
         public long[] HistogramY { get; private set; }
         public (double val,double err) Loss { get; private set; }
+        public List<Peak> Peaks { get; private set; }
 
-        public LossFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) loss)
+        public LossFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) loss, List<Peak> peaks)
         {
             HistogramX = histX;
             HistogramY = histY;
             Loss = loss;
+            Peaks = peaks;
         }
     }
     

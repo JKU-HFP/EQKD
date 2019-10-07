@@ -17,7 +17,7 @@ namespace QKD_Library.Synchronization
         //##  P R O P E R T I E S
         //#################################################
         public int AveragingFIFOSize { get; set; } = 30;
-        public int RateThreshold { get; set; } = 50000;
+        public int RateThreshold { get; set; } = 30000;
         public double SlopeTolerance { get; set; } = 1E-3;
 
         //#################################################
@@ -119,14 +119,15 @@ namespace QKD_Library.Synchronization
             //-------------------------------
             //      F I T   S L O P E
             //-------------------------------
-      
+
             //Select some points around threshold
-            double[] linRegrTimes = cropped_times.Skip(cropped_threshold_index - 5).Take(5).Select(v => (double)v).ToArray();
-            double[] linRegrVals = cropped_rates.Skip(cropped_threshold_index - 5).Take(5).ToArray();
+            int linRegrRange = 10;
+            double[] linRegrTimes = cropped_times.Skip(cropped_threshold_index - linRegrRange/2).Take(linRegrRange).Select(v => (double)v).ToArray();
+            double[] linRegrVals = cropped_rates.Skip(cropped_threshold_index - linRegrRange / 2).Take(linRegrRange).ToArray();
 
             result.FittingTimes = linRegrTimes;
 
-            (double k, double d) linRegression = MathNet.Numerics.Fit.Line(linRegrTimes, linRegrVals).ToValueTuple();
+            (double d, double k) linRegression = MathNet.Numerics.Fit.Line(linRegrTimes, linRegrVals).ToValueTuple();
 
             double[] func_values = linRegrTimes.Select(t => linRegression.k * t + linRegression.d).ToArray();
 
