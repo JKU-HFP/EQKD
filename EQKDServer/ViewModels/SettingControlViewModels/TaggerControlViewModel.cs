@@ -131,7 +131,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private double _corrChartXMin = -10000;
+        private double _corrChartXMin = double.NaN;
         public double CorrChartXMin
         {
             get { return _corrChartXMin; }
@@ -142,7 +142,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private double _corrChartXMax = 10000;
+        private double _corrChartXMax = double.NaN;
         public double CorrChartXMax
         {
             get { return _corrChartXMax; }
@@ -196,6 +196,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //Initialize Chart elements
             CorrelationCollection = new SeriesCollection();
             CorrelationXSectionsCollection = new SectionsCollection();
+            CorrelationYSectionsCollection = new SectionsCollection();
 
  
             _correlationChartValues = new List<ChartValues<ObservablePoint>>

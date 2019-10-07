@@ -272,11 +272,6 @@ namespace EQKDServer.ViewModels
             };
         }
 
-        private void ServerTimeTagger_TimeTaggerConnected(object sender, TimeTagger_Library.TimeTagger.TimeTaggerConnectedEventArgs e)
-        {
-            _channelViewModel = new ChannelViewModel();
-        }
-
         private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
         {
             _correlationChartValues.Clear();
@@ -297,8 +292,10 @@ namespace EQKDServer.ViewModels
 
         private void On_OpenCountrateWindowCommand(object obj)
         {
-            //No viewmodel available
-            if (_channelViewModel == null) return;
+            //TimeTagger ready?
+            if (!_EQKDServer.ServerTimeTagger.CanCollect) return;
+
+            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.ServerTimeTagger);
 
             if (_channelView != null) if (_channelView.IsVisible) return;
             
