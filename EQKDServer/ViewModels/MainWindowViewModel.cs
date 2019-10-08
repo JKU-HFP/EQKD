@@ -206,7 +206,7 @@ namespace EQKDServer.ViewModels
         public MainWindowViewModel()
         {
             //Create EKQDServer and register Events
-            _EQKDServer = new EQKDServerModel(LogMessage);
+            _EQKDServer = new EQKDServerModel(LogMessage,UserPrompt);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
@@ -303,6 +303,12 @@ namespace EQKDServer.ViewModels
         private void LogMessage(string mess)
         {
             Messages += DateTime.Now.ToString("HH:mm:ss")+": "+ mess + "\n";
+        }
+        
+        private int UserPrompt(string mess, string senderID)
+        {
+            MessageBoxResult res = MessageBox.Show(mess, senderID, MessageBoxButton.OKCancel);
+            return (int)res;
         }
 
         //Eventhandler

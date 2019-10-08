@@ -58,6 +58,7 @@ namespace QKD_Library.Synchronization
         private ITimeTagger _tagger2;
 
         private Action<string> _loggerCallback;
+        private Func<string, string, int> _userprompt;
 
         private Kurolator _clockKurolator;
         private Kurolator _corrKurolator;
@@ -123,9 +124,10 @@ namespace QKD_Library.Synchronization
         //##  C O N S T R U C T O R
         //#################################################
 
-        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback = null)
+        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null)
         {
             _loggerCallback = loggerCallback;
+            _userprompt = userprompt;
             _tagger1 = tagger1;
             _tagger2 = tagger2;
         }
@@ -157,19 +159,19 @@ namespace QKD_Library.Synchronization
         }
 
 
-
         private long GetGlobalOffset()
         {
-
             TimeTags ttA = null;
             TimeTags ttB = null;
+            int tmpPacketsize = 0;
 
             while (!GlobalOffsetDefined)
             {
-                WriteLog("Global Clock offset undefined. Block signal and release it fast.");
+                UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
 
                 ResetTimeTaggers();
 
+                tmpPacketsize = _tagger1.PacketSize;
                 _tagger1.PacketSize = _tagger2.PacketSize = 200000;
 
                 _tagger1.StartCollectingTimeTagsAsync();
@@ -194,8 +196,10 @@ namespace QKD_Library.Synchronization
                     GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
                     GlobalOffsetDefined = true;
                 }
-                return 0;
+                         
             }
+
+            _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketsize;
             return 0;
         }
 
@@ -246,33 +250,20 @@ namespace QKD_Library.Synchronization
                     while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
                     break;
             }
-
-            //Try to synchronize clock
-            int clockSyncRetries = 1;
-            int curr_tries = 1;
+            
 
             TaggerSyncResults result = new TaggerSyncResults()
             {
                 TimeTags_Alice = ttA,
                 CompTimeTags_Bob = ttB
             };
-
-            SyncClockResult syncClockRes;
-
-            while (true)
+                     
+            //Clock synchronization
+            SyncClockResult syncClockRes = SyncClocks(ttA, ttB);
+            if (!syncClockRes.IsClocksSync)             
             {
-                if (curr_tries >= 2) WriteLog($"Retrying clock synchronization {curr_tries}/{clockSyncRetries}");
-                syncClockRes = SyncClocks(ttA, ttB);
-                if (syncClockRes.IsClocksSync) break;                
-
-                if(++curr_tries > clockSyncRetries)
-                {
-                    WriteLog("Clock synchronization failed.");
-                    return result;
-                }
-
-                //!!!!!!!!!!!DEBUG DELAY!!!!!!!!!!!!
-                Thread.Sleep(500);
+                WriteLog("Clock synchronization failed.");
+                return result;
             }
 
             //Final synchronization by correlation finding
@@ -771,6 +762,12 @@ namespace QKD_Library.Synchronization
         private void WriteLog(string msg)
         {
             _loggerCallback?.Invoke("Sync: " + msg);
+        }
+
+        private bool UserPrompt(string msg)
+        {
+            int result= _userprompt?.Invoke(msg, "Tagger Synchronization") ?? 2;
+            return result == 1; 
         }
     }
 

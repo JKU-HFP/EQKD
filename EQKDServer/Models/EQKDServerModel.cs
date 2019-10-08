@@ -27,6 +27,7 @@ namespace EQKDServer.Models
         //-----------------------------------
 
         private Action<string> _loggerCallback;
+        private Func<string, string, int> _userprompt;
         private ServerSettings _currentServerSettings = new ServerSettings();
         string _serverSettings_XMLFilename = "ServerSettings.xml";
         CancellationTokenSource _cts;
@@ -85,9 +86,10 @@ namespace EQKDServer.Models
         //-----------------------------------
         //---- C O N S T R U C T O R
         //-----------------------------------
-        public EQKDServerModel(Action<string> loggercallback)
+        public EQKDServerModel(Action<string> loggercallback, Func<string,string,int> userprompt)
         {
             _loggerCallback = loggercallback;
+            _userprompt = userprompt;
 
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
@@ -151,7 +153,7 @@ namespace EQKDServer.Models
             //_QWP_D.Offset = 33.15;
                
 
-            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback);
+            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
         }

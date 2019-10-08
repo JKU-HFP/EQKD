@@ -18,7 +18,11 @@ namespace QKD_Library.Synchronization
         //#################################################
         public int AveragingFIFOSize { get; set; } = 30;
         public int RateThreshold { get; set; } = 30000;
-        public double SlopeTolerance { get; set; } = 1E-3;
+        /// <summary>
+        /// Minimum slope
+        /// eg. 30.000E-8 -> 30000 cps per 100 micro second
+        /// </summary>
+        public double SlopeTolerance { get; set; } = 30000E-8;
 
         //#################################################
         //##  P R I V A T E S
@@ -150,7 +154,7 @@ namespace QKD_Library.Synchronization
 
             result.Status = result.Slope > SlopeTolerance ? SignalStartStatus.SlopeOK : SignalStartStatus.SlopeTooLow;
 
-            WriteLog($"Global Start Time: {result.GlobalStartTime} | Slope: {result.Slope} | Min: {SlopeTolerance} | {(result.Status==SignalStartStatus.SlopeOK ? "Slope OK":"Slope TOO LOW")}");
+            WriteLog($"Global Start Time: {result.GlobalStartTime} | Slope: {result.Slope*1E8:F2}/100μs | Min: {SlopeTolerance*1E8}/100μs | {(result.Status==SignalStartStatus.SlopeOK ? "Slope OK":"Slope TOO LOW")}");
             
             return result;
         }
