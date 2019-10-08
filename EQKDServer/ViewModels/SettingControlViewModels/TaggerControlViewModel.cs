@@ -164,6 +164,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //Commands
         public RelayCommand<object> StartSyncCommand { get; private set; }
         public RelayCommand<object> CancelCommand { get; private set; }
+        public RelayCommand<object> TestClockCommand { get; private set; }
 
         //###########################
         // C O N S T R U C T O R
@@ -177,6 +178,12 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer.StopSynchronize();  
             });
+
+            TestClockCommand = new RelayCommand<object>((o) =>
+                {
+                    SetSyncParameters();
+                    _EQKDServer.TestClock();
+                });
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
@@ -343,6 +350,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 StrokeDashArray = new DoubleCollection(new[] { 4d })
             };
             CorrelationXSectionsCollection.Add(axisSection);
+
+            CorrChartXMin = double.NaN;
+            CorrChartXMax = double.NaN;
         }
 
         private void TaggerSynchronization_SyncClocksComplete(object sender, SyncClocksCompleteEventArgs e)
@@ -368,7 +378,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         }
     
 
-        private void Synchronize(object o)
+        private void SetSyncParameters()
         {
             _EQKDServer.PacketSize = PacketSize;
 
@@ -377,7 +387,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.AliceBobSync.LinearDriftCoefficient = LinearDriftCoefficient;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
-
+        }
+        private void Synchronize(object o)
+        {
+            SetSyncParameters();
             _EQKDServer.StartSynchronizeAsync();
         }
 

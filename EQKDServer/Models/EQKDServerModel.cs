@@ -107,7 +107,7 @@ namespace EQKDServer.Models
             {
                 RefChan = 1
             };
-            sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
 
 
             //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
@@ -153,7 +153,7 @@ namespace EQKDServer.Models
             //_QWP_D.Offset = 33.15;
                
 
-            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt);
+            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, _QWP_A);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
         }
@@ -161,6 +161,11 @@ namespace EQKDServer.Models
         //--------------------------------------
         //----  M E T H O D S
         //--------------------------------------
+        
+        public async Task TestClock()
+        {
+            await Task.Run(() => AliceBobSync.TestClock(PacketSize));
+        }
 
         public async Task StartSynchronizeAsync()
         {
@@ -175,10 +180,7 @@ namespace EQKDServer.Models
 
             IsSyncActive = true;
 
-            AliceBobSync.ResetTimeTaggers();
-
-                        
-
+                               
             await Task.Run(() =>
           {
               //while (!_cts.Token.IsCancellationRequested)

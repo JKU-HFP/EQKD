@@ -14,6 +14,7 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra.Double;
 using MathNet.Numerics.Distributions;
+using Stage_Library.Thorlabs;
 
 namespace QKD_Library.Synchronization
 {
@@ -59,6 +60,7 @@ namespace QKD_Library.Synchronization
 
         private Action<string> _loggerCallback;
         private Func<string, string, int> _userprompt;
+        private KPRM1EStage _shutterContr;
 
         private Kurolator _clockKurolator;
         private Kurolator _corrKurolator;
@@ -124,12 +126,13 @@ namespace QKD_Library.Synchronization
         //##  C O N S T R U C T O R
         //#################################################
 
-        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null)
+        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, KPRM1EStage shutterContr=null)
         {
             _loggerCallback = loggerCallback;
             _userprompt = userprompt;
             _tagger1 = tagger1;
             _tagger2 = tagger2;
+            _shutterContr = shutterContr;
         }
 
         //#################################################
@@ -159,23 +162,68 @@ namespace QKD_Library.Synchronization
         }
 
 
+        public SyncClockResult TestClock(int packetSize=100000)
+        {
+            TimeTags ttA = null;
+            TimeTags ttB = null;
+
+            _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
+
+            //Refresh sync rate
+            _tagger2.SyncRate = _tagger1.SyncRate;
+
+            _tagger1.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
+
+            _tagger1.StartCollectingTimeTagsAsync();
+            _tagger2.StartCollectingTimeTagsAsync();
+
+            while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
+            while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+
+            SyncClockResult res= SyncClocks(ttA, ttB);
+            return res;
+        }
+
+
+        private void TriggerShutter()
+        {
+            _shutterContr.SetOutput(true);
+            Thread.Sleep(100);
+            _shutterContr.SetOutput(false);
+        }
+        
         private long GetGlobalOffset()
         {
             TimeTags ttA = null;
             TimeTags ttB = null;
-            int tmpPacketsize = 0;
+
+            int tmpPacketSize = _tagger1.PacketSize;
+            _tagger1.PacketSize = _tagger2.PacketSize = 200000;
 
             while (!GlobalOffsetDefined)
             {
-                UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
+                if(_shutterContr==null)
+                {
+                    UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
+                }
 
                 ResetTimeTaggers();
 
-                tmpPacketsize = _tagger1.PacketSize;
-                _tagger1.PacketSize = _tagger2.PacketSize = 200000;
+                if (_shutterContr!=null)
+                {
+                    TriggerShutter();
+                    Thread.Sleep(2000);
+                }
 
                 _tagger1.StartCollectingTimeTagsAsync();
                 _tagger2.StartCollectingTimeTagsAsync();
+
+                if(_shutterContr!=null)
+                {
+                    Thread.Sleep(3000);
+                    TriggerShutter();
+                }
 
                 while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
                 while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
@@ -190,8 +238,7 @@ namespace QKD_Library.Synchronization
 
                 OnOffsetFound(new OffsetFoundEventArgs(startresA, startresB));
 
-                if(true)
-                //if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
+                if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
                 {
                     GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
                     GlobalOffsetDefined = true;
@@ -199,7 +246,10 @@ namespace QKD_Library.Synchronization
                          
             }
 
-            _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketsize;
+            _tagger1.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
+            _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketSize;
+
             return 0;
         }
 
@@ -228,7 +278,7 @@ namespace QKD_Library.Synchronization
             //---------------------------------------------------
 
             if (!GlobalOffsetDefined) GetGlobalOffset();
-
+           
             //---------------------------------------------------
             // Request timetags and perform synchronisation
             //---------------------------------------------------
@@ -265,6 +315,9 @@ namespace QKD_Library.Synchronization
                 WriteLog("Clock synchronization failed.");
                 return result;
             }
+
+            //DEBUG DELAY!!!!!!!!!!!
+            Thread.Sleep(1000);
 
             //Final synchronization by correlation finding
             SyncCorrResults corrSyncRes = SyncCorrelation(ttA, syncClockRes.CompTimeTags_Bob);
@@ -309,7 +362,7 @@ namespace QKD_Library.Synchronization
             TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
 
 
-            GlobalClockOffset = alice_first - bob_first;
+            //GlobalClockOffset = alice_first - bob_first;
 
             //----------------------------------------------------------------
             //Compensate Bobs tags for a variation of linear drift coefficients
@@ -343,7 +396,7 @@ namespace QKD_Library.Synchronization
 
                 //Number of peaks plausible?
                 int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod) + 1;
-                if (peaks.Count < numExpectedPeaks - 1 || peaks.Count > numExpectedPeaks + 1)
+                if (peaks.Count < numExpectedPeaks - 1 || peaks.Count > numExpectedPeaks + 2)
                 {
                     //Return standard result
 
@@ -520,8 +573,8 @@ namespace QKD_Library.Synchronization
         {
             SyncCorrResults results = new SyncCorrResults();
 
-            double coarseCorrelationSignificance = 0.5;
-            int maxNumCoarseSearches = 10;
+            double coarseCorrelationSignificance = 0.3;
+            int maxNumCoarseSearches = 12;
 
             ulong FineTimeWindow = 10 * ExcitationPeriod;
 
@@ -555,22 +608,25 @@ namespace QKD_Library.Synchronization
                             coarseResults.HistogramX = _corrHist.Histogram_X.ToList();
                             coarseResults.HistogramY = _corrHist.Histogram_Y.ToList();
 
-                            long minPoint = coarseResults.HistogramY.Min();
-                            long maxPoint = coarseResults.HistogramY.Max();
-
-                            bool minPointsignificant = minPoint < coarseCorrelationSignificance * coarseResults.HistogramY.Average();
-                            bool maxPointsignificant = maxPoint > coarseCorrelationSignificance * coarseResults.HistogramY.Average();
+                     
+                            //Remove first and last point
+                            IEnumerable<long> croppedHistogramY = coarseResults.HistogramY.Skip(1).Take(coarseResults.HistogramY.Count - 2);
+                            long minPoint = croppedHistogramY.Min();
+                            long maxPoint = croppedHistogramY.Max();
+                            bool minPointsignificant = minPoint < (1-coarseCorrelationSignificance) * croppedHistogramY.Average();
+                            bool maxPointsignificant = maxPoint > (1+coarseCorrelationSignificance) * croppedHistogramY.Average();
 
                             //Is Extremum significant?
-                            if (minPointsignificant || maxPointsignificant)
+                            if (maxPointsignificant)
                             {
-                                int ind = minPointsignificant ?
-                                    coarseResults.HistogramY.FindIndex(y => y == minPoint) :
-                                    coarseResults.HistogramY.FindIndex(y => y == maxPoint);
+                                //int ind = minPointsignificant ?
+                                //    coarseResults.HistogramY.FindIndex(y => y == minPoint) :
+                                //    coarseResults.HistogramY.FindIndex(y => y == maxPoint);
+                                int ind = coarseResults.HistogramY.FindIndex(y => y == maxPoint);
 
                                 coarseResults.CorrPeakPos = coarseResults.HistogramX[ind];
                                 
-                                GlobalClockOffset -= coarseResults.CorrPeakPos; //IS SIGN CORRECT?
+                                GlobalClockOffset += _coarseTimeOffset - coarseResults.CorrPeakPos; //IS SIGN CORRECT?
 
                                 _coarseTimeOffset = 0;
                                 _numCoarseSearches = 0;
@@ -582,12 +638,15 @@ namespace QKD_Library.Synchronization
                             else
                             {
                                 //alternately vary search window                      
-                                _coarseTimeOffset = (-1) * _numCoarseSearches % 2 * (_numCoarseSearches / 2 + 1) * (long)coarseTimewindow;
+                                _coarseTimeOffset = (_numCoarseSearches % 2 == 0 ? 1 : -1) * (_numCoarseSearches / 2 + 1) * (long)coarseTimewindow;
                                 _numCoarseSearches++;
                             }
 
                             coarseResults.Status = _corrsyncStatus;
-                            OnSyncCorrComplete(new SyncCorrCompleteEventArgs(coarseResults));
+                            //OnSyncCorrComplete(new SyncCorrCompleteEventArgs(coarseResults));
+
+                            //DEBUG DELAY
+                            Thread.Sleep(1000);
 
                             //No correlation found
                             if (_numCoarseSearches > maxNumCoarseSearches)
@@ -648,12 +707,12 @@ namespace QKD_Library.Synchronization
                         else
                         {
                             double average_area = peaks.Select(p => p.Area).Average();
-                            List<double> visibilities = peaks.Select(p => Math.Abs((p.Area - average_area) / (p.Area + average_area))).ToList();
-                            double max_visibility = visibilities.Max();
-                            int ind_max = visibilities.FindIndex(v => v == max_visibility);
+                            List<double> ratios = peaks.Select(p => Math.Abs((p.Area/average_area))).ToList();
+                            double max_ratio = ratios.Max();
+                            int ind_max = ratios.FindIndex(v => v == max_ratio);
 
                             //Is deviation significant?
-                            if(max_visibility > 0.5)
+                            if(max_ratio > 1.2)
                             {
                                 res.CorrPeakPos = peaks[ind_max].MeanTime;
 
@@ -672,6 +731,9 @@ namespace QKD_Library.Synchronization
 
                         OnSyncCorrComplete(new SyncCorrCompleteEventArgs(res));
                         results = res;
+
+                        //DEBUG DELAY!!!
+                        Thread.Sleep(1000);
 
                         break;
 
