@@ -36,6 +36,7 @@ namespace QKD_Library
         /// </summary>
         public int NumTagger { get; set; } = 0;
 
+        public Mode OptimizationMode { get; set; } = Mode.DownhillSimplex;
         /// <summary>
         /// Maximum iteration for nonlinear Solver
         /// </summary>
@@ -59,7 +60,6 @@ namespace QKD_Library
         /// Integration time in seconds
         /// </summary>
         public int PacketSize { get; set; } = 1000000;
-
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -135,6 +135,16 @@ namespace QKD_Library
         }
 
         //#################################################
+        //##  E N U M E R A T O R 
+        //#################################################
+
+        public enum Mode
+        {
+            DownhillSimplex,
+            BruteForce
+        }
+
+        //#################################################
         //##  C O N S T R U C T O R
         //#################################################
         public StateCorrection(TaggerSync taggerSync, List<IRotationStage> rotationStages, Action<string> loggerCallback = null)
@@ -171,7 +181,6 @@ namespace QKD_Library
 
         private void DoOptimize(CancellationToken ct)
         {
- 
             //Initial Optimization for initial guess;
                        
             Stopwatch stopwatch = new Stopwatch();
@@ -189,14 +198,61 @@ namespace QKD_Library
                 stopwatch.Stop();
                 WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
             }
+
+            switch(OptimizationMode)
+            {
+                case Mode.DownhillSimplex:
+                    DownhillSimplex();
+                    break;
+
+                case Mode.BruteForce:
+                    //Bisect until Accuracy is reached
+                    double Range = InitRange / (InitNumPoints - 1);
+
+                    int iteration = 1;
+
+                    while (Range >= Accurracy)
+                    {
+                        int n = 3;
+
+                        WriteLog("-------------------------------------");
+                        _currLogfile = Path.Combine(_logFolder, $"Iteration_{iteration:D3}.txt");
+                        WriteLog($"Iteration {iteration} | n={n} | range={Range}", true);
+
+                        stopwatch.Restart();
+
+                        MinPos = GetOptimumPositions(MinPos, n, Range, ct);
+                        if (ct.IsCancellationRequested) break;
+                        Range = Range / 2;
+
+                        stopwatch.Stop();
+
+                        WriteLog($"Iteration {iteration} done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
+
+                        iteration++;
+                    }
+
+                    //Move stages to optimum position
+                    _rotationStages[0].Move_Absolute(MinPos[0]);
+                    _rotationStages[1].Move_Absolute(MinPos[1]);
+                    _rotationStages[2].Move_Absolute(MinPos[2]);
+
+                    break;
+            }
+        
+        }
+
+        private void DownhillSimplex()
+        {
             //Nelder Mead Sigleton Minimization
 
             _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
+            Stopwatch stopwatch = new Stopwatch();
             stopwatch.Restart();
 
             WriteLog($"Starting Nelder Mead Singleton Minimization with MaxIterations = {MaxIterations}, Convergence Criterium = {Accurracy}", true);
 
-            Func<Vector<double>,double> loss_func = (Vector<double> p) =>
+            Func<Vector<double>, double> loss_func = (Vector<double> p) =>
             {
                 Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
                 Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
@@ -207,22 +263,22 @@ namespace QKD_Library
                 var loss = GetLossFunction();
 
                 WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
-                
+
                 return loss.val;
             };
 
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
             Vector<double> init_guess = new DenseVector(MinPos);
-            Vector<double> init_perturb = new DenseVector(new double[] {MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
+            Vector<double> init_perturb = new DenseVector(new double[] { MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
             NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, MaxIterations);
             MinimizationResult solver_result = solver.FindMinimum(obj_function, init_guess, init_perturb);
 
             stopwatch.Stop();
 
-            switch(solver_result.ReasonForExit)
+            switch (solver_result.ReasonForExit)
             {
                 case ExitCondition.Converged:
-                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed}",true);
+                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed}", true);
 
                     MinPos = solver_result.MinimizingPoint.ToArray();
 
@@ -242,9 +298,9 @@ namespace QKD_Library
                     break;
 
                 default:
-                    WriteLog($"Other exit reason: {Enum.GetName(typeof(ExitCondition),solver_result.ReasonForExit)}", true);
+                    WriteLog($"Other exit reason: {Enum.GetName(typeof(ExitCondition), solver_result.ReasonForExit)}", true);
                     break;
-            }        
+            }
         }
 
         public void StopSynchronization()
