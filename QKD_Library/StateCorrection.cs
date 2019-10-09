@@ -34,7 +34,7 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 0;
+        public int NumTagger { get; set; } = 2;
 
         public Mode OptimizationMode { get; set; } = Mode.DownhillSimplex;
         /// <summary>
@@ -393,7 +393,7 @@ namespace QKD_Library
             {
                 TaggerSyncResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
 
-                if (!syncRes.IsSync) return (-1, 0);
+                if (!syncRes.IsSync) throw new Exception("Tagger synchronization error");
 
                 tt1 = syncRes.TimeTags_Alice;
                 tt2 = syncRes.CompTimeTags_Bob;

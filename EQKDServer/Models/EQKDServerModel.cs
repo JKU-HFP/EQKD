@@ -110,10 +110,10 @@ namespace EQKDServer.Models
             sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
 
 
-            //ClientTimeTagger = new NetworkTagger(_loggerCallback,SecQNetServer);
+            NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             ServerTimeTagger = hydra;
-            ClientTimeTagger = sitagger;
+            ClientTimeTagger = nwtagger;
 
 
             //Instanciate and connect rotation Stages
@@ -174,7 +174,7 @@ namespace EQKDServer.Models
             _cts = new CancellationTokenSource();
 
             //Deactivate client side basis obscuring
-            SecQNetServer.ObscureClientTimeTags = false;
+            SecQNetServer.ObscureClientTimeTags = true;
 
             WriteLog("Synchronisation started");
 
@@ -186,6 +186,27 @@ namespace EQKDServer.Models
               //while (!_cts.Token.IsCancellationRequested)
               //{
               TaggerSyncResults syncClockRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+
+
+              if(syncClockRes.IsSync)
+              {
+                  List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
+                {
+                    //Clear Basis
+                    (0,5),(0,6),(0,7),(0,8),
+                    (1,5),(1,6),(1,7),(1,8),
+                    (2,5),(2,6),(2,7),(2,8),
+                    (3,5),(3,6),(3,7),(3,8),
+
+                   // Obscured Basis
+                    //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+                };
+
+                  Histogram trackingHist = new Histogram(_clockChanConfig, 200000, 512);
+
+                  Kurolator trackingKurolator = new Kurolator(new List<CorrelationGroup> { trackingHist }, 200000);
+                  trackingKurolator.AddCorrelations(syncClockRes.TimeTags_Alice, syncClockRes.CompTimeTags_Bob, 0);
+              }
 
               //File.AppendAllLines("SyncTest.txt", new string[] { syncClockRes.NewLinearDriftCoeff + "\t" + syncClockRes.GroundLevel +"\t" + syncClockRes.Sigma });
 
@@ -204,7 +225,8 @@ namespace EQKDServer.Models
 
         public void StopSynchronize()
         {
-           if(IsSyncActive) _cts?.Cancel();
+            AliceBobSync?.ResetTimeTaggers();
+          
         }
 
         public async Task StartFiberCorrectionAsync()
@@ -218,9 +240,8 @@ namespace EQKDServer.Models
 
         public async Task StartKeyGeneration()
         {
-            bool local = true;
-            PacketSize = 1000000;
-
+            bool local = false;
+    
             SecQNetServer.ObscureClientTimeTags = true;
 
             await Task.Run(() =>
@@ -240,7 +261,12 @@ namespace EQKDServer.Models
 
                    //Get Key Correlations
                    TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
-                   if (!syncRes.IsSync) return;
+
+                   if (!syncRes.IsSync)
+                   {
+                       WriteLog("Not in sync, no keys generated");
+                       return;
+                   }
 
                    Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
                    Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);

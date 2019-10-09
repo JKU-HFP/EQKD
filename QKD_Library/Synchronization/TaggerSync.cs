@@ -63,14 +63,15 @@ namespace QKD_Library.Synchronization
         private KPRM1EStage _shutterContr;
 
         private Kurolator _clockKurolator;
-        private Kurolator _corrKurolator;
-        private Histogram _corrHist;
 
         private CorrSyncStatus _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
         private long _coarseTimeOffset = 0;
         private int _numCoarseSearches = 0;
 
-        List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
+
+        private static byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
+        private static byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
+        private List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         {
             //Clear Basis
             (0,5),(0,6),(0,7),(0,8),
@@ -78,8 +79,8 @@ namespace QKD_Library.Synchronization
             (2,5),(2,6),(2,7),(2,8),
             (3,5),(3,6),(3,7),(3,8),
 
-           // Obscured Basis
-            //(0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
+            //Obscured Basis
+            (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
 
             //Funky generator
             //(1,5)
@@ -93,7 +94,7 @@ namespace QKD_Library.Synchronization
         //            //(0,1)
         //        };
 
-        List<(byte cA, byte cB)> _corrChanConfig = new List<(byte cA, byte cB)>
+        private List<(byte cA, byte cB)> _corrChanConfig = new List<(byte cA, byte cB)>
         {
             (2,7)
         };
@@ -184,7 +185,7 @@ namespace QKD_Library.Synchronization
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
 
-            SyncClockResult res= SyncClocks(ttA, ttB);
+            SyncClockResult res = SyncClocks(ttA, ttB);
             return res;
         }
 
@@ -303,12 +304,12 @@ namespace QKD_Library.Synchronization
                     while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
                     break;
             }
-            
+
 
             TaggerSyncResults result = new TaggerSyncResults()
             {
                 TimeTags_Alice = ttA,
-                CompTimeTags_Bob = ttB
+                TimeTags_Bob = ttB,
             };
                      
             //Clock synchronization
@@ -319,16 +320,13 @@ namespace QKD_Library.Synchronization
                 return result;
             }
 
-            //DEBUG DELAY!!!!!!!!!!!
-            Thread.Sleep(1000);
-
             //Final synchronization by correlation finding
             SyncCorrResults corrSyncRes = SyncCorrelation(ttA, syncClockRes.CompTimeTags_Bob);
                         
             result.IsSync = corrSyncRes.IsCorrSync;
 
             //Correct TimeTags if Offset is defined
-            if (GlobalOffsetDefined) result.CompTimeTags_Bob = new TimeTags(ttB.chan, ttB.time.Select(t => t + GlobalClockOffset).ToArray()); //SIGN OK?
+            if (GlobalOffsetDefined) result.CompTimeTags_Bob = new TimeTags(ttB.chan, ttB.time.Select(t => t + GlobalClockOffset).ToArray());
 
             return result;
         }
@@ -576,7 +574,7 @@ namespace QKD_Library.Synchronization
         {
             SyncCorrResults results = new SyncCorrResults();
 
-            double coarseCorrelationSignificance = 0.3;
+            double coarseCorrelationSignificance = 0.4;
             int maxNumCoarseSearches = 12;
 
             ulong FineTimeWindow = 10 * ExcitationPeriod;
@@ -603,9 +601,9 @@ namespace QKD_Library.Synchronization
 
                             //Find coarse correlation by antibunching at all channels
                             ulong coarseTimewindow = 10000 * ExcitationPeriod;
-                            _corrHist = new Histogram(_clockChanConfig, coarseTimewindow, (long)ExcitationPeriod);
+                            Histogram _corrHist = new Histogram(_clockChanConfig, coarseTimewindow, (long)ExcitationPeriod);
 
-                            _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, coarseTimewindow);
+                            Kurolator _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, coarseTimewindow);
                             _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset + _coarseTimeOffset);
 
                             coarseResults.HistogramX = _corrHist.Histogram_X.ToList();
@@ -616,8 +614,10 @@ namespace QKD_Library.Synchronization
                             IEnumerable<long> croppedHistogramY = coarseResults.HistogramY.Skip(1).Take(coarseResults.HistogramY.Count - 2);
                             long minPoint = croppedHistogramY.Min();
                             long maxPoint = croppedHistogramY.Max();
-                            bool minPointsignificant = minPoint < (1-coarseCorrelationSignificance) * croppedHistogramY.Average();
-                            bool maxPointsignificant = maxPoint > (1+coarseCorrelationSignificance) * croppedHistogramY.Average();
+                            double average = croppedHistogramY.Average();
+
+                            bool minPointsignificant = minPoint < (1-coarseCorrelationSignificance) * average;
+                            bool maxPointsignificant = maxPoint > (1+coarseCorrelationSignificance) * average;                       
 
                             //Is Extremum significant?
                             if (maxPointsignificant)
@@ -635,7 +635,7 @@ namespace QKD_Library.Synchronization
                                 _numCoarseSearches = 0;
                                 _corrsyncStatus = CorrSyncStatus.SearchingCorrPeak;
 
-                                WriteLog($"Coarse correlations found at {coarseResults.CorrPeakPos} after {sw.Elapsed}");
+                                WriteLog($"Coarse correlations found at {coarseResults.CorrPeakPos} with a peak ration of {maxPoint/average:F2} after {sw.Elapsed}");
                             }
                             //If not: Change search range
                             else
@@ -643,6 +643,8 @@ namespace QKD_Library.Synchronization
                                 //alternately vary search window                      
                                 _coarseTimeOffset = (_numCoarseSearches % 2 == 0 ? 1 : -1) * (_numCoarseSearches / 2 + 1) * (long)coarseTimewindow;
                                 _numCoarseSearches++;
+
+                                WriteLog($"No coarse correlation found, shifting search window by {_coarseTimeOffset / 1E6:F2} μs");
                             }
 
                             coarseResults.Status = _corrsyncStatus;
@@ -669,15 +671,15 @@ namespace QKD_Library.Synchronization
 
                         SyncCorrResults res = new SyncCorrResults();
    
-                        _corrHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
+                        Histogram fineCorrHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
 
-                        _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, FineTimeWindow);
-                        _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
+                        Kurolator fineCorrKurolator = new Kurolator(new List<CorrelationGroup> { fineCorrHist }, FineTimeWindow);
+                        fineCorrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
 
-                        res.HistogramX = _corrHist.Histogram_X.ToList();
-                        res.HistogramY = _corrHist.Histogram_Y.ToList();
+                        res.HistogramX = fineCorrHist.Histogram_X.ToList();
+                        res.HistogramY = fineCorrHist.Histogram_Y.ToList();
 
-                        List<Peak> peaks = _corrHist.GetPeaks();
+                        List<Peak> peaks = fineCorrHist.GetPeaks();
                         res.Peaks = peaks;
 
                         //Find maximum distance between the peaks
@@ -715,14 +717,15 @@ namespace QKD_Library.Synchronization
                             int ind_max = ratios.FindIndex(v => v == max_ratio);
 
                             //Is deviation significant?
-                            if(max_ratio > 1.2)
+                            if(max_ratio > 1.4)
                             {
                                 res.CorrPeakPos = peaks[ind_max].MeanTime;
 
                                 GlobalClockOffset -= res.CorrPeakPos; //IS SIGN CORRECT?
 
+                                res.IsCorrSync = true;
                                 _corrsyncStatus = CorrSyncStatus.TrackingPeak;
-                                WriteLog($"Correlated peak found at {res.CorrPeakPos} after {sw.Elapsed}");
+                                WriteLog($"Correlated peak found at {res.CorrPeakPos} with a ratio of {max_ratio:F2} after {sw.Elapsed}");
                             }
                             else
                             {
@@ -747,21 +750,21 @@ namespace QKD_Library.Synchronization
 
                         SyncCorrResults trackingRes = new SyncCorrResults();
 
-                        _corrHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
+                        Histogram trackingHist = new Histogram(_clockChanConfig, FineTimeWindow, 512);
 
-                        _corrKurolator = new Kurolator(new List<CorrelationGroup> { _corrHist }, FineTimeWindow);
-                        _corrKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
+                        Kurolator trackingKurolator = new Kurolator(new List<CorrelationGroup> { trackingHist }, FineTimeWindow);
+                        trackingKurolator.AddCorrelations(ttAlice, ttBob, GlobalClockOffset);
 
-                        trackingRes.HistogramX = _corrHist.Histogram_X.ToList();
-                        trackingRes.HistogramY = _corrHist.Histogram_Y.ToList();
+                        trackingRes.HistogramX = trackingHist.Histogram_X.ToList();
+                        trackingRes.HistogramY = trackingHist.Histogram_Y.ToList();
 
-                        List<Peak> trackedPeaks = _corrHist.GetPeaks();
+                        List<Peak> trackedPeaks = trackingHist.GetPeaks();
                         trackingRes.Peaks = trackedPeaks;
 
                         //Track peak closest to zero
-                        long mindist = trackedPeaks.Select(p => p.MeanTime).Min();
+                        long mindist = trackedPeaks.Select(p => Math.Abs(p.MeanTime)).Min();
                        
-                        Peak MiddlePeak = trackedPeaks.Where(p => p.MeanTime == mindist).FirstOrDefault();
+                        Peak MiddlePeak = trackedPeaks.Where(p => Math.Abs(p.MeanTime) == mindist).FirstOrDefault();
 
                         //Is middlepeak around zero? --> DONE
                         if( ((double) MiddlePeak.MeanTime).AlmostEqual(0,ExcitationPeriod/10) )
