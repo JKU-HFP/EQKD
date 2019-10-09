@@ -38,7 +38,7 @@ namespace EQKDClient
             {
                 RefChan = 1
             };
-            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
 
             //List<int> countrate = TimeTagger.GetCountrate();
             //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
@@ -95,10 +95,12 @@ namespace EQKDClient
 
                         case CommandPacket.SecQNetCommands.ObscureBasisOFF:
                             _obscureBasis = false;
+                            WriteLog("Stealth mode OFF");
                             break;
 
                         case CommandPacket.SecQNetCommands.ObscureBasisON:
                             _obscureBasis = true;
+                            WriteLog("Stealth mode ON");
                             break;
 
                         case CommandPacket.SecQNetCommands.ReceiveSiftedTags:
