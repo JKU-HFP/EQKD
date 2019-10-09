@@ -133,6 +133,9 @@ namespace QKD_Library.Synchronization
             _tagger1 = tagger1;
             _tagger2 = tagger2;
             _shutterContr = shutterContr;
+
+            //Define tagger1 as SyncRate Source
+            _tagger1.SyncRateChanged += (sender, e) => _tagger2.SyncRate = e.SyncRate;
         }
 
         //#################################################
