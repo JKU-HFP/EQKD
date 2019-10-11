@@ -32,7 +32,8 @@
         </Grid.ColumnDefinitions>
 
         <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
+        <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
         
     </Grid>
 </UserControl>

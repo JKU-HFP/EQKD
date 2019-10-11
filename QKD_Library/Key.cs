@@ -59,10 +59,10 @@ namespace QKD_Library
             return (double)num_incorrect / keyA.Count;
         }
 
-        public double GetRate(TimeTags tt, List<byte> key)
+        public double GetRate(TimeTags tt, List<KeyEntry> keyEntries)
         {
             double timespan = (tt.time.Last() - tt.time.First()) * 1E-12;
-            double rate = key.Count / timespan;
+            double rate = keyEntries.Count / timespan;
             KeyRates.Add(rate);
             return rate;
         }

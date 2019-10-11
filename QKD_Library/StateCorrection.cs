@@ -34,7 +34,7 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 0;
+        public int NumTagger { get; set; } = 2;
 
         public Mode OptimizationMode { get; set; } = Mode.BruteForce;
         /// <summary>

@@ -158,6 +158,10 @@ namespace EQKDServer.Models
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
 
+            //_QWP_A.Move_Absolute(-98.578);
+            //_HWP_B.Move_Absolute(26.0156);
+            //_QWP_B.Move_Absolute(107.015);
+
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, _QWP_A);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
@@ -238,11 +242,11 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
-            
-            //await FiberCorrection.StartOptimizationAsync();
+            SecQNetServer.ObscureClientTimeTags = false;
 
-            await StartKeyGeneration();
+            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
+
+            await FiberCorrection.StartOptimizationAsync();
         }
 
 
@@ -268,9 +272,12 @@ namespace EQKDServer.Models
 
                if (!local)
                {
+                   string ratesfile = "RawKeyRates.txt";
+                   File.WriteAllLines(ratesfile, new string[] { });
+
                    Stopwatch stopwatch = new Stopwatch();
                    stopwatch.Start();
-
+                                     
                    while (!token.IsCancellationRequested)
                    {
                        //Get Key Correlations
@@ -285,7 +292,11 @@ namespace EQKDServer.Models
                        var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
                        //var filtered_entries = Key.RemoveBias(key_entries) ;
                        var filtered_entries = key_entries;
-                       AliceKey.AddKey(filtered_entries);                   
+                       AliceKey.AddKey(filtered_entries);
+
+                       double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, filtered_entries);
+                       WriteLog($"{filtered_entries.Count} keys generated with a raw rate of {rate:F3} keys/s");
+                       File.AppendAllLines(ratesfile, new string[] { rate.ToString() });
 
                        //Register key at Bob                
                        TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, filtered_entries.Select(fe => (long)fe.index_bob).ToArray());
@@ -294,7 +305,7 @@ namespace EQKDServer.Models
                    }
 
                    stopwatch.Stop();
-                   WriteLog($"{AliceKey.SecureKey.Count} keys generated in {stopwatch.Elapsed}");
+                   WriteLog($"Stopped key generation. Total of {AliceKey.SecureKey.Count} keys generated in {stopwatch.Elapsed}| Raw key rate: {AliceKey.KeyRates.Average()}");                
                }
 
                else
