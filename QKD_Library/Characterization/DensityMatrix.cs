@@ -40,14 +40,14 @@ namespace QKD_Library.Characterization
             new double[] {45,0, 45, 0}, //xH 1
             new double[] {45,0,0,0}, //xV 2
             new double[] {45,0,22.5,45}, //xD 3
-            new double[] {45,0,-22.5,0}, //xA 4
+            new double[] {45,0,-22.5,45}, //xA 4
             new double[] {45,0,22.5,0}, //xR 5
             new double[] {45,0,22.5, 90}, //xL 6
 
             //Vx
             new double[] {0,0, 45, 0}, //xH 7
             new double[] {0,0,0,0}, //xV 8
-            new double[] {0,0,22.5,0}, //xD 9
+            new double[] {0,0,22.5,45}, //xD 9
             new double[] {0,0,-22.5,45}, //xA 10
             new double[] {0,0,22.5,0}, //xR 11
             new double[] {0,0,22.5, 90}, //xL 12
