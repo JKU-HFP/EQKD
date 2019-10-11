@@ -100,8 +100,7 @@ namespace EQKDServer.Models
                 MeasurementMode = HydraHarp.Mode.MODE_T3,
                 PacketSize = 500000
             };
-            hydra.Connect(new List<long> { 0, -3636, -1332, -4148 }); //Normal
-            //ServerTimeTagger.Connect(new List<long> { 0, 38616, 0, 0 });  //Density Matrix
+            hydra.Connect(new List<long> { 0, -3636, -1332, -4148 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -151,11 +150,12 @@ namespace EQKDServer.Models
             _QWP_B.Offset = 63.84;
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
-               
+
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, _QWP_A);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);          
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
+           // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
         }
 
         //--------------------------------------
@@ -231,9 +231,9 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
-
-            await FiberCorrection.StartOptimizationAsync();
+            await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            
+            //await FiberCorrection.StartOptimizationAsync();
 
             //await StartKeyGeneration();
         }

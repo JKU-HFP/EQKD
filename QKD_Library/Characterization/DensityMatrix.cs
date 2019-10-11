@@ -94,10 +94,10 @@ namespace QKD_Library.Characterization
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int PacketSize { get; set; } = 2000000;
-        public uint ChannelA { get; set; } = 0;
-        public uint ChannelB { get; set; } = 1;
-        public long OffsetChanB { get; set; } = 53080;
+        public int PacketSize { get; set; } = 4000000;
+        public uint ChannelA { get; set; } = 4;
+        public uint ChannelB { get; set; } = 8;
+        public long OffsetChanB { get; set; } = 0; // 34820+7040;
 
         /// <summary>
         /// Folder for logging Density matrix Correction data. No saving if string is empty
@@ -158,6 +158,12 @@ namespace QKD_Library.Characterization
         //#################################################
         public async Task MeasurePeakAreasAsync()
         {
+            if(_HWP_A == null || _HWP_B==null || _QWP_A == null | _QWP_B==null | !_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
+            {
+                WriteLog("Rotation stages not ready");
+                return;
+            }
+
             //Use standard basis if no other given
             List<double[]> basisConfigs = StdBasis36;
 

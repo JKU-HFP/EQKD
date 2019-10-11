@@ -34,9 +34,9 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 2;
+        public int NumTagger { get; set; } = 0;
 
-        public Mode OptimizationMode { get; set; } = Mode.DownhillSimplex;
+        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
         /// <summary>
         /// Maximum iteration for nonlinear Solver
         /// </summary>
@@ -46,13 +46,13 @@ namespace QKD_Library
         /// Desired accuracy in degree
         /// </summary>
         public double Accurracy { get; set; } = 0.2;
-        public double[] MinPos { get;  set; } = new double[] { 45, 45 , 45 };
+        public double[] MinPos { get;  set; } = new double[] { 0, 0 , 0 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
         /// Perform initial "brute force" optimization
         /// </summary>
-        public bool DoInitOptimization { get; set; } = false;
+        public bool DoInitOptimization { get; set; } = true;
         public int InitNumPoints { get; set; } = 6;
         public double InitRange { get; set; } = 180;
         
@@ -195,6 +195,7 @@ namespace QKD_Library
                 stopwatch.Restart();
 
                 MinPos = GetOptimumPositions(MinPos, InitNumPoints, InitRange, ct);
+                MinPosAcc = Enumerable.Repeat(InitRange / (InitNumPoints - 1),MinPosAcc.Length).ToArray();
                 stopwatch.Stop();
                 WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
             }
@@ -278,7 +279,7 @@ namespace QKD_Library
             switch (solver_result.ReasonForExit)
             {
                 case ExitCondition.Converged:
-                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed}", true);
+                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed} at optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})", true);
 
                     MinPos = solver_result.MinimizingPoint.ToArray();
 
