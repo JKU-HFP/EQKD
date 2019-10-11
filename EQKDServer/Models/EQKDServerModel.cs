@@ -8,6 +8,7 @@ using Stage_Library.NewPort;
 using Stage_Library.Thorlabs;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -56,7 +57,12 @@ namespace EQKDServer.Models
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
 
-        public Key SecureKey { get; private set; } = new Key() { RectZeroChan=0, DiagZeroChan=2};
+        public Key AliceKey { get; private set; } = new Key()
+        {
+            RectZeroChan =0,
+            DiagZeroChan=2,
+            FileName= "SecureKey_Alice.txt"
+        };
         //Rotation Stages
         public SMC100Controller _smcController { get; private set; }
         public SMC100Stage _HWP_A { get; private set; }
@@ -239,34 +245,56 @@ namespace EQKDServer.Models
             await StartKeyGeneration();
         }
 
+
+        public void StopKeyGeneration()
+        {
+            _cts?.Cancel();
+        }
+
         public async Task StartKeyGeneration()
         {
             bool local = false;
-    
+
+            _cts = new CancellationTokenSource();
+            var token = _cts.Token;
+
             SecQNetServer.ObscureClientTimeTags = true;
+
+            WriteLog("Starting secure key generation");
+  
 
             await Task.Run(() =>
            {
 
                if (!local)
                {
-                   //Get Key Correlations
-                   TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                   Stopwatch stopwatch = new Stopwatch();
+                   stopwatch.Start();
 
-                   if (!syncRes.IsSync)
+                   while (!token.IsCancellationRequested)
                    {
-                       WriteLog("Not in sync, no keys generated");
-                       return;
+                       //Get Key Correlations
+                       TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+
+                       if (!syncRes.IsSync)
+                       {
+                           WriteLog("Not in sync, no keys generated");
+                           return;
+                       }
+
+                       var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+                       //var filtered_entries = Key.RemoveBias(key_entries) ;
+                       var filtered_entries = key_entries;
+                       AliceKey.AddKey(filtered_entries);                   
+
+                       //Register key at Bob                
+                       TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, filtered_entries.Select(fe => (long)fe.index_bob).ToArray());
+                       //Send sifted tags to bob
+                       SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags); 
                    }
 
-                   var key_entries = SecureKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-                   var filtered_entries = Key.RemoveBias(key_entries);
-                   SecureKey.AddKey(filtered_entries);
-
-                   //Register key at Bob                
-                   TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, filtered_entries.Select(fe => (long)fe.index_bob).ToArray());
-                   //Send sifted tags to bob
-                   SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
+                   stopwatch.Stop();
+                   WriteLog($"{AliceKey.SecureKey.Count} keys generated in {stopwatch.Elapsed}");
                }
 
                else

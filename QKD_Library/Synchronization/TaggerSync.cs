@@ -730,8 +730,8 @@ namespace QKD_Library.Synchronization
                             }
                             else
                             {
-                                //Go back to coarse searching
-                                _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
+                                //Error, stop searching
+                                _corrsyncStatus = CorrSyncStatus.NoCorrelationFound;
                                 WriteLog($"No correlated peak found after {sw.Elapsed}");
                             }
                         }

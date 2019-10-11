@@ -339,17 +339,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _correlationChartValues.ForEach(cv => cv.Clear());
             _correlationChartValues[0].AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
+            
+            //FIND ERROR!!!
 
-            CorrelationXSectionsCollection.Clear();  
-            var axisSection = new AxisSection
-            {
-                Value = e.SyncRes.CorrPeakPos / 1000.0,
-                SectionWidth = 0.1,
-                Stroke = Brushes.Red,
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection(new[] { 4d })
-            };
-            CorrelationXSectionsCollection.Add(axisSection);
+            //CorrelationXSectionsCollection.Clear();  
+            //var axisSection = new AxisSection
+            //{
+            //    Value = e.SyncRes.CorrPeakPos / 1000.0,
+            //    SectionWidth = 0.1,
+            //    Stroke = Brushes.Red,
+            //    StrokeThickness = 1,
+            //    StrokeDashArray = new DoubleCollection(new[] { 4d })
+            //};
+            //CorrelationXSectionsCollection.Add(axisSection);
 
             CorrChartXMin = double.NaN;
             CorrChartXMax = double.NaN;

@@ -91,7 +91,7 @@ namespace QKD_Library
                     index_alice = ci.i1,
                     index_bob = ci.i2,
                     alice_key_value = ttAlice.chan[ci.i1] ==  RectZeroChan|| ttAlice.chan[ci.i1] == DiagZeroChan ? (byte)0 : (byte)1 }
-                ).ToList();        
+                ).ToList();
 
             return keyEntries;
         }

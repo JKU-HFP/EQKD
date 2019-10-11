@@ -25,7 +25,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
-               
+                _EQKDServer.StopKeyGeneration();
             });
 
             //Handle Messages
