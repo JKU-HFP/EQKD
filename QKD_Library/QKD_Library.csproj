@@ -76,6 +76,7 @@
     <Compile Include="BitmapEncryption.cs" />
     <Compile Include="Characterization\DMBasis.cs" />
     <Compile Include="Characterization\DensityMatrix.cs" />
+    <Compile Include="Key.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuantumKey.cs" />
     <Compile Include="Synchronization\SignalStartFinder.cs" />
