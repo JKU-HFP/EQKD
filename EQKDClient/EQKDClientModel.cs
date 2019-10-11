@@ -20,10 +20,14 @@ namespace EQKDClient
         private CancellationTokenSource _listening_cts;
 
         private bool _obscureBasis = false;
-        private List<byte> _bobKeys = new List<byte>();
 
         //Properties
-        public Key SecureKey { get; private set; } = new Key() { RectZeroChan = 5, DiagZeroChan = 7 };
+        public Key SecureKey { get; private set; } = new Key()
+        {
+            RectZeroChan = 5,
+            DiagZeroChan = 7,
+            FileName= "SecureKey_Bob.txt"
+        };
         public SecQClient secQNetClient { get; private set; }
 
         public ITimeTagger TimeTagger { get; private set; }
@@ -61,7 +65,9 @@ namespace EQKDClient
             try
             {
                 TimeTags send_tt = null;
+                TimeTags orgin_send_tt = null;
                 TimeTags receive_tt = null;
+    
 
                 while (true)
                 {
@@ -74,6 +80,7 @@ namespace EQKDClient
                         case CommandPacket.SecQNetCommands.SendTimeTags:
                             if (TimeTagger.GetNextTimeTags(out send_tt))
                             {
+                                orgin_send_tt = new TimeTags(send_tt.chan.Take(send_tt.chan.Length).ToArray(), send_tt.time.Take(send_tt.time.Length).ToArray());
                                 //Obscure basis if requested
                                 if(_obscureBasis)
                                 {
@@ -81,7 +88,7 @@ namespace EQKDClient
                                     for(int i=0; i<send_tt.chan.Length; i++)
                                     {
                                         act_chan = send_tt.chan[i];
-                                        send_tt.chan[i] = act_chan == 5 || act_chan == 7 ? TimeTagPacket.RectBasisCodedChan : TimeTagPacket.DiagbasisCodedChan;
+                                        send_tt.chan[i] = act_chan == 5 || act_chan == 6 ? TimeTagPacket.RectBasisCodedChan : TimeTagPacket.DiagbasisCodedChan;
                                     }
                                 }
 
@@ -112,7 +119,7 @@ namespace EQKDClient
 
                             List<int> key_indices = receive_tt.time.Select(t => (int)t).ToList();
 
-                            SecureKey.AddKey(send_tt, key_indices);
+                            SecureKey.AddKey(orgin_send_tt, key_indices);    
                     
                             break;
 
