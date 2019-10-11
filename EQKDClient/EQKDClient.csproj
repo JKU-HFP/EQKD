@@ -111,6 +111,10 @@
       <Project>{c11c1b88-8c40-4026-8f66-41603917af87}</Project>
       <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
+    <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
+      <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
+      <Name>QKD_Library</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
       <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>
       <Name>SecQNet_Library</Name>

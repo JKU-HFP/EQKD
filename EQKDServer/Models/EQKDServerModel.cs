@@ -56,6 +56,7 @@ namespace EQKDServer.Models
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
 
+        public Key SecureKey { get; private set; } = new Key() { RectZeroChan=0, DiagZeroChan=2};
         //Rotation Stages
         public SMC100Controller _smcController { get; private set; }
         public SMC100Stage _HWP_A { get; private set; }
@@ -231,11 +232,11 @@ namespace EQKDServer.Models
 
         public async Task StartFiberCorrectionAsync()
         {
-            await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
             
             //await FiberCorrection.StartOptimizationAsync();
 
-            //await StartKeyGeneration();
+            await StartKeyGeneration();
         }
 
         public async Task StartKeyGeneration()
@@ -249,16 +250,6 @@ namespace EQKDServer.Models
 
                if (!local)
                {
-                   byte bR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
-                   byte bD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
-                   List<(byte cA, byte cB)> keyCorrConfig = new List<(byte cA, byte cB)>
-                   {
-                       //Rectilinear
-                       (0,bR),(1,bR),
-                       //Diagonal
-                       (2,bD),(3,bD)
-                   };
-
                    //Get Key Correlations
                    TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
@@ -268,27 +259,12 @@ namespace EQKDServer.Models
                        return;
                    }
 
-                   Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
-                   Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
+                   var key_entries = SecureKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+                   var filtered_entries = Key.FilterKeyEntries(key_entries);
+                   SecureKey.AddKey(filtered_entries);
 
-                   key_corr.AddCorrelations(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-
-                   //KEY SIFTING
-                   List<long> aliceKeyTimes = key_hist.Correlations.Select(corr => corr.t1).ToList();
-                   List<long> bobKeyTimes = key_hist.Correlations.Select(corr => corr.t2).ToList();
-
-                   //Register key at Alice
-                   List<int> aliceKeyIndices = syncRes.TimeTags_Alice.time.GetIndicesOf(aliceKeyTimes).ToList();
-                   aliceKeyIndices.ForEach((i) =>
-                   {
-                       byte act_chan = syncRes.TimeTags_Alice.chan[i];
-                       _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-                   });
-
-                   //Register key at Bob
-                   List<int> bobKeyIndices = syncRes.CompTimeTags_Bob.time.GetIndicesOf(bobKeyTimes).ToList();
-                   TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, bobKeyIndices.Select(bi => syncRes.TimeTags_Bob.time[bi]).ToArray());
-
+                   //Register key at Bob                
+                   TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, filtered_entries.Select(fe => (long)fe.index_bob).ToArray());
                    //Send sifted tags to bob
                    SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
                }

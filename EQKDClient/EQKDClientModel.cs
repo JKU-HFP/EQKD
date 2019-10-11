@@ -1,4 +1,5 @@
 ﻿using Extensions_Library;
+using QKD_Library;
 using SecQNet;
 using SecQNet.SecQNetPackets;
 using System;
@@ -19,10 +20,10 @@ namespace EQKDClient
         private CancellationTokenSource _listening_cts;
 
         private bool _obscureBasis = false;
-        private List<byte> _secureKeys = new List<byte>();
         private List<byte> _bobKeys = new List<byte>();
 
         //Properties
+        public Key SecureKey { get; private set; } = new Key() { RectZeroChan = 5, DiagZeroChan = 7 };
         public SecQClient secQNetClient { get; private set; }
 
         public ITimeTagger TimeTagger { get; private set; }
@@ -110,12 +111,9 @@ namespace EQKDClient
                             if (receive_tt == null) break;
 
                             List<int> key_indices = receive_tt.time.Select(t => (int)t).ToList();
-                            
-                            key_indices.ForEach( (i) =>
-                            {
-                                byte act_chan = send_tt.chan[i];
-                                _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-                            });                           
+
+                            SecureKey.AddKey(send_tt, key_indices);
+                    
                             break;
 
                         case CommandPacket.SecQNetCommands.SendTimeTagsSecure:
