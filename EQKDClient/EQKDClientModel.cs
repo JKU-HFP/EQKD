@@ -109,7 +109,7 @@ namespace EQKDClient
 
                             if (receive_tt == null) break;
 
-                            List<int> key_indices = send_tt.time.GetIndicesOf(receive_tt.time).ToList();
+                            List<int> key_indices = receive_tt.time.Select(t => (int)t).ToList();
                             
                             key_indices.ForEach( (i) =>
                             {
