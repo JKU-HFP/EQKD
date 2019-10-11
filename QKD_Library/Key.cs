@@ -12,32 +12,46 @@ namespace QKD_Library
 {
     public class Key
     {
-        //public
+        //-----------------------------------
+        //----  P R O P E R T I E S
+        //-----------------------------------
+        public string FileName { get; set; } = "Key.txt";
         public ulong KeyTimebin { get; set; } = 1000;
         public int RectZeroChan { get; set; } = 0;
         public int DiagZeroChan { get; set; } = 2;
 
-        //private
-        List<byte> _key = new List<byte>();
+        public List<byte> SecureKey { get; private set; } = new List<byte>();
+        public List<double> KeyRates { get; private set; } = new List<double>();
 
-        //constructor
+        //-----------------------------------
+        //---- C O N S T R U C T O R
+        //-----------------------------------
         public Key()
         {
 
         }
 
+        //--------------------------------------
+        //----  M E T H O D S
+        //--------------------------------------
+
         public void SaveToFile(string filename)
         {
-            File.WriteAllLines(filename, _key.Select(k => k.ToString()));
+            File.WriteAllLines(filename, SecureKey.Select(k => k.ToString()));
+        }
+
+        private void AppendToFile(string filename, List<byte> newKey)
+        {
+            File.AppendAllLines(filename, newKey.Select(k => k.ToString()));
         }
 
         public void ReadFromFile(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            _key = lines.Select(l => byte.Parse(l)).ToList();
+            SecureKey = lines.Select(l => byte.Parse(l)).ToList();
         }
         
-        public double GetQBER(List<byte> keyA, List<byte> keyB)
+        public static double GetQBER(List<byte> keyA, List<byte> keyB)
         {
             if (keyA.Count != keyB.Count) return -1;
 
@@ -48,7 +62,9 @@ namespace QKD_Library
         public double GetRate(TimeTags tt, List<byte> key)
         {
             double timespan = (tt.time.Last() - tt.time.First()) * 1E-12;
-            return key.Count / timespan;
+            double rate = key.Count / timespan;
+            KeyRates.Add(rate);
+            return rate;
         }
                         
         public List<KeyEntry> GetKeyEntries(TimeTags ttAlice, TimeTags ttBob, ulong keytimebin=1000)
@@ -86,7 +102,12 @@ namespace QKD_Library
             return (double)num_ones / (keyEntries.Count - num_ones);
         }
 
-        public static List<KeyEntry> FilterKeyEntries(List<KeyEntry> entries)
+        /// <summary>
+        /// Filters timetags if Bias of 0 or 1 is persistent
+        /// </summary>
+        /// <param name="entries"></param>
+        /// <returns></returns>
+        public static List<KeyEntry> RemoveBias(List<KeyEntry> entries)
         {
             double bias = GetBias(entries);
 
@@ -114,21 +135,38 @@ namespace QKD_Library
             return (resultEntries);
         }
 
-        public void AddKey(TimeTags tt, List<int> keyIndices, bool append = true)
+        /// <summary>
+        /// Add Keys by timetag packet and list of indices
+        /// </summary>
+        /// <param name="tt"></param>
+        /// <param name="keyIndices"></param>
+        public void AddKey(TimeTags tt, List<int> keyIndices)
         {
-            if (!append) _key.Clear();
+            List<byte> newKey = new List<byte>();
 
             //Register key
             foreach (int i in keyIndices)
             {
                 byte act_chan = tt.chan[i];
-                _key.Add(act_chan == RectZeroChan || act_chan == DiagZeroChan ? (byte)0 : (byte)1);
+                newKey.Add(act_chan == RectZeroChan || act_chan == DiagZeroChan ? (byte)0 : (byte)1);
             };
+
+            SecureKey.AddRange(newKey);
+            if (!string.IsNullOrEmpty(FileName)) AppendToFile(FileName, newKey);
         }
 
+        /// <summary>
+        /// Add Keys by key entries
+        /// </summary>
+        /// <param name="keyentries"></param>
         public void AddKey(List<KeyEntry> keyentries)
         {
-            _key.AddRange(keyentries.Select(ke => ke.alice_key_value));
+            List<byte> newKey = new List<byte>();
+
+            newKey.AddRange(keyentries.Select(ke => ke.alice_key_value));
+
+            SecureKey.AddRange(newKey);
+            if (!string.IsNullOrEmpty(FileName)) AppendToFile(FileName, newKey);
         }
 
     }

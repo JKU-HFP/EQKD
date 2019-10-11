@@ -260,7 +260,7 @@ namespace EQKDServer.Models
                    }
 
                    var key_entries = SecureKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-                   var filtered_entries = Key.FilterKeyEntries(key_entries);
+                   var filtered_entries = Key.RemoveBias(key_entries);
                    SecureKey.AddKey(filtered_entries);
 
                    //Register key at Bob                

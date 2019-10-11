@@ -12,12 +12,13 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
-            TestClass testclass = new TestClass();
-            testclass.StartAsync();
+            Key alicekey = new Key();
+            Key bobkey = new Key();
 
-            Thread.Sleep(3000);
+            alicekey.ReadFromFile(@"I:\public\NANOSCALE SEMICONDUCTOR GROUP\1. DATA\BIG-LAB\2019\10\10\QD25\SecureKey_Alice_2Taggers.txt");
+            bobkey.ReadFromFile(@"I:\public\NANOSCALE SEMICONDUCTOR GROUP\1. DATA\BIG-LAB\2019\10\10\QD25\SecureKey_Bob_2Taggers.txt");
 
-            testclass.Cancel();
+            double qber = Key.GetQBER(alicekey.SecureKey, bobkey.SecureKey);
 
 
             while (true) ;
