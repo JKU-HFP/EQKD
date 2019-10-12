@@ -22,7 +22,7 @@ namespace EQKDClient
         private bool _obscureBasis = false;
 
         //Properties
-        public Key SecureKey { get; private set; } = new Key()
+        public QKey SecureKey { get; private set; } = new QKey()
         {
             RectZeroChan = 5,
             DiagZeroChan = 7,

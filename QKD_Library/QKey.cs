@@ -10,7 +10,7 @@ using TimeTagger_Library.Correlation;
 
 namespace QKD_Library
 {
-    public class Key
+    public class QKey
     {
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -26,7 +26,7 @@ namespace QKD_Library
         //-----------------------------------
         //---- C O N S T R U C T O R
         //-----------------------------------
-        public Key()
+        public QKey()
         {
 
         }
@@ -96,10 +96,10 @@ namespace QKD_Library
             return keyEntries;
         }
 
-        public static double GetBias(List<KeyEntry> keyEntries)
+        public static double GetBias(IEnumerable<byte> key)
         {
-            int num_ones = keyEntries.Where(ke => ke.alice_key_value == 1).Count();
-            return (double)num_ones / (keyEntries.Count - num_ones);
+            int num_ones = key.Where(k => k == 1).Count();
+            return (double)num_ones / (key.Count() - num_ones);
         }
 
         /// <summary>
@@ -109,15 +109,12 @@ namespace QKD_Library
         /// <returns></returns>
         public static List<KeyEntry> RemoveBias(List<KeyEntry> entries)
         {
-            double bias = GetBias(entries);
-
-            int max_rand = 1000000; //Defines accuracy
+            double bias = GetBias(entries.Select(ke=>ke.alice_key_value));
 
             //No bias
-            if (bias.AlmostEqual(1.0, 1.0 / max_rand)) return entries;
+            if (bias.AlmostEqual(1.0, 1E-4)) return entries;
 
             double probability = Math.Abs(bias-1);
-            int compval = (int)Math.Round(probability * max_rand);
 
             //Bias towards 0 or 1?
             int key_to_cut = bias > 1.0 ? 1 : 0;
@@ -128,12 +125,51 @@ namespace QKD_Library
 
            foreach (KeyEntry entry in entries)
             {
-                if (entry.alice_key_value == key_to_cut && ran.Next(max_rand) > compval)
-                    resultEntries.Add(entry);
+                double currRand = ran.NextDouble();
+
+                if (entry.alice_key_value == key_to_cut && currRand < probability) continue;
+                resultEntries.Add(entry);
             }
 
             return (resultEntries);
         }
+
+        public static List<QKey> RemoveBias (QKey mainKey, QKey secondKey )
+        {
+            if (mainKey.SecureKey.Count != secondKey.SecureKey.Count) return null;
+
+            double bias = GetBias(mainKey.SecureKey);
+
+            //No bias
+            if (bias.AlmostEqual(1.0, 1E-4))
+            {
+                return new List<QKey> { mainKey, secondKey };
+            }
+
+            QKey filteredMainKey = new QKey();
+            QKey filteredSecondKey = new QKey();
+
+            double probability = Math.Abs(bias - 1);
+         
+            //Bias towards 0 or 1?
+            byte key_to_cut = bias > 1.0 ? (byte)1 : (byte)0;
+
+            Random ran = new Random();
+                
+            for(int i=0; i<mainKey.SecureKey.Count; i++)
+            {
+                double currRand = ran.NextDouble();
+
+                if (mainKey.SecureKey[i] == key_to_cut && currRand < probability) continue;
+                
+                filteredMainKey.SecureKey.Add(mainKey.SecureKey[i]);
+                filteredSecondKey.SecureKey.Add(secondKey.SecureKey[i]);
+                                
+            }
+
+            return new List<QKey> { filteredMainKey, filteredSecondKey };
+        }
+
 
         /// <summary>
         /// Add Keys by timetag packet and list of indices

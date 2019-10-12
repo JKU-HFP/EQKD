@@ -57,7 +57,7 @@ namespace EQKDServer.Models
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
 
-        public Key AliceKey { get; private set; } = new Key()
+        public QKey AliceKey { get; private set; } = new QKey()
         {
             RectZeroChan =0,
             DiagZeroChan=2,
@@ -290,12 +290,13 @@ namespace EQKDServer.Models
                        }
 
                        var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-                       //var filtered_entries = Key.RemoveBias(key_entries) ;
-                       var filtered_entries = key_entries;
+                       double bias = QKey.GetBias(key_entries.Select(ke => ke.alice_key_value));
+                       var filtered_entries = QKey.RemoveBias(key_entries) ;
+                       double filtered_bias = QKey.GetBias(filtered_entries.Select(fe => fe.alice_key_value));
                        AliceKey.AddKey(filtered_entries);
 
                        double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, filtered_entries);
-                       WriteLog($"{filtered_entries.Count} keys generated with a raw rate of {rate:F3} keys/s");
+                       WriteLog($"{filtered_entries.Count} keys generated with a raw rate of {rate:F3} keys/s | Initial Bias {bias:F4} | Final Bias {filtered_bias:F4}");
                        File.AppendAllLines(ratesfile, new string[] { rate.ToString() });
 
                        //Register key at Bob                
