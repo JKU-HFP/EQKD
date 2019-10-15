@@ -104,14 +104,20 @@ namespace EQKDServer.Models
             HydraHarp hydra = new HydraHarp(_loggerCallback)
             {
                 DiscriminatorLevel = 250,
-                MeasurementMode = HydraHarp.Mode.MODE_T3,
+                SyncDivider = 8,
+                SyncDiscriminatorLevel=200,
+                MeasurementMode = HydraHarp.Mode.MODE_T2,
+                ClockMode = HydraHarp.Clock.External,
                 PacketSize = 500000
             };
             hydra.Connect(new List<long> { 0, -3636, -1332, -4148 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
-                RefChan = 1
+                RefChan = 1,
+                SyncDiscriminatorVoltage = 0.2,
+                RefChanDivider=100,
+                SyncRate=10000000
             };
             sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
 
@@ -119,7 +125,7 @@ namespace EQKDServer.Models
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             ServerTimeTagger = hydra;
-            ClientTimeTagger = nwtagger;
+            ClientTimeTagger = sitagger;
 
 
             //Instanciate and connect rotation Stages

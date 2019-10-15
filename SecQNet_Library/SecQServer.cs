@@ -205,7 +205,7 @@ namespace SecQNet
             return true;
         }
 
-        public bool RequestStartTimeTagger(int packetsize, int syncrate=0)
+        public bool RequestStartTimeTagger(int packetsize, double syncrate=0)
         {
             try
             {

@@ -153,6 +153,20 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private double _synFreqOffset;
+
+        public double SyncFreqOffset
+        {
+            get { return _synFreqOffset; }
+            set
+            {
+                _synFreqOffset = value;
+                OnPropertyChanged("SyncFreqOffset");
+            }
+        }
+
+
+
         #endregion
 
         //Charts
@@ -389,6 +403,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.AliceBobSync.LinearDriftCoefficient = LinearDriftCoefficient;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_Var = LinDriftCoeff_Variation;
             _EQKDServer.AliceBobSync.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
+
+            _EQKDServer.AliceBobSync.SyncFreqOffset = SyncFreqOffset;
         }
         private void Synchronize(object o)
         {

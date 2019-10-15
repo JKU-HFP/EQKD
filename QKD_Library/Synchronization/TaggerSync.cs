@@ -33,7 +33,7 @@ namespace QKD_Library.Synchronization
         /// Defined by: time ALICE - time BOB
         /// </summary>
         public long GlobalClockOffset { get; set; } = 0;
-
+        public double SyncFreqOffset { get; set; } = 0;
         public double LinearDriftCoefficient { get; set; } = 0;
         public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
         public int LinearDriftCoeff_NumVar { get; set; } = 2;
@@ -42,7 +42,7 @@ namespace QKD_Library.Synchronization
         public long GroundlevelTimebin { get; set; } = 2000;
         public double GroundlevelTolerance { get; set; } = 0.1;
         public double PVal { get; set; } = 0;
-        public ulong ExcitationPeriod { get; set; } = 12500; //200000000; 
+        public ulong ExcitationPeriod { get; set; } =  12500;
 
         //Correlation Synchronization
         public ulong CorrTimeBin { get; set; } = 512;
@@ -82,8 +82,8 @@ namespace QKD_Library.Synchronization
             //Obscured Basis
             (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
 
-            //Funky generator
-            //(1,5)
+            ////Funky generator
+            //(0,2)
         };
         //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
         //        {
@@ -136,7 +136,7 @@ namespace QKD_Library.Synchronization
             _shutterContr = shutterContr;
 
             //Define tagger1 as SyncRate Source
-            _tagger1.SyncRateChanged += (sender, e) => _tagger2.SyncRate = e.SyncRate;
+            //_tagger1.SyncRateChanged += (sender, e) => _tagger2.SyncRate = e.SyncRate+SyncFreqOffset;
         }
 
         //#################################################
@@ -169,13 +169,15 @@ namespace QKD_Library.Synchronization
 
         public SyncClockResult TestClock(int packetSize=100000)
         {
+            _tagger2.SyncRate = 10000000+SyncFreqOffset;
+
             TimeTags ttA = null;
             TimeTags ttB = null;
 
             _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
 
             //Refresh sync rate
-            _tagger2.SyncRate = _tagger1.SyncRate;
+            //_tagger2.SyncRate = _tagger1.SyncRate;
 
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
@@ -185,6 +187,9 @@ namespace QKD_Library.Synchronization
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
+
+
+            //TimeTags tt = GetSingleTimeTags(0, packetSize);
 
             SyncClockResult res = SyncClocks(ttA, ttB);
             return res;
@@ -362,9 +367,8 @@ namespace QKD_Library.Synchronization
             var bob_diff = bob_last - bob_first;
 
             TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
-
-
-            //GlobalClockOffset = alice_first - bob_first;
+         
+            //GlobalClockOffset = alice_first - bob_first; 
 
             //----------------------------------------------------------------
             //Compensate Bobs tags for a variation of linear drift coefficients
@@ -532,8 +536,8 @@ namespace QKD_Library.Synchronization
             //No fitting found
             if (driftCompResults.Where(r => r.IsFitSuccessful == true).Count() <= 0)
             {
-
                 WriteLog($"Clock Sync failed in {sw.Elapsed} | TimeSpan: {packettimespan} |DriftCoeff {LinearDriftCoefficient}");
+                OnSyncClocksComplete(new SyncClocksCompleteEventArgs(result));
                 return result;
             }
 

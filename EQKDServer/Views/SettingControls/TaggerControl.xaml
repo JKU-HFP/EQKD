@@ -67,6 +67,10 @@
                 <TextBlock Text="Fiber Offset"/>
                 <TextBox Width="100" Text="{Binding FiberOffset}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Sync Freq. offset"/>
+                <TextBox Width="100" Text="{Binding SyncFreqOffset}"/>
+            </StackPanel>
         </StackPanel>
 
         
