@@ -5,6 +5,7 @@ Created on Tue Nov 12 16:21:42 2019
 @author: Schimpf
 """
 
+import os
 from matplotlib import pyplot as plt
 import numpy as np
 import time
@@ -15,8 +16,8 @@ import Bitmap_encoding as bmp
 from matplotlib import image as im
 import imageio
 
-alicefile="..\QKD_2Taggers_10_10_2019\SecureKey_Alice_2Tagger_long.txt"
-bobfile="..\QKD_2Taggers_10_10_2019\SecureKey_Bob_2Tagger_long.txt"
+alicefile="keys\SecureKey_Alice_2Tagger_long.txt"
+bobfile="keys\SecureKey_Bob_2Tagger_long.txt"
 
 aliceKey = np.loadtxt(alicefile)
 bobKey = np.loadtxt(bobfile)
@@ -54,6 +55,9 @@ print("--------- Induce different biases -------------")
 sim_biases = [0.01*b for b in range(101)]
 sim_entropies = list(map(lambda p: ka.SEntropy([1-p,p]),sim_biases)) 
 
+gifdir="tmp/"
+if not os.path.isdir(gifdir): os.mkdir(gifdir)
+
 picfiles=[]
 for i,bias in enumerate(sim_biases[::2]):
     newA,newB=kc.RemoveBias(aliceKey,bobKey,bias)
@@ -77,7 +81,7 @@ for i,bias in enumerate(sim_biases[::2]):
     bmp_ax2.imshow(im.imread("pics\\decrypted.bmp"))
     
     entr_fig.tight_layout()
-    picfile="pics\\gif\\"+str(i)+".png"
+    picfile=gifdir+str(i)+".png"
     picfiles.append(picfile)
     entr_fig.savefig(picfile)
     entr_fig.show()
@@ -86,7 +90,7 @@ for i,bias in enumerate(sim_biases[::2]):
 images=[]
 for filename in picfiles:
     images.append(imageio.imread(filename))
-imageio.mimsave('pics/gif/entropy.gif', images, fps=3)
+imageio.mimsave(gifdir+"entropy.gif", images, fps=3)
 
 #
 #
