@@ -191,7 +191,7 @@ namespace QKD_Library.Synchronization
 
             //TimeTags tt = GetSingleTimeTags(0, packetSize);
 
-            SyncClockResult res = SyncClocks(ttA, ttB);
+            SyncClockResult res = SyncClocks(ttA, ttB, testMode:true);
             return res;
         }
 
@@ -349,7 +349,7 @@ namespace QKD_Library.Synchronization
             _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
         }
 
-        private SyncClockResult SyncClocks(TimeTags ttAlice, TimeTags ttBob)
+        private SyncClockResult SyncClocks(TimeTags ttAlice, TimeTags ttBob, bool testMode=false)
         {
             Stopwatch sw = new Stopwatch();
 
@@ -367,9 +367,9 @@ namespace QKD_Library.Synchronization
             var bob_diff = bob_last - bob_first;
 
             TimeSpan packettimespan = new TimeSpan(0, 0, 0, 0, (int)(Math.Min(alice_diff, bob_diff) * 1E-9));
-         
-            //GlobalClockOffset = alice_first - bob_first; 
 
+            long clockOffset = testMode ? alice_first - bob_first : GlobalClockOffset;
+        
             //----------------------------------------------------------------
             //Compensate Bobs tags for a variation of linear drift coefficients
             //-----------------------------------------------------------------
@@ -394,7 +394,7 @@ namespace QKD_Library.Synchronization
 
                 Histogram hist = new Histogram(_clockChanConfig, ClockSyncTimeWindow, (long)ClockTimeBin);
                 _clockKurolator = new Kurolator(new List<CorrelationGroup> { hist }, ClockSyncTimeWindow);
-                _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], GlobalClockOffset);
+                _clockKurolator.AddCorrelations(ttAlice, ttBob_comp_list[drift_index], clockOffset);
 
                 //----- Analyse peaks ----
 
