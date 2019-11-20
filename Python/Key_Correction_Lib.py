@@ -12,8 +12,23 @@ Methods for correcting keys from QKD
 import numpy as np
 import hashlib
 import time
+import scipy as sc
 
-def RemoveBias(keyA,keyB,bias):
+def RemoveBias(keyA,keyB):
+    """Flip random half of bits"""
+    resKeyA=np.zeros_like(keyA)
+    resKeyB=np.zeros_like(keyB)
+    flip=sc.random.random(len(keyA))>0.5
+    for i in range(len(keyA)):
+        if(flip[i]):
+            resKeyA[i]=1-keyA[i]
+            resKeyB[i]=1-keyB[i]
+        else:
+            resKeyA[i]=keyA[i]
+            resKeyB[i]=keyB[i]
+    return resKeyA,resKeyB
+
+def InduceBias(keyA,keyB,bias):
     """Remove bias from given key"""
     
     probability = np.abs(bias-0.5)*2
@@ -131,7 +146,21 @@ def Twiggle(keyA,keyB,packetsize):
             "efficiency": len(aNew)/len(keyA),
             "timespan": timespan}
 
-
+def PermuteKeys(keyA,keyB,permutation):
+    """Permuts two keys along a permutation key"""
+    keyA=np.array(keyA)
+    keyB=np.array(keyB)
+    if(keyA.size!=keyB.size):
+         raise Exception('Keys not of equal length')
+    if(keyA.size!=permutation.size):
+         raise Exception('Permutation not of same length as keys')
+    
+    keyAtmp=np.zeros_like(keyA)
+    keyBtmp=np.zeros_like(keyB)
+    for i in range(len(keyA)):
+        keyAtmp[i] = keyA[permutation[i]]
+        keyBtmp[i] = keyB[permutation[i]]
+    return keyAtmp, keyBtmp
 
 
 

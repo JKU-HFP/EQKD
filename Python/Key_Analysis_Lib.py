@@ -70,3 +70,10 @@ def ErrorCorrelation(aliceKey, bobKey, N=20):
                         histogram[dist] = histogram[dist]+1
     
     return histogram
+
+
+def SecureRate_Hashing(Qber,rdet):
+    if(Qber>1.0 or Qber<0): raise ValueError("Qber has to be between 0 and 1")
+    if(4*Qber>1): return 0
+    R=80E6
+    return (1-4*Qber)*rdet*rdet/R
