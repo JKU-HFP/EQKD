@@ -169,10 +169,17 @@ namespace EQKDServer.Models
             //_QWP_B.Move_Absolute(107.015);
 
 
-            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, _QWP_A);
+            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
            // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
+        }
+
+        private void TriggerShutter()
+        {
+            _QWP_A.SetOutput(true);
+            Thread.Sleep(100);
+            _QWP_A.SetOutput(false);
         }
 
         //--------------------------------------

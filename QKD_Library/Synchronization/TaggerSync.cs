@@ -60,7 +60,7 @@ namespace QKD_Library.Synchronization
 
         private Action<string> _loggerCallback;
         private Func<string, string, int> _userprompt;
-        private KPRM1EStage _shutterContr;
+        private Action _shutterContr;
 
         private Kurolator _clockKurolator;
 
@@ -127,7 +127,7 @@ namespace QKD_Library.Synchronization
         //##  C O N S T R U C T O R
         //#################################################
 
-        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, KPRM1EStage shutterContr=null)
+        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, Action shutterContr=null)
         {
             _loggerCallback = loggerCallback;
             _userprompt = userprompt;
@@ -194,15 +194,7 @@ namespace QKD_Library.Synchronization
             SyncClockResult res = SyncClocks(ttA, ttB, testMode:true);
             return res;
         }
-
-
-        private void TriggerShutter()
-        {
-            _shutterContr.SetOutput(true);
-            Thread.Sleep(100);
-            _shutterContr.SetOutput(false);
-        }
-        
+                
         private long GetGlobalOffset()
         {
             TimeTags ttA = null;
