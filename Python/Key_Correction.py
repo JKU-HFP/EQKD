@@ -11,7 +11,6 @@ Correction of existing key obtained by QKD
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy as sc
-import time
 
 import Key_Analysis_Lib as ka
 import Key_Correction_Lib as kc
@@ -159,36 +158,54 @@ print("Key ratio: {}".format(twiggleResult["efficiency"]))
 print("Original QBER: {:.3f}%".format(100*ka.Qber(aliceKey,bobKey)))
 print("New QBER: {:.3f}%".format(100*ka.Qber(twiggleResult["keyA"],twiggleResult["keyB"])))
 
+f=plt.figure(figsize=(3,2))
+ax=f.add_subplot(111)
+klist=[0,1,2,3]
+plist=ka.ProbDist(klist,1000,ka.Qber(aliceKey,bobKey))
+ax.bar(klist,plist*100)
+ax.set_xlabel('Number of errors')
+ax.set_ylabel('Probability (%)')
+ax.set_ylim((0,10))
+f.tight_layout()
+f.show()
+
+# If we were to simply plot pts, we'd lose most of the interesting
+# details due to the outliers. So let's 'break' or 'cut-out' the y-axis
+# into two portions - use the top (ax) for the outliers, and the bottom
+# (ax2) for the details of the majority of our data
+f, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(3,2))
+
+# plot the same data on both axes
+bar1=ax.bar(klist,plist*100)
+bar2=ax2.bar(klist,plist*100)
+
+# zoom-in / limit the view to different portions of the data
+ax.set_ylim(78, 100)  # outliers only
+ax2.set_ylim(0, 22)  # most of the data
+
+# hide the spines between ax and ax2
+ax.spines['bottom'].set_visible(False)
+ax2.spines['top'].set_visible(False)
+ax.xaxis.tick_top()
+ax.tick_params(labeltop=False)  # don't put tick labels at the top
+ax2.xaxis.tick_bottom()
+ax2.set_xlabel('Number of errors')
+ax2.set_ylabel('Probability (%)')
+
+d = .015  # how big to make the diagonal lines in axes coordinates
+# arguments to pass to plot, just so we don't keep repeating them
+kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+ax.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+ax.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+
+f.show()
+
+
 aliceKey,bobKey=twiggleResult["keyA"],twiggleResult["keyB"]
-
-print("----- 05. REMOVE BIAS ----------")
-
-newA,newB = aliceKey,bobKey
-bias_tolerance=1E-5
-bias=ka.KeyProbDist(aliceKey)[1]
-num_removals=0
-start_time=time.time()
-
-"""Remove bias until tolerance reached"""
-while np.abs((bias-0.5))>bias_tolerance:
-    bias=ka.KeyProbDist(newA)[1]
-    newA,newB=kc.InduceBias(newA,newB,bias)
-    num_removals+=1
-end_time=time.time()
-timespan=end_time-start_time
-
-opt_bias=bias
-opt_entropy=ka.SEntropy(ka.KeyProbDist(newA))
-
-
-print("Remaining bias: {}".format(opt_bias))
-print("Shannon entropy: {}".format(opt_entropy))
-print("Bias removal time: {}".format(timespan))
-print("Bias removal rate: {:.2f}ms/1000keys".format(1E6*timespan/aliceKey.size))
-print("Number of bias removal cycles: {}".format(num_removals))
-print("Efficiency: {}".format(len(newA)/len(aliceKey)))
-
-aliceKey,bobKey = newA,newB
 
 
 

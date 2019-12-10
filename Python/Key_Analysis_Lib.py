@@ -77,3 +77,6 @@ def SecureRate_Hashing(Qber,rdet):
     if(4*Qber>1): return 0
     R=80E6
     return (1-4*Qber)*rdet*rdet/R
+
+def EveBits(t):
+    return 4*t+5*np.sqrt(12*t)

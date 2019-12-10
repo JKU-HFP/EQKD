@@ -214,7 +214,7 @@ namespace QKD_Library.Synchronization
 
                 if (_shutterContr!=null)
                 {
-                    TriggerShutter();
+                    _shutterContr();
                     Thread.Sleep(2000);
                 }
 
@@ -224,7 +224,7 @@ namespace QKD_Library.Synchronization
                 if(_shutterContr!=null)
                 {
                     Thread.Sleep(3000);
-                    TriggerShutter();
+                    _shutterContr();
                 }
 
                 while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);

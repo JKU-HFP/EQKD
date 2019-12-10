@@ -17,10 +17,21 @@ from matplotlib import image as im
 import imageio
 
 alicefile="keys\SecureKey_Alice_2Tagger_long.txt"
+#alicefile=r"C:\Users\Christian\Dropbox\PhD\QKD\Encryption_Test_25_08_2019\Key_Alice.txt"
 bobfile="keys\SecureKey_Bob_2Tagger_long.txt"
+#bobfile=r"C:\Users\Christian\Dropbox\PhD\QKD\Encryption_Test_25_08_2019\Key_Bob.txt"
 
 aliceKey = np.loadtxt(alicefile)
 bobKey = np.loadtxt(bobfile)
+
+
+
+#aliceKey,bobKey=kc.InduceBias(aliceKey,bobKey,0.47)
+#
+#np.savetxt("keys\\tmp_aliceKey.txt",aliceKey, fmt='%d')
+#np.savetxt("keys\\tmp_bobKey.txt",bobKey, fmt='%d')
+#bmp.Encrypt("pics\\JKU.bmp","pics\\encrypted.bmp","keys\\tmp_AliceKey.txt")
+#bmp.Encrypt("pics\\encrypted.bmp","pics\\decrypted.bmp","keys\\tmp_bobKey.txt")
 
 print("----- 01. REMOVE BIAS ----------")
 
@@ -33,7 +44,7 @@ start_time=time.time()
 """Remove bias until tolerance reached"""
 while np.abs((bias-0.5))>bias_tolerance:
     bias=ka.KeyProbDist(newA)[1]
-    newA,newB=kc.RemoveBias(newA,newB,bias)
+    newA,newB=kc.InduceBias(newA,newB,bias)
     num_removals+=1
 end_time=time.time()
 
@@ -48,7 +59,7 @@ print("Efficiency: {}".format(len(newA)/len(aliceKey)))
 
 aliceKey,bobKey = newA,newB
 
-
+print(ka.SEntropy(ka.KeyProbDist(aliceKey)))
 
 print("--------- Induce different biases -------------")
 
@@ -60,15 +71,19 @@ if not os.path.isdir(gifdir): os.mkdir(gifdir)
 
 picfiles=[]
 for i,bias in enumerate(sim_biases[::2]):
-    newA,newB=kc.RemoveBias(aliceKey,bobKey,bias)
+    newA,newB=kc.InduceBias(aliceKey,bobKey,bias)
     np.savetxt("keys\\tmp_aliceKey.txt",newA, fmt='%d')
     np.savetxt("keys\\tmp_bobKey.txt",newB, fmt='%d')
+    bmp.Encrypt("pics\\Blank.bmp","pics\\key.bmp","keys\\tmp_AliceKey.txt")
     bmp.Encrypt("pics\\JKU.bmp","pics\\encrypted.bmp","keys\\tmp_AliceKey.txt")
     bmp.Encrypt("pics\\encrypted.bmp","pics\\decrypted.bmp","keys\\tmp_bobKey.txt")
     
     entr_fig = plt.figure(figsize=(10,5))
 
-    entr_ax1 = entr_fig.add_subplot(221)
+    key_fig=entr_fig.add_subplot(221)
+    key_fig.imshow(im.imread("pics\\key.bmp"))
+
+    entr_ax1 = entr_fig.add_subplot(222)
     entr_ax1.plot(sim_biases,sim_entropies)
     entr_ax1.plot([ka.GetBias(newA),],[ka.SEntropy(ka.KeyProbDist(newA)),],ls='none',marker='s',markersize=5)
     entr_ax1.set_xlabel('Probability of Key-Bit=1')

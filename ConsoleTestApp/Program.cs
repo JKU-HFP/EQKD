@@ -25,7 +25,7 @@ namespace ConsoleTestApp
             //double qber = QKey.GetQBER(alicekey.SecureKey, bobkey.SecureKey);
 
             string cmd = @"E:\Programs\Anaconda\testfile.py";
-            string progargs = "";
+            string progargs = "argument1";
 
             ProcessStartInfo start = new ProcessStartInfo();
             start.FileName = @"E:\Programs\Anaconda\python.exe";
