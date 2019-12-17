@@ -9,6 +9,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy import signal
 
+def entr(q):
+    return q*np.log2(q)+(1-q)*np.log2(1-q)
+
+r = [i*0.1 for i in range(11)]
+etnrs = etr(r)
+
 path = r'E:\Dropbox\Dropbox\PhD\QKD\QKD_2Taggers_10_10_2019\StateCorrection_2_BruteForce\HD.txt'
 data = np.loadtxt(path,delimiter=',')
 
