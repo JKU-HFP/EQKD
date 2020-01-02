@@ -31,6 +31,14 @@
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
 
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical">
+
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Packet Size"/>
+                <TextBox Width="100" Text="{Binding PacketSize}"/>
+            </StackPanel>
+        </StackPanel>
+
         <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
         <Button Grid.Row="3" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
         <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />

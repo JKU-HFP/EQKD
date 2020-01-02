@@ -34,18 +34,19 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 2;
+        public int NumTagger { get; set; } = 0;
 
-        public Mode OptimizationMode { get; set; } = Mode.Combined;
+        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
         /// <summary>
         /// Maximum iteration for nonlinear Solver
         /// </summary>
-        public int MaxIterations { get; set; } = 5000;
-        
+        public int MaxIterations { get; set; } = 500;
+        public double Accurracy_Simplex { get; set; } = 0.2;
+
         /// <summary>
         /// Desired accuracy in degree
         /// </summary>
-        public double Accurracy { get; set; } = 0.2;
+        public double Accurracy_BruteForce { get; set; } = 0.2;
         public double[] MinPos { get;  set; } = new double[] { 0, 0 , 0 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
@@ -170,7 +171,7 @@ namespace QKD_Library
                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
                  
-            WriteLog($"Starting state correction with target accuracy = {Accurracy}deg, Packetsize {PacketSize}");
+            WriteLog($"Starting state correction with Packetsize {PacketSize}");
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -201,6 +202,8 @@ namespace QKD_Library
                 WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
             }
 
+            if (ct.IsCancellationRequested) return;
+
             switch(OptimizationMode)
             {
                 case Mode.DownhillSimplex:
@@ -209,7 +212,7 @@ namespace QKD_Library
 
                 case Mode.BruteForce:
                     //Bisect until Accuracy is reached
-                    BruteForce(InitRange / (InitNumPoints - 1), ct);
+                    BruteForce(InitRange/(InitNumPoints-1), ct);
                     break;
 
                 case Mode.Combined:
@@ -229,7 +232,9 @@ namespace QKD_Library
 
             int iteration = 1;
 
-            while (Range >= Accurracy)
+            WriteLog($"Starting Brute Force optimization with target accuracy = {Accurracy_BruteForce} deg",true);
+
+            while (Range >= Accurracy_BruteForce)
             {
                 int n = 3;
 
@@ -266,7 +271,7 @@ namespace QKD_Library
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Restart();
 
-            WriteLog($"Starting Nelder Mead Singleton Minimization with MaxIterations = {MaxIterations}, Convergence Criterium = {Accurracy}", true);
+            WriteLog($"Starting Nelder Mead Singleton Minimization with MaxIterations = {MaxIterations}, Convergence Criterium = {Accurracy_Simplex}", true);
 
             Func<Vector<double>, double> loss_func = (Vector<double> p) =>
             {
@@ -288,7 +293,7 @@ namespace QKD_Library
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
             Vector<double> init_guess = new DenseVector(MinPos);
             Vector<double> init_perturb = new DenseVector(new double[] { MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
-            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy, MaxIterations);
+            NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy_Simplex, MaxIterations);
 
             MinimizationResult solver_result = null;
 
@@ -314,7 +319,7 @@ namespace QKD_Library
                     WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
 
                     //Write new initial perturbations
-                    MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy * 10;
+                    MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy_Simplex * 10;
 
                     //Move stages to optimum position
                     _rotationStages[0].Move_Absolute(MinPos[0]);
@@ -323,11 +328,11 @@ namespace QKD_Library
                     break;
 
                 case ExitCondition.ExceedIterations:
-                    WriteLog($"Maximum iterations ({MaxIterations}) exeeded.");
+                    WriteLog($"Maximum iterations ({MaxIterations}) exeeded.",true);
                     break;
 
                 case null:
-                    WriteLog("Operation cancelled");
+                    WriteLog("Downhill simplex cancelled",true);
                     break;
 
                 default:
@@ -336,7 +341,7 @@ namespace QKD_Library
             }
         }
 
-        public void StopSynchronization()
+        public void StopCorrection()
         {
             _cts.Cancel();
         }

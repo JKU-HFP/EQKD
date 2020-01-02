@@ -269,7 +269,8 @@ namespace QKD_Library.Synchronization
             _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
 
             //Refresh sync rate
-            _tagger2.SyncRate = _tagger1.SyncRate;
+            //_tagger2.SyncRate = _tagger1.SyncRate;
+            _tagger2.SyncRate = 10000000 + SyncFreqOffset; //Rb clock
 
 
             _tagger1.StartCollectingTimeTagsAsync();

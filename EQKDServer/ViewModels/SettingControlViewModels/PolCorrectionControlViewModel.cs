@@ -11,6 +11,22 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 {
     class PolCorrectionControlViewModel : ViewModelBase
     {
+        //#############################
+        //### P R O P E R T I E S   ###
+        //#############################
+
+        private int _packetSize = 200000;
+        public int PacketSize 
+        {
+            get { return _packetSize; }
+            set
+            {
+                _packetSize = value;
+                OnPropertyChanged("PacketSize");
+            }
+        }
+
+
         //Private fields
         private EQKDServerModel _EQKDServer;
 
@@ -24,11 +40,16 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public PolCorrectionControlViewModel()
         {
             //Map RelayCommmands
-            StartCorrectionCommand = new RelayCommand<object>((o) => _EQKDServer.StartFiberCorrectionAsync());
+            StartCorrectionCommand = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.FiberCorrection.PacketSize = PacketSize;
+                _EQKDServer.StartFiberCorrectionAsync();
+            });
             StartKeyGenerationCommand = new RelayCommand<object>((o) => _EQKDServer.StartKeyGeneration());
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
+                _EQKDServer.FiberCorrection.StopCorrection();
                 _EQKDServer.StopKeyGeneration();
             });
 
