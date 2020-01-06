@@ -36,22 +36,18 @@ namespace QKD_Library
         /// </summary>
         public int NumTagger { get; set; } = 0;
 
+        //Downhill Simplex
         public Mode OptimizationMode { get; set; } = Mode.BruteForce;
-        /// <summary>
-        /// Maximum iteration for nonlinear Solver
-        /// </summary>
         public int MaxIterations { get; set; } = 500;
         public double Accurracy_Simplex { get; set; } = 0.2;
 
-        /// <summary>
-        /// Desired accuracy in degree
-        /// </summary>
+        //Bruteforce
         public double Accurracy_BruteForce { get; set; } = 0.2;
         public double[] MinPos { get;  set; } = new double[] { 0, 0 , 0 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
-        /// Perform initial "brute force" optimization
+        /// Perform initial "brute force" optimization in combined mode
         /// </summary>
         public bool DoInitOptimization { get; set; } = true;
         public int InitNumPoints { get; set; } = 6;
@@ -191,7 +187,7 @@ namespace QKD_Library
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
 
 
-            if (DoInitOptimization)
+            if (DoInitOptimization && OptimizationMode != Mode.BruteForce)
             {
                 WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}", true);
                 stopwatch.Restart();
@@ -212,13 +208,15 @@ namespace QKD_Library
 
                 case Mode.BruteForce:
                     //Bisect until Accuracy is reached
-                    BruteForce(InitRange/(InitNumPoints-1), ct);
+                    if (DoInitOptimization) BruteForce(InitRange / (InitNumPoints - 1), ct);
+                    else BruteForce(InitRange, ct);
                     break;
 
                 case Mode.Combined:
-                    double finetune_range = 5;
+                    double finetune_range = 10;
                     DownhillSimplex(ct);
-                    if (!ct.IsCancellationRequested) BruteForce(finetune_range, ct);
+                    if (ct.IsCancellationRequested) _cts = new CancellationTokenSource(); //Reset cancellation token
+                    BruteForce(finetune_range, ct);
                     break;
             }
 
@@ -266,6 +264,8 @@ namespace QKD_Library
         private void DownhillSimplex(CancellationToken ct)
         {
             //Nelder Mead Sigleton Minimization
+            double[] min_pos_tmp = new double[] { 0, 0, 0 };
+            double minCost = 1;
 
             _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
             Stopwatch stopwatch = new Stopwatch();
@@ -286,6 +286,13 @@ namespace QKD_Library
                 var loss = GetLossFunction();
 
                 WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
+                
+                //Record minimum value
+                if(loss.val<minCost)
+                {
+                    minCost = loss.val;
+                    min_pos_tmp = new double[] { p[0], p[1], p[2] };
+                }
 
                 return loss.val;
             };
@@ -331,8 +338,16 @@ namespace QKD_Library
                     WriteLog($"Maximum iterations ({MaxIterations}) exeeded.",true);
                     break;
 
-                case null:
+                case null: //Cancelled by token
                     WriteLog("Downhill simplex cancelled",true);
+
+                    MinPos = min_pos_tmp;
+                    WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
+
+                    //Move stages to optimum position
+                    _rotationStages[0].Move_Absolute(MinPos[0]);
+                    _rotationStages[1].Move_Absolute(MinPos[1]);
+                    _rotationStages[2].Move_Absolute(MinPos[2]);
                     break;
 
                 default:
@@ -378,7 +393,7 @@ namespace QKD_Library
                     for (int i2 = 0; i2 < positions[0].Length; i2++)
                     {
 
-                        if (ct.IsCancellationRequested) return opt_pos;
+                        if (ct.IsCancellationRequested) return StartPos;
 
                         //Position rotation stages
                         double p0 = positions[0][i0];
