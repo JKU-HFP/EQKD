@@ -102,9 +102,10 @@
 
         </DockPanel>
 
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Sync" Command="{Binding StartSyncCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
-        <Button Grid.Row="3" Grid.Column="3" Content="Test Clock" Command="{Binding TestClockCommand}" />
+        <Button Grid.Row="3" Grid.Column="1" Content="Test Clock" Command="{Binding TestClockCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Synchronize" Command="{Binding StartSyncCommand}" />
+        <!-- <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" /> -->
+        
 
     </Grid>
 </UserControl>

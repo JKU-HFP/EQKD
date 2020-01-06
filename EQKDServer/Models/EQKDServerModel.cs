@@ -72,6 +72,7 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_B { get; private set; }
         public KPRM1EStage _QWP_C { get; private set; }
         public KPRM1EStage _QWP_D { get; private set; }
+        public KBD101Stage PolarizerStage { get; private set; }
 
 
         //-----------------------------------
@@ -169,13 +170,23 @@ namespace EQKDServer.Models
             //_HWP_B.Move_Absolute(26.0156);
             //_QWP_B.Move_Absolute(107.015);
 
+            PolarizerStage = new KBD101Stage(_loggerCallback);
+            PolarizerStage.Connect("28250918");
 
-            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter);
+            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
            // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
         }
 
+        private void PolarizerControl(bool status)
+        {
+            const double REMOVEDPOS = 0;
+            const double INSERTEDPOS = 20;
+
+            if (status == true) PolarizerStage.Move_Absolute(INSERTEDPOS);
+            else PolarizerStage.Move_Absolute(REMOVEDPOS);
+        }
         private void TriggerShutter()
         {
             _QWP_A.SetOutput(true);
@@ -247,13 +258,7 @@ namespace EQKDServer.Models
 
             WriteLog("Synchronisation Stopped");
         }
-
-        public void StopSynchronize()
-        {
-            AliceBobSync?.ResetTimeTaggers();
-          
-        }
-
+        
         public async Task StartFiberCorrectionAsync()
         {
             SecQNetServer.ObscureClientTimeTags = false;

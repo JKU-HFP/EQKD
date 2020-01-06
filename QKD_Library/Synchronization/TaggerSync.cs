@@ -61,6 +61,7 @@ namespace QKD_Library.Synchronization
         private Action<string> _loggerCallback;
         private Func<string, string, int> _userprompt;
         private Action _shutterContr;
+        private Action<bool> _polarizerContr;
 
         private Kurolator _clockKurolator;
 
@@ -127,13 +128,14 @@ namespace QKD_Library.Synchronization
         //##  C O N S T R U C T O R
         //#################################################
 
-        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, Action shutterContr=null)
+        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, Action shutterContr=null, Action<bool> polarizerContr=null)
         {
             _loggerCallback = loggerCallback;
             _userprompt = userprompt;
             _tagger1 = tagger1;
             _tagger2 = tagger2;
             _shutterContr = shutterContr;
+            _polarizerContr = polarizerContr;
 
             //Define tagger1 as SyncRate Source
             //_tagger1.SyncRateChanged += (sender, e) => _tagger2.SyncRate = e.SyncRate+SyncFreqOffset;
@@ -195,7 +197,7 @@ namespace QKD_Library.Synchronization
             return res;
         }
                 
-        private long GetGlobalOffset()
+        private void GetGlobalOffset()
         {
             TimeTags ttA = null;
             TimeTags ttB = null;
@@ -205,11 +207,9 @@ namespace QKD_Library.Synchronization
 
             while (!GlobalOffsetDefined)
             {
-                if(_shutterContr==null)
-                {
-                    UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
-                }
-
+                //Move shutter             
+                if (_shutterContr==null) UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
+               
                 ResetTimeTaggers();
 
                 if (_shutterContr!=null)
@@ -218,6 +218,7 @@ namespace QKD_Library.Synchronization
                     Thread.Sleep(2000);
                 }
 
+                //Start collecting
                 _tagger1.StartCollectingTimeTagsAsync();
                 _tagger2.StartCollectingTimeTagsAsync();
 
@@ -252,7 +253,7 @@ namespace QKD_Library.Synchronization
             _tagger2.ClearTimeTagBuffer();
             _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketSize;
 
-            return 0;
+            return;
         }
 
         public TaggerSyncResults GetSyncedTimeTags(int packetSize = 100000)
@@ -281,10 +282,16 @@ namespace QKD_Library.Synchronization
             //---------------------------------------------------
 
             if (!GlobalOffsetDefined) GetGlobalOffset();
-           
+
             //---------------------------------------------------
             // Request timetags and perform synchronisation
             //---------------------------------------------------
+
+            if (_corrsyncStatus != CorrSyncStatus.TrackingPeak)
+            {
+                if (_polarizerContr != null) _polarizerContr(true);
+                else UserPrompt("Place polarizer in optical path.");     
+            }
 
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
@@ -321,8 +328,9 @@ namespace QKD_Library.Synchronization
 
             //Final synchronization by correlation finding
             SyncCorrResults corrSyncRes = SyncCorrelation(ttA, syncClockRes.CompTimeTags_Bob);
-                        
-            result.IsSync = corrSyncRes.IsCorrSync;
+
+            result.IsSync = corrSyncRes.IsCorrSync;  
+            _polarizerContr?.Invoke(false);                    
 
             //Correct TimeTags if Offset is defined
             if (GlobalOffsetDefined) result.CompTimeTags_Bob = new TimeTags(ttB.chan, ttB.time.Select(t => t + GlobalClockOffset).ToArray());

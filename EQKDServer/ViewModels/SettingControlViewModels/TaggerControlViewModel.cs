@@ -190,7 +190,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.StopSynchronize();  
+                  
             });
 
             TestClockCommand = new RelayCommand<object>((o) =>
