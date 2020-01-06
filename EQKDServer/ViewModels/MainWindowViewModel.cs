@@ -210,7 +210,6 @@ namespace EQKDServer.ViewModels
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
-            _EQKDServer.FiberCorrection.LossFunctionAquired += StateCorr_LossFunctionAquired;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
 

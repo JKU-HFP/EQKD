@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:scvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels"
              xmlns:local="clr-namespace:EQKDServer.Views.SettingControls"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
@@ -27,7 +28,6 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="100" />
             <ColumnDefinition Width="100" />
-            <ColumnDefinition Width="100" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
@@ -44,5 +44,24 @@
         <Button Grid.Row="3" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
         <Button Grid.Row="3" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
 
+
+        <lvc:CartesianChart   Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" MinWidth="300"
+                                DisableAnimations="True"
+                                Series="{Binding CorrelationCollection}"
+                                VisualElements="{Binding CorrelationVisualElementsCollection}">
+
+            <lvc:CartesianChart.AxisY>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="counts/s" MinValue="0"></lvc:Axis>
+                </lvc:AxesCollection>
+            </lvc:CartesianChart.AxisY>
+
+            <lvc:CartesianChart.AxisX>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="Delay [us]" Sections="{Binding CorrelationSectionsCollection}"/>
+                </lvc:AxesCollection>
+            </lvc:CartesianChart.AxisX>
+
+        </lvc:CartesianChart>
     </Grid>
 </UserControl>
