@@ -17,8 +17,8 @@ import Key_Correction_Lib as kc
 import Bitmap_encoding as bmp
 
 
-alicefile="keys/SecureKey_Alice_2Tagger_long.txt"
-bobfile="keys/SecureKey_Bob_2Tagger_long.txt"
+alicefile=r'C:\Users\BigLabPC\source\repos\JKU-HFP\EQKD\EQKDServer\bin\x64\Debug\AliceKey.txt'
+bobfile=r'C:\Users\BigLabPC\source\repos\JKU-HFP\EQKD\EQKDServer\bin\x64\Debug\BobKey.txt'
 
 aliceKey = np.loadtxt(alicefile)
 bobKey = np.loadtxt(bobfile)

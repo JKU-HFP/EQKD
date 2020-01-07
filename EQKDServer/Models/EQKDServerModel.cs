@@ -139,7 +139,7 @@ namespace EQKDServer.Models
 
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 45.01;
+                _HWP_A.Offset = 45.01+90;
             }
 
             if (_HWP_B != null)
@@ -148,41 +148,42 @@ namespace EQKDServer.Models
             }
 
 
-            //_HWP_C = new KPRM1EStage(_loggerCallback);
-            _QWP_A = new KPRM1EStage(_loggerCallback);
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-            //_QWP_C = new KPRM1EStage(_loggerCallback);
-            //_QWP_D = new KPRM1EStage(_loggerCallback);
+            _HWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_A = new KPRM1EStage(_loggerCallback);
+            //_QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_C = new KPRM1EStage(_loggerCallback);
+            _QWP_D = new KPRM1EStage(_loggerCallback);
 
-            //_HWP_C.Connect("27254524");
-            _QWP_A.Connect("27254310");
-            _QWP_B.Connect("27504148");
-            //_QWP_C.Connect("27003707");
-            //_QWP_D.Connect("27254574");
+            _HWP_C.Connect("27254524");
+            //_QWP_A.Connect("27254310");
+            //_QWP_B.Connect("27504148");
+            _QWP_C.Connect("27003707");
+            _QWP_D.Connect("27254574");
 
-            //_HWP_C.Offset = 58.5;
-            _QWP_A.Offset = 35.15;
-            _QWP_B.Offset = 63.84;
-            //_QWP_C.Offset = 27.3;
-            //_QWP_D.Offset = 33.15;
+            _HWP_C.Offset = 58.5+90;
+            //_QWP_A.Offset = 35.15;
+            //_QWP_B.Offset = 63.84;
+            _QWP_C.Offset = 27.3+90;
+            _QWP_D.Offset = 33.15; //FAST AXIS WRONG!
 
-            _QWP_A.Move_Absolute(36.4973958333333);
-            _HWP_B.Move_Absolute(48.3203125);
-            _QWP_B.Move_Absolute(99.778645833333);
+            //_QWP_A.Move_Absolute(36.4973958333333);
+            //_HWP_B.Move_Absolute(48.3203125);
+            //_QWP_B.Move_Absolute(99.778645833333);
 
             PolarizerStage = new KBD101Stage(_loggerCallback);
             PolarizerStage.Connect("28250918");
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
+            //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //in Alice/Bob Boxes
+
         }
 
         private void PolarizerControl(bool status)
         {
-            const double REMOVEDPOS = 0;
-            const double INSERTEDPOS = 20;
+            const double REMOVEDPOS = 40;
+            const double INSERTEDPOS = 91.5;
 
             if (status == true) PolarizerStage.Move_Absolute(INSERTEDPOS);
             else PolarizerStage.Move_Absolute(REMOVEDPOS);
@@ -263,9 +264,9 @@ namespace EQKDServer.Models
         {
             SecQNetServer.ObscureClientTimeTags = false;
 
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            await FiberCorrection.StartOptimizationAsync();
+            //await FiberCorrection.StartOptimizationAsync();
         }
 
 

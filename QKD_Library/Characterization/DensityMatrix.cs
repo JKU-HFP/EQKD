@@ -94,9 +94,9 @@ namespace QKD_Library.Characterization
         /// <summary>
         /// Integration time per Basis in seconds
         /// </summary>
-        public int PacketSize { get; set; } = 4000000;
-        public uint ChannelA { get; set; } = 4;
-        public uint ChannelB { get; set; } = 8;
+        public int PacketSize { get; set; } = 3000000;
+        public uint ChannelA { get; set; } = 3;
+        public uint ChannelB { get; set; } = 7;
         public long OffsetChanB { get; set; } = 0; // 34820+7040;
 
         /// <summary>
