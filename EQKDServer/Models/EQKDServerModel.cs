@@ -166,9 +166,9 @@ namespace EQKDServer.Models
             //_QWP_C.Offset = 27.3;
             //_QWP_D.Offset = 33.15;
 
-            //_QWP_A.Move_Absolute(-98.578);
-            //_HWP_B.Move_Absolute(26.0156);
-            //_QWP_B.Move_Absolute(107.015);
+            _QWP_A.Move_Absolute(36.4973958333333);
+            _HWP_B.Move_Absolute(48.3203125);
+            _QWP_B.Move_Absolute(99.778645833333);
 
             PolarizerStage = new KBD101Stage(_loggerCallback);
             PolarizerStage.Connect("28250918");
@@ -176,7 +176,7 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-           // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
+            // AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_D, _HWP_C, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
         }
 
         private void PolarizerControl(bool status)
@@ -276,7 +276,7 @@ namespace EQKDServer.Models
 
         public async Task StartKeyGeneration()
         {
-            bool local = false;
+            bool local = true;
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -350,7 +350,7 @@ namespace EQKDServer.Models
                        };
 
                        //Get Key Correlations
-                       TimeTags tt = AliceBobSync.GetSingleTimeTags(1, PacketSize);
+                       TimeTags tt = AliceBobSync.GetSingleTimeTags(0, PacketSize);
 
                        long tspan = tt.time.Last() - tt.time.First();
 

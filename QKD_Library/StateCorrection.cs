@@ -39,19 +39,19 @@ namespace QKD_Library
         //Downhill Simplex
         public Mode OptimizationMode { get; set; } = Mode.BruteForce;
         public int MaxIterations { get; set; } = 500;
-        public double Accurracy_Simplex { get; set; } = 0.2;
+        public double Accurracy_Simplex { get; set; } = 0.3;
 
         //Bruteforce
-        public double Accurracy_BruteForce { get; set; } = 0.2;
-        public double[] MinPos { get;  set; } = new double[] { 0, 0 , 0 };
+        public double Accurracy_BruteForce { get; set; } = 0.3;
+        public double[] MinPos { get; set; } = new double[] { 40.2473958333333, 56.4453125, 104.153645833333 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
         /// Perform initial "brute force" optimization in combined mode
         /// </summary>
-        public bool DoInitOptimization { get; set; } = true;
+        public bool DoInitOptimization { get; set; } = false;
         public int InitNumPoints { get; set; } = 6;
-        public double InitRange { get; set; } = 180;
+        public double InitRange { get; set; } = 10;
         
         /// <summary>
         /// Integration time in seconds
@@ -216,7 +216,7 @@ namespace QKD_Library
                     double finetune_range = 10;
                     DownhillSimplex(ct);
                     if (ct.IsCancellationRequested) _cts = new CancellationTokenSource(); //Reset cancellation token
-                    BruteForce(finetune_range, ct);
+                    BruteForce(finetune_range, _cts.Token);
                     break;
             }
 

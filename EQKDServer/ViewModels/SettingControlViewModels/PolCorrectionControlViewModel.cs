@@ -77,6 +77,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             });
 
             //Initialize Chart elements
+            CorrelationCollection = new SeriesCollection();
+            CorrelationSectionsCollection = new SectionsCollection();
+
             _correlationChartValues = new ChartValues<ObservablePoint> { };
             _correlationLineSeries = new LineSeries()
             {
