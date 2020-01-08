@@ -38,11 +38,13 @@ namespace QKD_Library.Synchronization
         public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
         public int LinearDriftCoeff_NumVar { get; set; } = 2;
 
-        public double STD_Tolerance { get; set; } = 1700;
+        public double STD_Tolerance { get; set; } = 2000;
         public long GroundlevelTimebin { get; set; } = 2000;
-        public double GroundlevelTolerance { get; set; } = 0.1;
+        public double GroundlevelTolerance { get; set; } = 0.2;
         public double PVal { get; set; } = 0;
         public ulong ExcitationPeriod { get; set; } =  12500;
+
+        public ulong PeakBinning = 2000;
 
         //Correlation Synchronization
         public ulong CorrTimeBin { get; set; } = 512;
@@ -399,7 +401,7 @@ namespace QKD_Library.Synchronization
 
                 //----- Analyse peaks ----
 
-                List<Peak> peaks = hist.GetPeaks(peakBinning: 2000);
+                List<Peak> peaks = hist.GetPeaks(peakBinning: PeakBinning);
 
                 //Number of peaks plausible?
                 int numExpectedPeaks = (int)(2 * ClockSyncTimeWindow / ExcitationPeriod) + 1;
@@ -595,6 +597,14 @@ namespace QKD_Library.Synchronization
                 switch (_corrsyncStatus)
                 {
                     //-----------------------------------------
+                    // Last status was error
+                    //-----------------------------------------
+
+                    case CorrSyncStatus.NoCorrelationFound:
+                        _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
+                        break;
+
+                    //-----------------------------------------
                     // Find coarse time by large search radius
                     //-----------------------------------------
 
@@ -685,7 +695,7 @@ namespace QKD_Library.Synchronization
                         res.HistogramX = fineCorrHist.Histogram_X.ToList();
                         res.HistogramY = fineCorrHist.Histogram_Y.ToList();
 
-                        List<Peak> peaks = fineCorrHist.GetPeaks();
+                        List<Peak> peaks = fineCorrHist.GetPeaks(peakBinning: PeakBinning);
                         res.Peaks = peaks;
 
                         //Find maximum distance between the peaks
@@ -723,7 +733,7 @@ namespace QKD_Library.Synchronization
                             int ind_max = ratios.FindIndex(v => v == max_ratio);
 
                             //Is deviation significant?
-                            if(max_ratio > 1.4)
+                            if(max_ratio > 1.9)
                             {
                                 res.CorrPeakPos = peaks[ind_max].MeanTime;
 
@@ -764,7 +774,7 @@ namespace QKD_Library.Synchronization
                         trackingRes.HistogramX = trackingHist.Histogram_X.ToList();
                         trackingRes.HistogramY = trackingHist.Histogram_Y.ToList();
 
-                        List<Peak> trackedPeaks = trackingHist.GetPeaks();
+                        List<Peak> trackedPeaks = trackingHist.GetPeaks(peakBinning: PeakBinning);
                         trackingRes.Peaks = trackedPeaks;
 
                         //Track peak closest to zero
@@ -773,7 +783,7 @@ namespace QKD_Library.Synchronization
                         Peak MiddlePeak = trackedPeaks.Where(p => Math.Abs(p.MeanTime) == mindist).FirstOrDefault();
 
                         //Is middlepeak around zero? --> DONE
-                        if( ((double) MiddlePeak.MeanTime).AlmostEqual(0,ExcitationPeriod/10) )
+                        if( ((double) MiddlePeak.MeanTime).AlmostEqual(0,ExcitationPeriod/3) )
                         {
                             trackingRes.CorrPeakPos = MiddlePeak.MeanTime;
                             trackingRes.IsCorrSync = true;
@@ -815,7 +825,7 @@ namespace QKD_Library.Synchronization
 
                         }
 
-                        GlobalClockOffset -= trackingRes.CorrPeakPos; //IS SIGN CORRECT?
+                        GlobalClockOffset -= trackingRes.CorrPeakPos;
                         OnSyncCorrComplete(new SyncCorrCompleteEventArgs(trackingRes));
 
                         results = trackingRes;

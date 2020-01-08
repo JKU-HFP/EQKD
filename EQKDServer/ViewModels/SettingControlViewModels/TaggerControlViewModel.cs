@@ -190,7 +190,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
-                  
+                _EQKDServer.AliceBobSync.ResetTimeTaggers();
             });
 
             TestClockCommand = new RelayCommand<object>((o) =>

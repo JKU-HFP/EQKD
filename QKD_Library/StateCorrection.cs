@@ -358,7 +358,7 @@ namespace QKD_Library
 
         public void StopCorrection()
         {
-            _cts.Cancel();
+            _cts?.Cancel();
         }
 
         private double[] GetOptimumPositions(double[] StartPos, int num_points, double range, CancellationToken ct)
