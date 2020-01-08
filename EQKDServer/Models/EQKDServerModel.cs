@@ -22,6 +22,12 @@ namespace EQKDServer.Models
 {
     public class EQKDServerModel
     {
+        //-----------------------------------
+        //---- C O N S T A N T S 
+        //-----------------------------------
+
+        const double REMOVEDPOS = 40;
+        const double INSERTEDPOS = 91.5;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -170,15 +176,9 @@ namespace EQKDServer.Models
             //_HWP_B.Move_Absolute(48.3203125);
             //_QWP_B.Move_Absolute(99.778645833333);
 
-            //PolarizerStage = new KBD101Stage(_loggerCallback);
-            //PolarizerStage.Connect("28250918");
-
-            //while(true)
-            //{
-            //    PolarizerStage.Move_Absolute(0);
-            //    PolarizerStage.Move_Absolute(90);
-            //}
-
+            PolarizerStage = new KBD101Stage(_loggerCallback);
+            PolarizerStage.Connect("28250918");
+            
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
@@ -188,18 +188,16 @@ namespace EQKDServer.Models
 
         private void PolarizerControl(bool status)
         {
-            return;
-
-            const double REMOVEDPOS = 40;
-            const double INSERTEDPOS = 91.5;
-
-            if (status == true)
+            switch (status)
             {
-                PolarizerStage.Move_Absolute(INSERTEDPOS);
-            }
-            else
-            {
-                PolarizerStage.Move_Absolute(REMOVEDPOS);
+                case true:
+                    PolarizerStage.Move_Absolute(INSERTEDPOS);
+                    break;
+                case false:
+                    PolarizerStage.Move_Absolute(REMOVEDPOS);
+                    break;
+                default:
+                    break;
             }
         }
         private void TriggerShutter()
