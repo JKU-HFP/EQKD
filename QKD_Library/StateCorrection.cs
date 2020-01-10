@@ -42,8 +42,8 @@ namespace QKD_Library
         public double Accurracy_Simplex { get; set; } = 0.3;
 
         //Bruteforce
-        public double Accurracy_BruteForce { get; set; } = 0.3;
-        public double[] MinPos { get; set; } = new double[] { 40.2473958333333, 56.4453125, 104.153645833333 };
+        public double Accurracy_BruteForce { get; set; } = 0.2;
+        public double[] MinPos { get; set; } = new double[] { 189.357337962963, 62.5782638888888, 27.2015046296296 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
@@ -326,7 +326,7 @@ namespace QKD_Library
                     WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
 
                     //Write new initial perturbations
-                    MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy_Simplex * 10;
+                    //MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy_Simplex * 10;
 
                     //Move stages to optimum position
                     _rotationStages[0].Move_Absolute(MinPos[0]);
@@ -409,7 +409,7 @@ namespace QKD_Library
                         //Get loss function value
                         cost = GetLossFunction();
 
-                        if (cost.val+(cost.err/4) < cost_min.val-(cost_min.err/4))
+                        if (cost.val+(cost.err/10) < cost_min.val-(cost_min.err/10))
                         {
                             min_indices = (i0, i1, i2);
                             cost_min = cost;
