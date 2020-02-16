@@ -37,13 +37,14 @@ namespace QKD_Library
         public int NumTagger { get; set; } = 0;
 
         //Downhill Simplex
-        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
+        public Mode OptimizationMode { get; set; } = Mode.Combined;
         public int MaxIterations { get; set; } = 500;
         public double Accurracy_Simplex { get; set; } = 0.3;
 
+
         //Bruteforce
         public double Accurracy_BruteForce { get; set; } = 0.2;
-        public double[] MinPos { get; set; } = new double[] { 189.357337962963, 62.5782638888888, 27.2015046296296 };
+        public double[] MinPos { get; set; } = new double[] {0,0,0 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
@@ -66,7 +67,7 @@ namespace QKD_Library
         /// <summary>
         /// Peak Integration Time Bin
         /// </summary>
-        public ulong TimeBin { get; set; } = 1000;
+        public ulong TimeBin { get; set; } = 1500;
 
         /// <summary>
         /// Folder for logging state Correction data. No saving if string is empty
@@ -459,7 +460,7 @@ namespace QKD_Library
             corr.AddCorrelations(tt1,tt2,0);
 
             List<Peak> peaks = hist.GetPeaks(6250, 0.1, true, TimeBin);
-            var loss = hist.GetRelativeMiddlePeakArea();
+            var loss = hist.GetRelativeMiddlePeakArea((long)TimeBin);
 
             OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss, peaks));
 

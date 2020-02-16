@@ -59,7 +59,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.FiberCorrection.PacketSize = PacketSize;
                 _EQKDServer.StartFiberCorrectionAsync();
             });
-            StartKeyGenerationCommand = new RelayCommand<object>((o) => _EQKDServer.StartKeyGeneration());
+            StartKeyGenerationCommand = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.PacketSize = PacketSize;
+                 _EQKDServer.StartKeyGeneration();
+            });
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
