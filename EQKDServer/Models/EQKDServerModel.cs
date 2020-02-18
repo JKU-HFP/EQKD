@@ -22,6 +22,12 @@ namespace EQKDServer.Models
 {
     public class EQKDServerModel
     {
+        //-----------------------------------
+        //---- C O N S T A N T S 
+        //-----------------------------------
+
+        const double REMOVEDPOS = 40;
+        const double INSERTEDPOS = 91.5;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -120,14 +126,15 @@ namespace EQKDServer.Models
                 RefChanDivider=100,
                 SyncRate=10000000
             };
-            long long_fiber_offs = -4992;
-            sitagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016+long_fiber_offs, -256 + long_fiber_offs, -1152 + long_fiber_offs, 2176 + long_fiber_offs });
+            long long_fiber_offs = 0;// -4992;
+            long OIC_Alice750m = 0;// -3493504-256;
+            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -2388+OIC_Alice750m, -2388+OIC_Alice750m, -6016+long_fiber_offs, -256 + long_fiber_offs, -1152 + long_fiber_offs, 2176 + long_fiber_offs });
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
-            ServerTimeTagger = hydra;
-            ClientTimeTagger = nwtagger;
+            ServerTimeTagger = sitagger;
+            ClientTimeTagger = hydra;
 
 
             //Instanciate and connect rotation Stages
@@ -166,19 +173,18 @@ namespace EQKDServer.Models
             //_QWP_C.Offset = 27.3+90;
             //_QWP_D.Offset = 33.15; //FAST AXIS WRONG!
 
-            //_QWP_A.Move_Absolute(36.4973958333333);
-            //_HWP_B.Move_Absolute(48.3203125);
-            //_QWP_B.Move_Absolute(99.778645833333);
+            ////-19.53,31.97,-40.94
+            //_QWP_A.Move_Absolute(0);
+            //_HWP_B.Move_Absolute(0);
+            //_QWP_B.Move_Absolute(0);
 
-            //PolarizerStage = new KBD101Stage(_loggerCallback);
-            //PolarizerStage.Connect("28250918");
+            //_QWP_A.Move_Absolute(-25.5);
+            //_HWP_B.Move_Absolute(24.19);
+            //_QWP_B.Move_Absolute(-50.81);
 
-            //while(true)
-            //{
-            //    PolarizerStage.Move_Absolute(0);
-            //    PolarizerStage.Move_Absolute(90);
-            //}
-
+            PolarizerStage = new KBD101Stage(_loggerCallback);
+            PolarizerStage.Connect("28250918");
+            
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
@@ -188,18 +194,16 @@ namespace EQKDServer.Models
 
         private void PolarizerControl(bool status)
         {
-            return;
-
-            const double REMOVEDPOS = 40;
-            const double INSERTEDPOS = 91.5;
-
-            if (status == true)
+            switch (status)
             {
-                PolarizerStage.Move_Absolute(INSERTEDPOS);
-            }
-            else
-            {
-                PolarizerStage.Move_Absolute(REMOVEDPOS);
+                case true:
+                    PolarizerStage.Move_Absolute(INSERTEDPOS);
+                    break;
+                case false:
+                    PolarizerStage.Move_Absolute(REMOVEDPOS);
+                    break;
+                default:
+                    break;
             }
         }
         private void TriggerShutter()
@@ -292,7 +296,7 @@ namespace EQKDServer.Models
 
         public async Task StartKeyGeneration()
         {
-            bool local = false;
+            bool local = true;
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -347,7 +351,7 @@ namespace EQKDServer.Models
 
                else
                {
-                   while (true)
+                   while (!_cts.Token.IsCancellationRequested)
                    {
                        List<byte> newAliceKeys = new List<byte>();
                        List<byte> newBobKeys = new List<byte>();
@@ -418,8 +422,12 @@ namespace EQKDServer.Models
                        double QBER = (double)sum_err / _secureKeys.Count;
                        double rate = key_hist.CorrelationIndices.Count / (tspan / 1E12);
 
+                       File.AppendAllLines("KeyStats.txt", new string[] { DateTime.Now.ToString() + "," + rate.ToString() + "," + QBER.ToString()});
+
                        WriteLog($"QBER: {QBER:F3} | rate: {rate:F3} | BellTest middlepeak: {relmeanpeakarea:F4}");
                    }
+
+                   WriteLog("Local Key generation completed.");
                }
 
            });
