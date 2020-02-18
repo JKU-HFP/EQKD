@@ -7,7 +7,6 @@ Created on Wed Nov 13 13:50:12 2019
 Correction of existing key obtained by QKD
 """
 
-
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy as sc
@@ -17,8 +16,8 @@ import Key_Correction_Lib as kc
 import Bitmap_encoding as bmp
 
 
-alicefile=r'C:\Users\BigLabPC\source\repos\JKU-HFP\EQKD\EQKDServer\bin\x64\Debug\AliceKey.txt'
-bobfile=r'C:\Users\BigLabPC\source\repos\JKU-HFP\EQKD\EQKDServer\bin\x64\Debug\BobKey.txt'
+alicefile=r'..\..\..\PhD\QKD\QKD_2Taggers_10_10_2019\SecureKey_Alice_2Tagger_long.txt'
+bobfile=r'..\..\..\PhD\QKD\QKD_2Taggers_10_10_2019\SecureKey_Bob_2Tagger_long.txt'
 
 aliceKey = np.loadtxt(alicefile)
 bobKey = np.loadtxt(bobfile)
@@ -158,6 +157,8 @@ print("Key ratio: {}".format(twiggleResult["efficiency"]))
 print("Original QBER: {:.3f}%".format(100*ka.Qber(aliceKey,bobKey)))
 print("New QBER: {:.3f}%".format(100*ka.Qber(twiggleResult["keyA"],twiggleResult["keyB"])))
 
+
+"""
 f=plt.figure(figsize=(3,2))
 ax=f.add_subplot(111)
 klist=[0,1,2,3]
@@ -168,6 +169,7 @@ ax.set_ylabel('Probability (%)')
 ax.set_ylim((0,10))
 f.tight_layout()
 f.show()
+
 
 # If we were to simply plot pts, we'd lose most of the interesting
 # details due to the outliers. So let's 'break' or 'cut-out' the y-axis
@@ -206,10 +208,11 @@ f.show()
 
 
 aliceKey,bobKey=twiggleResult["keyA"],twiggleResult["keyB"]
+"""
 
+#
+#np.savetxt("keys\\tmp_aliceKey.txt",aliceKey, fmt='%d')
+#np.savetxt("keys\\tmp_bobKey.txt",bobKey, fmt='%d')
+#bmp.Encrypt("pics\\JKU.bmp","pics\\encrypted.bmp","keys\\tmp_AliceKey.txt")
+#bmp.Encrypt("pics\\encrypted.bmp","pics\\decrypted.bmp","keys\\tmp_bobKey.txt")
 
-
-np.savetxt("keys\\tmp_aliceKey.txt",aliceKey, fmt='%d')
-np.savetxt("keys\\tmp_bobKey.txt",bobKey, fmt='%d')
-bmp.Encrypt("pics\\JKU.bmp","pics\\encrypted.bmp","keys\\tmp_AliceKey.txt")
-bmp.Encrypt("pics\\encrypted.bmp","pics\\decrypted.bmp","keys\\tmp_bobKey.txt")

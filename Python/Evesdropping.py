@@ -4,7 +4,7 @@ Created on Tue Nov 12 16:17:05 2019
 
 @author: Schimpf
 """
-
+#%%
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -47,6 +47,9 @@ def qber_eve(partial, theta):
     #print(simQBER)
     return simQBER
 
+print('test')
+
+#%%
 SimQbersEve = np.array([[p/100,qber_eve(p/100,0)] for p in range(0,105,5)])
 
 f = plt.figure(figsize=(7,4))
@@ -57,3 +60,5 @@ ax.set_xlabel('T')
 ax.set_ylabel('Theoretical QBER (%)')
 
 f.show()
+
+# %%
