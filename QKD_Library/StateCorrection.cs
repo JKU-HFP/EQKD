@@ -37,14 +37,14 @@ namespace QKD_Library
         public int NumTagger { get; set; } = 0;
 
         //Downhill Simplex
-        public Mode OptimizationMode { get; set; } = Mode.Combined;
+        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
         public int MaxIterations { get; set; } = 500;
         public double Accurracy_Simplex { get; set; } = 0.3;
 
 
         //Bruteforce
-        public double Accurracy_BruteForce { get; set; } = 0.2;
-        public double[] MinPos { get; set; } = new double[] {0,0,0 };
+        public double Accurracy_BruteForce { get; set; } = 0.5;
+        public double[] MinPos { get; set; } = new double[] {45,45,90 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace QKD_Library
         /// </summary>
         public bool DoInitOptimization { get; set; } = false;
         public int InitNumPoints { get; set; } = 6;
-        public double InitRange { get; set; } = 10;
+        public double InitRange { get; set; } = 20;
         
         /// <summary>
         /// Integration time in seconds

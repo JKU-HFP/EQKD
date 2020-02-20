@@ -114,7 +114,7 @@ namespace EQKDServer.Models
                 SyncDivider = 8,
                 SyncDiscriminatorLevel=200,
                 MeasurementMode = HydraHarp.Mode.MODE_T2,
-                ClockMode = HydraHarp.Clock.External,
+                ClockMode = HydraHarp.Clock.Internal,
                 PacketSize = 500000
             };
             hydra.Connect(new List<long> { 0, -3636, -1332, -4148 });
@@ -127,14 +127,14 @@ namespace EQKDServer.Models
                 SyncRate=10000000
             };
             long long_fiber_offs = 0;// -4992;
-            long OIC_Alice750m = 0;// -3493504-256;
+            long OIC_Alice750m = -3493504;
             sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -2388+OIC_Alice750m, -2388+OIC_Alice750m, -6016+long_fiber_offs, -256 + long_fiber_offs, -1152 + long_fiber_offs, 2176 + long_fiber_offs });
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
-            ServerTimeTagger = sitagger;
-            ClientTimeTagger = hydra;
+            ServerTimeTagger = hydra;
+            ClientTimeTagger = sitagger;
 
 
             //Instanciate and connect rotation Stages
@@ -157,21 +157,21 @@ namespace EQKDServer.Models
 
             //_HWP_C = new KPRM1EStage(_loggerCallback);
             _QWP_A = new KPRM1EStage(_loggerCallback);
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-            //_QWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_D = new KPRM1EStage(_loggerCallback);
 
             //_HWP_C.Connect("27254524");
             _QWP_A.Connect("27254310");
-            _QWP_B.Connect("27504148");
-            //_QWP_C.Connect("27003707");
+            //_QWP_B.Connect("27504148");
+            _QWP_C.Connect("27003707");
             //_QWP_D.Connect("27254574");
 
             //_HWP_C.Offset = 58.5+90;
             _QWP_A.Offset = 35.15;
-            _QWP_B.Offset = 63.84;
-            //_QWP_C.Offset = 27.3+90;
-            //_QWP_D.Offset = 33.15; //FAST AXIS WRONG!
+            //_QWP_B.Offset = 63.84;
+            _QWP_C.Offset = 27.3;
+            //_QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
             ////-19.53,31.97,-40.94
             //_QWP_A.Move_Absolute(0);
@@ -188,7 +188,7 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //in Alice/Bob Boxes
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
 
         }
 
@@ -283,9 +283,9 @@ namespace EQKDServer.Models
         {
             SecQNetServer.ObscureClientTimeTags = false;
 
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            await FiberCorrection.StartOptimizationAsync();
+            //await FiberCorrection.StartOptimizationAsync();
         }
 
 
