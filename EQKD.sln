@@ -23,6 +23,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeTagger_Library_x64", ".
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions_Library", "..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj", "{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5D45FBB0-7D2D-4E0C-83FA-F926F192DB84}"
+	ProjectSection(SolutionItems) = preProject
+		Python\Primes.py = Python\Primes.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{105b3f84-f045-4ec7-b75c-de9a85f2d3e9}*SharedItemsImports = 13
