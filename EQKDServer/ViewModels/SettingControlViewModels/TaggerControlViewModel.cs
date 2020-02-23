@@ -20,6 +20,7 @@ using TimeTagger_Library.Correlation;
 using System.IO;
 using System.Windows.Media;
 using QKD_Library.Synchronization;
+using AsyncAwaitBestPractices;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -196,7 +197,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             TestClockCommand = new RelayCommand<object>((o) =>
                 {
                     SetSyncParameters();
-                    _EQKDServer.TestClock();
+                    _EQKDServer.TestClock().SafeFireAndForget();
                 });
 
             //Handle Messages

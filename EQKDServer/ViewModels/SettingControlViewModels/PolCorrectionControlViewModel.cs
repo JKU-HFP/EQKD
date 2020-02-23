@@ -1,4 +1,5 @@
-﻿using EQKDServer.Models;
+﻿using AsyncAwaitBestPractices;
+using EQKDServer.Models;
 using EQKDServer.Models.Messages;
 using GalaSoft.MvvmLight.Messaging;
 using LiveCharts;
@@ -57,12 +58,12 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             StartCorrectionCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.FiberCorrection.PacketSize = PacketSize;
-                _EQKDServer.StartFiberCorrectionAsync();
+                _EQKDServer.StartFiberCorrectionAsync().SafeFireAndForget();
             });
             StartKeyGenerationCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.PacketSize = PacketSize;
-                 _EQKDServer.StartKeyGeneration();
+                 _EQKDServer.StartKeyGeneration().SafeFireAndForget();
             });
 
             CancelCommand = new RelayCommand<object>((o) =>
