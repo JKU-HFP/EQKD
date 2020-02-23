@@ -15,6 +15,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using TimeTagger_Library;
 using TimeTagger_Library.TimeTagger;
+using AsyncAwaitBestPractices;
 
 namespace EQKDClient
 {
@@ -73,7 +74,7 @@ namespace EQKDClient
                     {
                         ((SimulatedTagger)_EQKDClient.TimeTagger).FileName = textBox_TestFile.Text;
                     }
-                    _EQKDClient.StartListeningAsync();
+                    _EQKDClient.StartListeningAsync().SafeFireAndForget();
                     break;
                 case SecQClient.ConnectionStatus.ConnectionFailed:
                     WriteLog("Connection failed:" + e.error_msg);
