@@ -38,6 +38,19 @@
                 <TextBlock Text="Packet Size"/>
                 <TextBox Width="100" Text="{Binding PacketSize}"/>
             </StackPanel>
+
+            <StackPanel Margin="0,20,0,0" Orientation="Vertical">
+                <TextBlock Text="Target Position"/>
+                <ItemsControl ItemsSource="{Binding TargetPos}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBox Width="100" Text="{Binding Path=.}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="Go to position" Command="{Binding GoToPositionCommand}" />
+            </StackPanel>
+            
         </StackPanel>
 
         <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />

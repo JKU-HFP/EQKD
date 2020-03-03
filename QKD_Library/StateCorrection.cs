@@ -28,6 +28,8 @@ namespace QKD_Library
         //##  P R O P E R T I E S
         //#################################################
 
+        public bool IsActive { get; private set; }
+
         /// <summary>
         /// Number of tagger involved
         /// 0.. only ServerTagger
@@ -151,15 +153,21 @@ namespace QKD_Library
             _taggerSync = taggerSync;
             _rotationStages = rotationStages;
             _loggerCallback = loggerCallback;
+        }      
+
+        private bool _checkStages()
+        {
+            if (_rotationStages.Any(r => r == null || !r.StageReady))
+            {
+                WriteLog("Rotation stages not ready");
+                return false;
+            }
+            return true;
         }
 
         public async Task StartOptimizationAsync()
         {
-            if( _rotationStages.Any( r => r==null || !r.StageReady) )
-            {
-                WriteLog("Rotation stages not ready");
-                return;
-            }
+            if (!_checkStages()) return;
 
             _cts = new CancellationTokenSource();
 
@@ -167,7 +175,9 @@ namespace QKD_Library
             {
                _logFolder = Directory.CreateDirectory(LogFolder + "_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")).FullName;
             }
-                 
+
+            IsActive = true;
+
             WriteLog($"Starting state correction with Packetsize {PacketSize}");
 
             Stopwatch stopwatch = new Stopwatch();
@@ -175,7 +185,17 @@ namespace QKD_Library
 
             await Task.Run(() => DoOptimize(_cts.Token));
 
+            IsActive = false;
+            
             WriteLog($"State correction complete in {stopwatch.Elapsed}");
+        }
+
+        public void GotoPosition(List<double> pos)
+        {
+            if (!_checkStages()) return;
+
+            if (pos.Count != 3) throw new Exception("Excactly 3 Positions needed for moving.");
+            if(!IsActive) _gotoPosition(pos[0], pos[1], pos[2]);
         }
 
         private void DoOptimize(CancellationToken ct)
@@ -401,11 +421,7 @@ namespace QKD_Library
                         double p1 = positions[1][i1];
                         double p2 = positions[2][i2];
 
-                        Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p0));
-                        Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p1));
-                        Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p2));
-
-                        Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
+                        _gotoPosition(p0, p1, p2);
 
                         //Get loss function value
                         cost = GetLossFunction();
@@ -428,6 +444,15 @@ namespace QKD_Library
             WriteLog($"Minimum: {cost_min.val:F4}({cost_min.err:F4},  {100 * cost_min.err / cost_min.val:F1}%)",true);
 
             return opt_pos;
+        }
+
+        private void _gotoPosition(double p0, double p1, double p2)
+        {
+            Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p0));
+            Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p1));
+            Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p2));
+
+            Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
         }
         
         /// <summary>

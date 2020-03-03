@@ -8,6 +8,7 @@ using LiveCharts.Wpf;
 using QKD_Library;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,6 +34,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        public ObservableCollection<double> TargetPos { get; set; } = new ObservableCollection<double>(new double[] { 0,0,0 });
+
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
@@ -51,6 +54,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public RelayCommand<object> StartKeyGenerationCommand { get; private set; }
 
         public RelayCommand<object> CancelCommand { get; private set; }
+
+        public RelayCommand<object> GoToPositionCommand { get; private set; }
 
         public PolCorrectionControlViewModel()
         {
@@ -71,6 +76,12 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.FiberCorrection.StopCorrection();
                 _EQKDServer.StopKeyGeneration();
             });
+
+            GoToPositionCommand = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.FiberCorrection.GotoPosition(TargetPos.ToList());
+            },
+            (o) => !_EQKDServer.FiberCorrection.IsActive);
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
