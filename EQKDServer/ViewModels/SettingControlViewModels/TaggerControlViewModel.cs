@@ -410,7 +410,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private void Synchronize(object o)
         {
             SetSyncParameters();
-            _EQKDServer.StartSynchronizeAsync();
+            _EQKDServer.StartSynchronizeAsync().SafeFireAndForget();
         }
 
         private bool CanSynchrononize(object o)

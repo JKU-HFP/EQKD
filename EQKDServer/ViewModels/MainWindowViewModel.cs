@@ -40,9 +40,6 @@ namespace EQKDServer.ViewModels
         //#################################################
 
         private EQKDServerModel _EQKDServer;
-        private int _rateUpdateCounter = 0;
-        private int _rateUpdateCounterLimit = 1;
-        private DateTime _lastTimeTagsReveivedTime = DateTime.Now;
 
         ChartValues<ObservablePoint> _correlationChartValues;
         private LineSeries _correlationLineSeries;

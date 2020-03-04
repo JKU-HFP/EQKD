@@ -30,6 +30,19 @@ namespace QKD_Library
 
         public bool IsActive { get; private set; }
 
+        public List<double> StagePositions
+        {
+            get
+            {
+                var poslist = new List<double>();
+                foreach(var stage in _rotationStages)
+                {
+                    poslist.Add(stage?.Position ?? double.NaN);
+                }
+                return poslist;
+            }
+        }
+
         /// <summary>
         /// Number of tagger involved
         /// 0.. only ServerTagger

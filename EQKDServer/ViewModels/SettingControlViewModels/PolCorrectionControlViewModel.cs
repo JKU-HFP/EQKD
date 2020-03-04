@@ -6,7 +6,7 @@ using LiveCharts;
 using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using QKD_Library;
-using System;
+using System.Timers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -19,6 +19,12 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 {
     class PolCorrectionControlViewModel : ViewModelBase
     {
+        //#############################
+        //### P R I V A T E         ###
+        //#############################
+
+        private Timer _posTimer = new Timer(1000);
+
         //#############################
         //### P R O P E R T I E S   ###
         //#############################
@@ -35,6 +41,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         }
 
         public ObservableCollection<double> TargetPos { get; set; } = new ObservableCollection<double>(new double[] { 0,0,0 });
+        public ObservableCollection<double> CurrPos { get; set; } = new ObservableCollection<double>(new double[] { 0, 0, 0 });
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
@@ -106,6 +113,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             };
             CorrelationCollection.Add(_correlationLineSeries);
+
+            //Set and start Position timer
+            _posTimer.Elapsed += (sender, e) => CurrPos = new ObservableCollection<double>(_EQKDServer.FiberCorrection.StagePositions);
         }
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
