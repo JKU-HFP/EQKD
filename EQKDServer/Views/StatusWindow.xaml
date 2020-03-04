@@ -103,9 +103,13 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="120"/>                  
             </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             
             <!-- Correlations -->
-            <lvc:CartesianChart Grid.Row="0"                     
+            <lvc:CartesianChart Grid.Row="0" Grid.ColumnSpan="2"                 
                         Zoom="None"
                         Series="{Binding Path=CorrelationCollection}"
                         DisableAnimations="True"
@@ -123,8 +127,20 @@
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
 
-            <!-- Linear Drift Compensation -->
+            <!-- Global Offset -->
             <lvc:CartesianChart Grid.Row="1"
+                        Zoom="None"
+                        Series="{Binding GlobalOffsetCollection}"
+                        DisableAnimations="True"  >
+                <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Global Time Offset"/>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisY>
+            </lvc:CartesianChart>
+
+            <!-- Linear Drift Compensation -->
+            <lvc:CartesianChart Grid.Row="1" Grid.Column="1"
                         Zoom="None"
                         Series="{Binding LinearDriftCompCollection}"
                         DisableAnimations="True"  >
@@ -134,7 +150,6 @@
                     </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
-
         </Grid>
 
     </Grid>

@@ -52,6 +52,8 @@ namespace EQKDServer.ViewModels
 
         private ChartValues<double> _linearDriftCompChartValues;
         private LineSeries _linearDriftCompLineSeries;
+        private ChartValues<double> _globalOffsetChartValues;
+        private LineSeries _globalOffsetLineSeries;
 
         private TimeTaggerChannelView _channelView;
         private ChannelViewModel _channelViewModel;
@@ -189,6 +191,7 @@ namespace EQKDServer.ViewModels
 
         //Charts
         public SeriesCollection LinearDriftCompCollection { get; set; }
+        public SeriesCollection GlobalOffsetCollection { get; set; }
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; } = new SectionsCollection();
         public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
@@ -209,6 +212,7 @@ namespace EQKDServer.ViewModels
             _EQKDServer = new EQKDServerModel(LogMessage,UserPrompt);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
+            _EQKDServer.AliceBobSync.SyncCorrComplete += SyncCorrComplete;
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
@@ -345,6 +349,16 @@ namespace EQKDServer.ViewModels
             };
             LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
 
+            _globalOffsetChartValues = new ChartValues<double>() { };
+            _globalOffsetLineSeries = new LineSeries()
+            {
+                Title = "Global Time Offset",
+                PointGeometrySize = 0,
+                LineSmoothness = 0.0,
+                Values = _globalOffsetChartValues,
+            };
+            GlobalOffsetCollection.Add(_globalOffsetLineSeries);
+
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
             _EQKDServer.ReadServerConfig();
@@ -451,6 +465,13 @@ namespace EQKDServer.ViewModels
             _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);
 
             _isUpdating = false;
+        }
+
+        private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
+        {
+            if (_globalOffsetChartValues.Count >= 20) _globalOffsetChartValues.RemoveAt(0);
+            _globalOffsetChartValues.Add(_EQKDServer.AliceBobSync.GlobalClockOffset);
+
         }
 
         private void BasisComplete(object sender, BasisCompletedEventArgs e)
