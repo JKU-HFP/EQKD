@@ -128,7 +128,7 @@ namespace EQKDServer.Models
             };
             long long_fiber_offs = 0;// -4992;
             long OIC_Alice750m = -3493504;
-            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -2388+OIC_Alice750m, -2388+OIC_Alice750m, -6016+long_fiber_offs, -256 + long_fiber_offs, -1152 + long_fiber_offs, 2176 + long_fiber_offs });
+            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176+long_fiber_offs, 2176+ long_fiber_offs, 1164+ long_fiber_offs, 2176+ long_fiber_offs });
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
