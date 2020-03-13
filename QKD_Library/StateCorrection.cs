@@ -56,10 +56,9 @@ namespace QKD_Library
         public int MaxIterations { get; set; } = 500;
         public double Accurracy_Simplex { get; set; } = 0.3;
 
-
         //Bruteforce
         public double Accurracy_BruteForce { get; set; } = 0.5;
-        public double[] MinPos { get; set; } = new double[] {45,45,90 };
+        public double[] MinPos { get; set; } = new double[] { 62, 48, 152 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
@@ -203,12 +202,14 @@ namespace QKD_Library
             WriteLog($"State correction complete in {stopwatch.Elapsed}");
         }
 
-        public void GotoPosition(List<double> pos)
+        public async Task GotoPosition(List<double> pos)
         {
             if (!_checkStages()) return;
 
             if (pos.Count != 3) throw new Exception("Excactly 3 Positions needed for moving.");
-            if(!IsActive) _gotoPosition(pos[0], pos[1], pos[2]);
+            if (!IsActive) await Task.Run(() => _gotoPosition(pos[0], pos[1], pos[2]));
+
+            return;
         }
 
         private void DoOptimize(CancellationToken ct)

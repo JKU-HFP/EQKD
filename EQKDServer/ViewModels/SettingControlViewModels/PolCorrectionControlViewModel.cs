@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using TimeTagger_Library.Correlation;
+using System.ComponentModel;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -40,8 +41,26 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        public ObservableCollection<double> TargetPos { get; set; } = new ObservableCollection<double>(new double[] { 0,0,0 });
-        public ObservableCollection<double> CurrPos { get; set; } = new ObservableCollection<double>(new double[] { 0, 0, 0 });
+        private List<double> _targetPos = new List<double>(new double[] { 1, 2, 3 });
+        public List<double> TargetPos {
+            get { return _targetPos; }
+            set
+            {
+                _targetPos = value;
+                OnPropertyChanged("TargetPos");
+            }
+        }
+
+        public ObservableCollection<double> _currPos = new ObservableCollection<double>(new double[] { 0, 0, 0 });
+        public ObservableCollection<double> CurrPos
+        {
+            get { return _currPos; }
+            set
+            {
+                _currPos = value;
+                OnPropertyChanged("CurrPos");
+            }
+        }
 
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
@@ -86,9 +105,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             GoToPositionCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.FiberCorrection.GotoPosition(TargetPos.ToList());
+                _EQKDServer.FiberCorrection.GotoPosition(TargetPos.ToList()).SafeFireAndForget();
             },
-            (o) => !_EQKDServer.FiberCorrection.IsActive);
+            (o) => !_EQKDServer?.FiberCorrection?.IsActive ?? false);
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
@@ -115,7 +134,11 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CorrelationCollection.Add(_correlationLineSeries);
 
             //Set and start Position timer
-            _posTimer.Elapsed += (sender, e) => CurrPos = new ObservableCollection<double>(_EQKDServer.FiberCorrection.StagePositions);
+            _posTimer.Elapsed += (sender, e) =>
+            {
+                CurrPos = new ObservableCollection<double>(_EQKDServer?.FiberCorrection?.StagePositions);
+            };
+            _posTimer.Start();
         }
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)

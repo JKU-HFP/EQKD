@@ -252,6 +252,7 @@ namespace EQKDServer.ViewModels
             //Initialize Chart elements
             LinearDriftCompCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
+            GlobalOffsetCollection = new SeriesCollection();
 
             //Exception Handling
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>

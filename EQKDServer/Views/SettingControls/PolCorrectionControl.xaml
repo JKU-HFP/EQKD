@@ -46,7 +46,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <TextBox Width="100" Text="{Binding Path=.}"/>
+                            <TextBox Width="100" Text="{Binding Path=., StringFormat=F2, UpdateSourceTrigger=LostFocus}"/>
                             <TextBlock Text="°" Style="{StaticResource PropertyTextBlockStyle}"/>
                         </StackPanel>
                     </DataTemplate>
@@ -62,7 +62,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <TextBox Width="100" Text="{Binding Path=.}"/>
+                            <TextBox Width="100" Text="{Binding Path=., StringFormat=F2}"/>
                             <TextBlock Text="°" Style="{StaticResource PropertyTextBlockStyle}"/>
                         </StackPanel>
                     </DataTemplate>

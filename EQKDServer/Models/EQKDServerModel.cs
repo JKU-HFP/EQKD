@@ -117,7 +117,7 @@ namespace EQKDServer.Models
                 ClockMode = HydraHarp.Clock.Internal,
                 PacketSize = 500000
             };
-            hydra.Connect(new List<long> { 0, -3636, -1332, -4148 });
+            hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -126,15 +126,16 @@ namespace EQKDServer.Models
                 RefChanDivider=100,
                 SyncRate=10000000
             };
-            long long_fiber_offs = 0;// -4992;
-            long OIC_Alice750m = -3493504;
-            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176+long_fiber_offs, 2176+ long_fiber_offs, 1164+ long_fiber_offs, 2176+ long_fiber_offs });
+
+            long testoffs = 512;
+            long OIC_Alice750m = 0;//-3493504;
+            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
-            ServerTimeTagger = hydra;
-            ClientTimeTagger = sitagger;
+            ServerTimeTagger = sitagger;
+            ClientTimeTagger = hydra;
 
 
             //Instanciate and connect rotation Stages
@@ -156,21 +157,23 @@ namespace EQKDServer.Models
 
 
             //_HWP_C = new KPRM1EStage(_loggerCallback);
-            _QWP_A = new KPRM1EStage(_loggerCallback);
-            //_QWP_B = new KPRM1EStage(_loggerCallback);
-            _QWP_C = new KPRM1EStage(_loggerCallback);
-            //_QWP_D = new KPRM1EStage(_loggerCallback);
-
             //_HWP_C.Connect("27254524");
-            _QWP_A.Connect("27254310");
-            //_QWP_B.Connect("27504148");
-            _QWP_C.Connect("27003707");
-            //_QWP_D.Connect("27254574");
-
             //_HWP_C.Offset = 58.5+90;
+
+            _QWP_A = new KPRM1EStage(_loggerCallback);
+            _QWP_A.Connect("27254310");
             _QWP_A.Offset = 35.15;
-            //_QWP_B.Offset = 63.84;
-            _QWP_C.Offset = 27.3;
+
+            _QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_B.Connect("27504148");
+            _QWP_B.Offset = 63.84;
+
+            //_QWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_C.Connect("27003707");
+            //_QWP_C.Offset = 27.3;
+
+            //_QWP_D = new KPRM1EStage(_loggerCallback);
+            //_QWP_D.Connect("27254574");
             //_QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
             ////-19.53,31.97,-40.94
@@ -283,9 +286,9 @@ namespace EQKDServer.Models
         {
             SecQNetServer.ObscureClientTimeTags = false;
 
-            await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            //await FiberCorrection.StartOptimizationAsync();
+            await FiberCorrection.StartOptimizationAsync();
         }
 
 
