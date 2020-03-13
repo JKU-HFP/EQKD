@@ -211,7 +211,8 @@ namespace QKD_Library.Synchronization
             {
                 //Move shutter             
                 if (_shutterContr==null) UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
-               
+                _polarizerContr?.Invoke(false);
+
                 ResetTimeTaggers();
 
                 if (_shutterContr!=null)
@@ -325,6 +326,7 @@ namespace QKD_Library.Synchronization
             if (!syncClockRes.IsClocksSync)             
             {
                 WriteLog("Clock synchronization failed.");
+                _polarizerContr?.Invoke(false);
                 return result;
             }
 

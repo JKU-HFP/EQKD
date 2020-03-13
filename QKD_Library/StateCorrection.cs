@@ -49,7 +49,7 @@ namespace QKD_Library
         /// 1.. only ClientTagger
         /// 2.. both tagger synchronized
         /// </summary>
-        public int NumTagger { get; set; } = 0;
+        public int NumTagger { get; set; } = 2;
 
         //Downhill Simplex
         public Mode OptimizationMode { get; set; } = Mode.BruteForce;
@@ -58,7 +58,7 @@ namespace QKD_Library
 
         //Bruteforce
         public double Accurracy_BruteForce { get; set; } = 0.5;
-        public double[] MinPos { get; set; } = new double[] { 62, 48, 152 };
+        public double[] MinPos { get; set; } = new double[] { 77, 85, 129 };
         public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
 
         /// <summary>
