@@ -224,6 +224,7 @@ namespace EQKDServer.Models
         
         public async Task TestClock()
         {
+            WriteLog("Start Testing Clocks...");
             SecQNetServer.ObscureClientTimeTags = false;
             await Task.Run(() => AliceBobSync.TestClock(PacketSize));
         }
@@ -301,156 +302,174 @@ namespace EQKDServer.Models
 
         public async Task StartKeyGeneration()
         {
-            bool local = true;
-
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
             SecQNetServer.ObscureClientTimeTags = true;
 
             WriteLog("Starting secure key generation");
-  
+
+            switch (ClientTimeTagger)
+            {
+                case NetworkTagger nwtag:
+                    await _generateKeysNetworkAsync(_cts.Token);
+                    break;
+
+                default:
+                    await _generateKeysLocalAsync(_cts.Token);
+                    break;
+            }
+
+            WriteLog("Secure key generation stopped.");
+        }
+
+        private async Task _generateKeysNetworkAsync(CancellationToken ct)
+        {
+            string ratesfile = "RawKeyRates.txt";
+            File.WriteAllLines(ratesfile, new string[] { });
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
 
             await Task.Run(() =>
-           {
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    //Get Key Correlations
+                    TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
-               if (!local)
+                    if (!syncRes.IsSync)
+                    {
+                        WriteLog("Not in sync, no keys generated");
+                        continue;
+                    }
+                 
+                    var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+                    //double bias = QKey.GetBias(key_entries.Select(ke => ke.alice_key_value));
+                    //var filtered_entries = QKey.RemoveBias(key_entries) ;
+                    double bias = QKey.GetBias(key_entries.Select(fe => fe.alice_key_value));
+                    AliceKey.AddKey(key_entries);
+
+                    double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
+                    WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s | Initial Bias {bias:F4}");
+                    File.AppendAllLines(ratesfile, new string[] { rate.ToString() });
+
+                    //Register key at Bob                
+                    TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, key_entries.Select(fe => (long)fe.index_bob).ToArray());
+                    //Send sifted tags to bob
+                    SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);               
+                }
+            });
+
+            stopwatch.Stop();
+            WriteLog($"Stopped remote key generation. Total of {AliceKey.SecureKey.Count} keys generated in {stopwatch.Elapsed}| Raw key rate: {AliceKey.KeyRates.Average()}");
+        }
+
+        private async Task _generateKeysLocalAsync(CancellationToken ct)
+        {
+            await Task.Run(() =>
+            {
+               while (!_cts.Token.IsCancellationRequested)
                {
-                   string ratesfile = "RawKeyRates.txt";
-                   File.WriteAllLines(ratesfile, new string[] { });
+                    List<byte> newAliceKeys = new List<byte>();
+                    List<byte> newBobKeys = new List<byte>();
 
-                   Stopwatch stopwatch = new Stopwatch();
-                   stopwatch.Start();
-                                     
-                   while (!token.IsCancellationRequested)
-                   {
-                       //Get Key Correlations
-                       TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                    TimeTags ttA = new TimeTags();
+                    TimeTags ttB = new TimeTags();
 
-                       if (!syncRes.IsSync)
-                       {
-                           WriteLog("Not in sync, no keys generated");
-                       }
-                       else
-                       {
-                           var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-                           //double bias = QKey.GetBias(key_entries.Select(ke => ke.alice_key_value));
-                           //var filtered_entries = QKey.RemoveBias(key_entries) ;
-                           double bias = QKey.GetBias(key_entries.Select(fe => fe.alice_key_value));
-                           AliceKey.AddKey(key_entries);
-
-                           double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
-                           WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s | Initial Bias {bias:F4}");
-                           File.AppendAllLines(ratesfile, new string[] { rate.ToString() });
-
-                           //Register key at Bob                
-                           TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, key_entries.Select(fe => (long)fe.index_bob).ToArray());
-                           //Send sifted tags to bob
-                           SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
-                       }
-                   }
-
-                   stopwatch.Stop();
-                   WriteLog($"Stopped key generation. Total of {AliceKey.SecureKey.Count} keys generated in {stopwatch.Elapsed}| Raw key rate: {AliceKey.KeyRates.Average()}");                
-               }
-
-               //local
-               else
-               {
-                   //Two taggers
-                   if(EXTERNAL_CLOCK)
-                   {
-   
-                       
-                   }
-
-                   //One Tagger (SI)
-                   else
-                   {                   
-                       while (!_cts.Token.IsCancellationRequested)
-                       {
-                           List<byte> newAliceKeys = new List<byte>();
-                           List<byte> newBobKeys = new List<byte>();
-
-                           List<(byte cA, byte cB)> keyCorrConfig = new List<(byte cA, byte cB)>
+                   List<(byte cA, byte cB)> keyCorrConfig = EXTERNAL_CLOCK
+                        ? new List<(byte cA, byte cB)>
+                           {
+                               //Rectilinear
+                               (0,5),(0,6),(1,5),(1,6),
+                               //Diagonal
+                               (2,7),(2,8),(3,7),(3,8)
+                           }
+                        : new List<(byte cA, byte cB)>
                            {
                                //Rectilinear
                                (1,5),(1,6),(2,5),(2,6),
                                //Diagonal
                                (3,7),(3,8),(4,7),(4,8)
                            };
-                           List<(byte cA, byte cB)> bellTestConfig = new List<(byte cA, byte cB)>
-                           {
-                               //Mixed bases
-                               (1,7),(1,8),(2,7),(2,8),
-                               (3,5),(3,6),(4,5),(4,6)
-                           };
 
-                           //Get Key Correlations
-                           TimeTags tt = AliceBobSync.GetSingleTimeTags(0, PacketSize);
+                   Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
+                   Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
+                   long tspan = 0;                  
 
-                           long tspan = tt.time.Last() - tt.time.First();
+                   switch(EXTERNAL_CLOCK)
+                   {
+                        //Two timertaggers (Hydra + SI)
+                        case true:
+                            TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
 
-                           Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);          
-                           Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
+                            if (!syncRes.IsSync)
+                            {
+                                WriteLog("Not in sync, no keys generated");
+                                continue;
+                            }
 
-                           Histogram bell_hist = new Histogram(bellTestConfig, 100000);
-                           Kurolator bell_corr = new Kurolator(new List<CorrelationGroup> { bell_hist }, 100000);
+                            ttA = syncRes.TimeTags_Alice;
+                            ttB = syncRes.CompTimeTags_Bob;
 
-                           key_corr.AddCorrelations(tt, tt);
-                           bell_corr.AddCorrelations(tt, tt);
+                            tspan = Math.Max(ttA.time.Last(), ttB.time.Last()) - Math.Min(ttA.time.First(), ttB.time.First());
+                            break;
 
-                           List<Peak> peaks = bell_hist.GetPeaks();
-                           (double val, double err) relmeanpeakarea = bell_hist.GetRelativeMiddlePeakArea();                                          
+                        //One Timetagger (SI)
+                        case false:
+                            ttA = AliceBobSync.GetSingleTimeTags(0, PacketSize);
+                            ttB = ttA;
 
-                           OnKeysGenerated(new KeysGeneratedEventArgs(bell_hist.Histogram_X, bell_hist.Histogram_Y));
-
-                           //KEY SIFTING
-
-                           //Register key at Alice
-                           foreach (int i in key_hist.CorrelationIndices.Select(i => i.i1))
-                           {
-                               byte act_chan = tt.chan[i];
-                               newAliceKeys.Add(act_chan == 1 || act_chan == 3 ? (byte)0 : (byte)1);
-                           };
-
-                           //Register key at Bob
-                           foreach (int i in key_hist.CorrelationIndices.Select(i => i.i2))
-                           {
-                               byte act_chan = tt.chan[i];
-                               newBobKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-                           };
-
-                           //Check QBER
-                           _secureKeys.AddRange(newAliceKeys);
-                           _bobKeys.AddRange(newBobKeys);
-
-                           int sum_err = 0;
-                           for (int i = 0; i < _secureKeys.Count; i++)
-                           {
-                               if (_secureKeys[i] != _bobKeys[i]) sum_err++;
-                           }
-
-                           //Write to file
-                           File.AppendAllLines("AliceKey.txt", newAliceKeys.Select(k => k.ToString()));
-                           File.AppendAllLines("BobKey.txt", newBobKeys.Select(k => k.ToString()));
-
-                           double QBER = (double)sum_err / _secureKeys.Count;
-                           double rate = key_hist.CorrelationIndices.Count / (tspan / 1E12);
-
-                           File.AppendAllLines("KeyStats.txt", new string[] { DateTime.Now.ToString() + "," + rate.ToString() + "," + QBER.ToString()});
-
-                           WriteLog($"QBER: {QBER:F3} | rate: {rate:F3} | BellTest middlepeak: {relmeanpeakarea:F4}");
-                       }
-
+                            tspan = ttA.time.Last() - ttA.time.First();
+                            break;
                    }
 
-                   WriteLog("Local Key generation completed.");
+
+                    key_corr.AddCorrelations(ttA, ttB);
+
+                   OnKeysGenerated(new KeysGeneratedEventArgs(key_hist.Histogram_X, key_hist.Histogram_Y));
+
+                   //KEY SIFTING            
+
+                   //Register key at Alice
+                   foreach (int i in key_hist.CorrelationIndices.Select(i => i.i1))
+                   {
+                       byte act_chan = ttA.chan[i];
+                       newAliceKeys.Add(act_chan == (EXTERNAL_CLOCK ? 0:1) || act_chan == (EXTERNAL_CLOCK? 2:3) ? (byte)0 : (byte)1);
+                   };
+
+                   //Register key at Bob
+                   foreach (int i in key_hist.CorrelationIndices.Select(i => i.i2))
+                   {
+                       byte act_chan = ttB.chan[i];
+                       newBobKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
+                   };
+
+                   //Check QBER
+                   _secureKeys.AddRange(newAliceKeys);
+                   _bobKeys.AddRange(newBobKeys);
+
+                   int sum_err = 0;
+                   for (int i = 0; i < _secureKeys.Count; i++)
+                   {
+                       if (_secureKeys[i] != _bobKeys[i]) sum_err++;
+                   }
+
+                   //Write to file
+                   File.AppendAllLines("AliceKey.txt", newAliceKeys.Select(k => k.ToString()));
+                   File.AppendAllLines("BobKey.txt", newBobKeys.Select(k => k.ToString()));
+
+                   double QBER = (double)sum_err / _secureKeys.Count;
+                   double rate = key_hist.CorrelationIndices.Count / (tspan / 1E12);
+
+                   File.AppendAllLines("KeyStats.txt", new string[] { DateTime.Now.ToString() + "," + rate.ToString() + "," + QBER.ToString() });
+
+                   WriteLog($"QBER: {QBER:F3} | rate: {rate:F3}");
                }
 
-           });
+                WriteLog("Local Key generation completed.");
+            });
         }
-        
 
 
         public void ReadServerConfig()
