@@ -115,6 +115,7 @@
     <Compile Include="Models\EQKDServerModel.cs" />
     <Compile Include="Models\Messages\EQKDServerCreatedMessage.cs" />
     <Compile Include="Models\ServerSettings.cs" />
+    <Compile Include="Models\StagePosModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="Models\RelayCommand.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\NetworkControlViewModel.cs" />

@@ -18,7 +18,7 @@ using System.ComponentModel;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
-    class PolCorrectionControlViewModel : ViewModelBase
+    public class PolCorrectionControlViewModel : ViewModelBase
     {
         //#############################
         //### P R I V A T E         ###
@@ -41,8 +41,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private List<double> _targetPos = new List<double>(new double[] { 1, 2, 3 });
-        public List<double> TargetPos {
+        private ObservableCollection<StagePosModel> _targetPos =
+            new ObservableCollection<StagePosModel>(Enumerable.Range(0, 3).Select(i => new StagePosModel() { Value = 0 }).ToList());
+        public ObservableCollection<StagePosModel> TargetPos {
             get { return _targetPos; }
             set
             {
@@ -51,8 +52,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        public ObservableCollection<double> _currPos = new ObservableCollection<double>(new double[] { 0, 0, 0 });
-        public ObservableCollection<double> CurrPos
+        public ObservableCollection<StagePosModel> _currPos =
+            new ObservableCollection<StagePosModel>(Enumerable.Range(0, 3).Select(i => new StagePosModel() { Value = 0 }).ToList());
+        public ObservableCollection<StagePosModel> CurrPos
         {
             get { return _currPos; }
             set
@@ -105,7 +107,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             GoToPositionCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.FiberCorrection.GotoPosition(TargetPos.ToList()).SafeFireAndForget();
+                _EQKDServer.FiberCorrection.GotoPosition(TargetPos.Select(t=>t.Value).ToList()).SafeFireAndForget();
             },
             (o) => !_EQKDServer?.FiberCorrection?.IsActive ?? false);
 
@@ -136,7 +138,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //Set and start Position timer
             _posTimer.Elapsed += (sender, e) =>
             {
-                CurrPos = new ObservableCollection<double>(_EQKDServer?.FiberCorrection?.StagePositions);
+                CurrPos = new ObservableCollection<StagePosModel>(_EQKDServer?.FiberCorrection?.StagePositions.Select(pos => new StagePosModel { Value = pos }).ToList());
             };
             _posTimer.Start();
         }
