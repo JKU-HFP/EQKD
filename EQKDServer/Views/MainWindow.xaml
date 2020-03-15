@@ -25,7 +25,8 @@
         <Style TargetType="{x:Type GridSplitter}" x:Key="HorizontalGridSplitterStyle" BasedOn="{StaticResource GridSplitterBaseStyle}">
             <Setter Property="Height" Value="5"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ResizeBehavior" Value="PreviousAndNext"/>
         </Style>
         
     </Window.Resources>
@@ -43,16 +44,16 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="20" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="20" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="20" />
-            <RowDefinition Height="150" />
+            <RowDefinition Height="2*" MinHeight="100"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*"  MinHeight="200" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*"  MinHeight="100"/>
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="20" />
-            <ColumnDefinition Width="238*"/>
+            <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
 
@@ -74,10 +75,10 @@
             </Border>
         </ContentControl>
 
-        <GridSplitter Grid.Row="2" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
+        <GridSplitter Grid.Row="3" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
 
         <!-- SETTINGS AREA -->
-        <TabControl Grid.Row="4" Grid.Column="1" >
+        <TabControl Grid.Row="4" Grid.Column="1">
             <TabItem>
                 <TabItem.Header>
                     <StackPanel Orientation="Vertical">
@@ -107,7 +108,9 @@
             </TabItem>
         </TabControl>
 
-        <GridSplitter Grid.Row="4" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}" />
+  
+        <GridSplitter Grid.Row="5" Grid.Column="1" Style="{StaticResource HorizontalGridSplitterStyle}"
+                     />
         
         <!-- MESSAGE AREA -->
 
@@ -119,6 +122,7 @@
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 ScrollViewer.CanContentScroll="True"
                 Text="{Binding Messages, Mode=OneWay}" Grid.ColumnSpan="3" Margin="0,0.2,19.6,19.2" Grid.RowSpan="2"/>
+ 
     </Grid>
 
 </Window>
