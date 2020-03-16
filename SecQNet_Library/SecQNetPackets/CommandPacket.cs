@@ -36,7 +36,7 @@ namespace SecQNet.SecQNetPackets
         //  val1    |     Sync Rate
 
         public int val0 = 0;
-        public int val1 = 0;
+        public double val1 = 0;
 
         public SecQNetCommands Command { get { return _command; } }
                  

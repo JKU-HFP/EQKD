@@ -73,20 +73,30 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BitmapEncryption.cs" />
-    <Compile Include="DMBasis.cs" />
-    <Compile Include="DensityMatrixMeasurement.cs" />
+    <Compile Include="Characterization\DMBasis.cs" />
+    <Compile Include="Characterization\DensityMatrix.cs" />
+    <Compile Include="QKey.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QuantumKey.cs" />
+    <Compile Include="Encryption.cs" />
+    <Compile Include="Synchronization\SignalStartFinder.cs" />
+    <Compile Include="Synchronization\SignalStartResult.cs" />
     <Compile Include="StateCorrection.cs" />
-    <Compile Include="Stokes.cs" />
-    <Compile Include="Synchronization.cs" />
-    <Compile Include="SyncResults.cs" />
+    <Compile Include="Characterization\Stokes.cs" />
+    <Compile Include="Synchronization\TaggerSync.cs" />
+    <Compile Include="Synchronization\SyncResults.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
+    <ProjectReference Include="..\..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj">
       <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
       <Name>Extensions_Library</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\Stage_Library_x64\Stage_Library_x64.csproj">
+      <Project>{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}</Project>
+      <Name>Stage_Library_x64</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{c11c1b88-8c40-4026-8f66-41603917af87}</Project>
+      <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
     <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
       <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>
@@ -96,5 +106,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

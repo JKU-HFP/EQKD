@@ -58,6 +58,12 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AsyncAwaitBestPractices, Version=1.0.0.0, Culture=neutral, PublicKeyToken=532360cfd341384d, processorArchitecture=MSIL">
+      <HintPath>..\packages\AsyncAwaitBestPractices.4.1.0\lib\netstandard1.0\AsyncAwaitBestPractices.dll</HintPath>
+    </Reference>
+    <Reference Include="AsyncAwaitBestPractices.MVVM, Version=1.0.0.0, Culture=neutral, PublicKeyToken=fd3d463fd20deb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\AsyncAwaitBestPractices.MVVM.4.1.0\lib\netstandard1.0\AsyncAwaitBestPractices.MVVM.dll</HintPath>
+    </Reference>
     <Reference Include="CommonServiceLocator, Version=2.0.2.0, Culture=neutral, PublicKeyToken=489b6accfaf20ef0, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonServiceLocator.2.0.2\lib\net45\CommonServiceLocator.dll</HintPath>
     </Reference>
@@ -78,6 +84,12 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.3\lib\netstandard2.0\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\MvvmLightLibs.5.4.1.1\lib\net45\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -134,9 +146,6 @@
     <Compile Include="Views\StatusWindow.xaml.cs">
       <DependentUpon>StatusWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\TimeTaggerModifyView.xaml.cs">
-      <DependentUpon>TimeTaggerModifyView.xaml</DependentUpon>
-    </Compile>
     <Page Include="Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -166,10 +175,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\StatusWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\TimeTaggerModifyView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -213,9 +218,17 @@
     <Resource Include="Views\Pics\Network_16x.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
-      <Project>{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}</Project>
+    <ProjectReference Include="..\..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj">
+      <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
       <Name>Extensions_Library</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\Stage_Library_x64\Stage_Library_x64.csproj">
+      <Project>{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}</Project>
+      <Name>Stage_Library_x64</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{c11c1b88-8c40-4026-8f66-41603917af87}</Project>
+      <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
     <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
       <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
@@ -230,6 +243,5 @@
     <Resource Include="Views\Pics\ConnectPlugged_16x.png" />
     <Resource Include="Views\Pics\ConnectUnplugged_16x.png" />
   </ItemGroup>
-  <Import Project="..\..\ProjectLibrary\TimeTaggerWPF_Library\TimeTaggerWPF_Library.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

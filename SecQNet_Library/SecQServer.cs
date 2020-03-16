@@ -200,12 +200,11 @@ namespace SecQNet
             {
                 Disconnect();
                 throw new Exception(ex.Message, ex.InnerException);
-                return false;
             }
             return true;
         }
 
-        public bool RequestStartTimeTagger(int packetsize, int syncrate=0)
+        public bool RequestStartTimeTagger(int packetsize, double syncrate=0)
         {
             try
             {
@@ -247,7 +246,6 @@ namespace SecQNet
             {
                 Disconnect();
                 throw new Exception(ex.Message, ex.InnerException);
-                return false;
             }
             return true;
         }

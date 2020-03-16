@@ -6,9 +6,33 @@ using System.Threading.Tasks;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 
-namespace QKD_Library
+namespace QKD_Library.Synchronization
 {
-    public class SyncClockResults
+    //#################################################
+    //##  E N U M E R A T O R
+    //#################################################
+
+    public enum CorrSyncStatus
+    {
+        SearchingCoarseRange,
+        NoCorrelationFound,
+        SearchingCorrPeak,
+        TrackingPeak,
+    }
+
+    //#################################################
+    //##  R E S U L T S
+    //#################################################
+    public class TaggerSyncResults
+    {
+        public bool IsSync { get; set; }
+        public TimeTags TimeTags_Alice { get; set; }
+        public TimeTags TimeTags_Bob { get; set; }
+        public TimeTags CompTimeTags_Bob { get; set; }
+    }
+
+
+    public class SyncClockResult
     {
         public bool PeaksFound { get; set; }
         public bool IsClocksSync { get; set; }
@@ -50,15 +74,12 @@ namespace QKD_Library
 
     public class SyncCorrResults
     {
-        public long[] HistogramX { get; set; }
-        public long[] HistogramY { get; set; }
+        public CorrSyncStatus Status { get; set; } = CorrSyncStatus.SearchingCoarseRange;
+        public List<long> HistogramX { get; set; }
+        public List<long> HistogramY { get; set; }
         public List<Peak> Peaks { get; set; }
         public long CorrPeakPos { get; set; }
-        public long NewFiberOffset { get; set; }
-        public bool CorrPeakFound { get; set; }
         public bool IsCorrSync { get; set; }
-        public TimeTags CompTimeTags_Bob { get; set; }
-        public TimeSpan ProcessingTime { get; set; } = new TimeSpan();
     }
 
 }

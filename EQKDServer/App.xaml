@@ -5,13 +5,11 @@
              xmlns:sw="clr-namespace:EQKDServer.StyleableWindow" 
              xmlns:vm="clr-namespace:EQKDServer.ViewModels"
              xmlns:ttvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels"
-             xmlns:ttwpf="clr-namespace:TimeTaggerWPF_Library"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
 
         <vm:MainWindowViewModel x:Key="MainWindowViewModel"/>
         <ttvm:ChannelViewModel x:Key="DefaultChannelViewModel"/>
-        <ttwpf:TimeTaggerModifyViewModel x:Key="DefaultTimeTaggerModifyViewModel"/>
 
         <!-- GLOBAL STYLE RESOURCES -->
  

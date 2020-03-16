@@ -31,6 +31,7 @@
             <ColumnDefinition Width="100" />
             <ColumnDefinition Width="100" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="100"/>
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
 
@@ -66,31 +67,44 @@
                 <TextBlock Text="Fiber Offset"/>
                 <TextBox Width="100" Text="{Binding FiberOffset}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Sync Freq. offset"/>
+                <TextBox Width="100" Text="{Binding SyncFreqOffset}"/>
+            </StackPanel>
         </StackPanel>
 
+        
+        <!-- Alice / Bob Synchronisation -->
+        
+        <DockPanel Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="3">
 
-        <lvc:CartesianChart Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2"
-                            DisableAnimations="True"
-                            Series="{Binding CorrelationCollection}"
-                            VisualElements="{Binding CorrelationVisualElementsCollection}">
-            
-            <lvc:CartesianChart.AxisY>
-                <lvc:AxesCollection>
-                    <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
-                </lvc:AxesCollection>
-            </lvc:CartesianChart.AxisY>
-      
-            <lvc:CartesianChart.AxisX>
-                <lvc:AxesCollection>
-                    <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}" ></lvc:Axis>
-                </lvc:AxesCollection>
-            </lvc:CartesianChart.AxisX>
+            <lvc:CartesianChart DockPanel.Dock="Left"
+                                MinWidth="300"
+                                DisableAnimations="True"
+                                Series="{Binding CorrelationCollection}"
+                                VisualElements="{Binding CorrelationVisualElementsCollection}">
 
-        </lvc:CartesianChart>
+                <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="counts/s" Sections="{Binding CorrelationYSectionsCollection}"
+                                  MinValue="0"></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisY>
 
-     
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Sync" Command="{Binding StartSyncCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+                <lvc:CartesianChart.AxisX>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Delay [us]" Sections="{Binding CorrelationXSectionsCollection}"
+                                  MinValue="{Binding CorrChartXMin}" MaxValue="{Binding CorrChartXMax}"></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisX>
+
+            </lvc:CartesianChart>
+
+        </DockPanel>
+
+        <Button Grid.Row="3" Grid.Column="1" Content="Test Clock" Command="{Binding TestClockCommand}" />
+        <Button Grid.Row="3" Grid.Column="2" Content="Synchronize" Command="{Binding StartSyncCommand}" />
+        <Button Grid.Row="3" Grid.Column="3" Content="Reset" Command="{Binding CancelCommand}" />
 
 
     </Grid>

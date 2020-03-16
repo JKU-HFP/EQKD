@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 
-namespace QKD_Library
+namespace QKD_Library.Characterization
 {
     internal class DMBasis
     {
         private Kurolator _correlator;
-       
+
         public ulong TimeBin { get; set; } = 1000;
 
         public double[] BasisConfig { get; set; }

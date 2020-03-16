@@ -98,9 +98,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Extensions_Library\Extensions_Library.csproj">
-      <Project>{A72E8128-6414-4DAD-AA0C-B2F673A90FF8}</Project>
+    <ProjectReference Include="..\..\ProjectLibrary\Extensions_Library\Extensions_Library.csproj">
+      <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
       <Name>Extensions_Library</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{c11c1b88-8c40-4026-8f66-41603917af87}</Project>
+      <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

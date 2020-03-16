@@ -7,35 +7,36 @@ using System.Text;
 using System.Threading;
 using System.Windows.Threading;
 using EQKDServer.Models;
+using TimeTagger_Library.TimeTagger;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
 {
     public class ChannelViewModel : INotifyPropertyChanged
     {
-        private EQKDServerModel _EQKDServer;
+        private ITimeTagger _timetagger;
         private DispatcherTimer _refreshTimer;
 
         public ObservableCollection<ChannelDiagnosis> ChanDiag { get; set; }
 
         public ChannelViewModel() : this(null) { }
 
-        public ChannelViewModel(EQKDServerModel eqkdserver)
+        public ChannelViewModel(ITimeTagger timetagger)
         {
-            _EQKDServer = eqkdserver;
-            ChanDiag = new ObservableCollection<ChannelDiagnosis> { new ChannelDiagnosis(0), new ChannelDiagnosis(1), new ChannelDiagnosis(2), new ChannelDiagnosis(3) };      
-            
-            if(_EQKDServer!=null && _EQKDServer.ServerTimeTagger!=null)
-            {
-                _refreshTimer = new DispatcherTimer();
-                _refreshTimer.Tick += OnRefreshTimerClick;
-                _refreshTimer.Interval = new TimeSpan(0,0,1);
-                _refreshTimer.IsEnabled = true;
-            }
+            if (timetagger == null) return;
+
+            _timetagger = timetagger;
+            ChanDiag = new ObservableCollection<ChannelDiagnosis> ( Enumerable.Range(0,_timetagger.NumChannels).Select(i => new ChannelDiagnosis(i)) );      
+
+            _refreshTimer = new DispatcherTimer();
+            _refreshTimer.Tick += OnRefreshTimerClick;
+            _refreshTimer.Interval = new TimeSpan(0,0,1);
+            _refreshTimer.IsEnabled = true;
+       
         }
 
         private void OnRefreshTimerClick(object sender, EventArgs e)
         {
-            List<int> tagger_Countrate = _EQKDServer.ServerTimeTagger.GetCountrate();
+            List<int> tagger_Countrate = _timetagger.GetCountrate();
 
             if (tagger_Countrate.Count < ChanDiag.Count) return;
 

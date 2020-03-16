@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:scvm="clr-namespace:EQKDServer.ViewModels.SettingControlViewModels"
              xmlns:local="clr-namespace:EQKDServer.Views.SettingControls"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
@@ -17,6 +18,7 @@
     <Grid DataContext="{StaticResource PolCorrectionControlViewModel}" >
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="10" />
             <RowDefinition Height="30" />
@@ -25,14 +27,72 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="100" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="20" />
         </Grid.ColumnDefinitions>
 
-        <Button Grid.Row="3" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
-        <Button Grid.Row="3" Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+    
+        <StackPanel Margin="0,0,0,20" Grid.Row="1" Grid.Column="1"  Orientation="Vertical">
+            <TextBlock Text="Packet Size"/>
+            <TextBox Width="100" Text="{Binding PacketSize}"/>
+        </StackPanel>
+
         
+        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Vertical">
+            <TextBlock Text="Target Pos."/>
+            <ItemsControl ItemsSource="{Binding TargetPos}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Width="100" Text="{Binding Path=., StringFormat=F2, UpdateSourceTrigger=LostFocus}"/>
+                            <TextBlock Text="°" Style="{StaticResource PropertyTextBlockStyle}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="Go to position" Command="{Binding GoToPositionCommand}" />
+        </StackPanel>
+
+
+        <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Vertical">
+            <TextBlock Text="Current Pos."/>
+            <ItemsControl ItemsSource="{Binding CurrPos}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Width="100" Text="{Binding Path=., StringFormat=F2}"/>
+                            <TextBlock Text="°" Style="{StaticResource PropertyTextBlockStyle}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+
+        <Button Grid.Row="4" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
+        <Button Grid.Row="4" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
+        <Button Grid.Row="4" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+
+
+        <lvc:CartesianChart   Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Grid.RowSpan="2"  MinWidth="300"
+                                DisableAnimations="True"
+                                Series="{Binding CorrelationCollection}"
+                                VisualElements="{Binding CorrelationVisualElementsCollection}">
+
+            <lvc:CartesianChart.AxisY>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="counts/s" MinValue="0"></lvc:Axis>
+                </lvc:AxesCollection>
+            </lvc:CartesianChart.AxisY>
+
+            <lvc:CartesianChart.AxisX>
+                <lvc:AxesCollection>
+                    <lvc:Axis Title="Delay [us]" Sections="{Binding CorrelationSectionsCollection}"/>
+                </lvc:AxesCollection>
+            </lvc:CartesianChart.AxisX>
+
+        </lvc:CartesianChart>
     </Grid>
 </UserControl>

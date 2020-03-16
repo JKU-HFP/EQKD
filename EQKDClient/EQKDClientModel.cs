@@ -1,4 +1,5 @@
 ﻿using Extensions_Library;
+using QKD_Library;
 using SecQNet;
 using SecQNet.SecQNetPackets;
 using System;
@@ -19,10 +20,14 @@ namespace EQKDClient
         private CancellationTokenSource _listening_cts;
 
         private bool _obscureBasis = false;
-        private List<byte> _secureKeys = new List<byte>();
-        private List<byte> _bobKeys = new List<byte>();
 
         //Properties
+        public QKey SecureKey { get; private set; } = new QKey()
+        {
+            RectZeroChan = 5,
+            DiagZeroChan = 7,
+            FileName= "SecureKey_Bob.txt"
+        };
         public SecQClient secQNetClient { get; private set; }
 
         public ITimeTagger TimeTagger { get; private set; }
@@ -38,7 +43,7 @@ namespace EQKDClient
             {
                 RefChan = 1
             };
-            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176, 0, 0, 0, 0, 0, 0, 0, 0 });
+            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
 
             //List<int> countrate = TimeTagger.GetCountrate();
             //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
@@ -60,7 +65,9 @@ namespace EQKDClient
             try
             {
                 TimeTags send_tt = null;
+                TimeTags orgin_send_tt = null;
                 TimeTags receive_tt = null;
+    
 
                 while (true)
                 {
@@ -73,6 +80,7 @@ namespace EQKDClient
                         case CommandPacket.SecQNetCommands.SendTimeTags:
                             if (TimeTagger.GetNextTimeTags(out send_tt))
                             {
+                                orgin_send_tt = new TimeTags(send_tt.chan.Take(send_tt.chan.Length).ToArray(), send_tt.time.Take(send_tt.time.Length).ToArray());
                                 //Obscure basis if requested
                                 if(_obscureBasis)
                                 {
@@ -80,7 +88,7 @@ namespace EQKDClient
                                     for(int i=0; i<send_tt.chan.Length; i++)
                                     {
                                         act_chan = send_tt.chan[i];
-                                        send_tt.chan[i] = act_chan == 5 || act_chan == 7 ? TimeTagPacket.RectBasisCodedChan : TimeTagPacket.DiagbasisCodedChan;
+                                        send_tt.chan[i] = act_chan == 5 || act_chan == 6 ? TimeTagPacket.RectBasisCodedChan : TimeTagPacket.DiagbasisCodedChan;
                                     }
                                 }
 
@@ -95,10 +103,12 @@ namespace EQKDClient
 
                         case CommandPacket.SecQNetCommands.ObscureBasisOFF:
                             _obscureBasis = false;
+                            WriteLog("Stealth mode OFF");
                             break;
 
                         case CommandPacket.SecQNetCommands.ObscureBasisON:
                             _obscureBasis = true;
+                            WriteLog("Stealth mode ON");
                             break;
 
                         case CommandPacket.SecQNetCommands.ReceiveSiftedTags:
@@ -107,13 +117,10 @@ namespace EQKDClient
 
                             if (receive_tt == null) break;
 
-                            List<int> key_indices = send_tt.time.GetIndicesOf(receive_tt.time).ToList();
-                            
-                            key_indices.ForEach( (i) =>
-                            {
-                                byte act_chan = send_tt.chan[i];
-                                _secureKeys.Add(act_chan == 5 || act_chan == 7 ? (byte)0 : (byte)1);
-                            });                           
+                            List<int> key_indices = receive_tt.time.Select(t => (int)t).ToList();
+
+                            SecureKey.AddKey(orgin_send_tt, key_indices);    
+                    
                             break;
 
                         case CommandPacket.SecQNetCommands.SendTimeTagsSecure:

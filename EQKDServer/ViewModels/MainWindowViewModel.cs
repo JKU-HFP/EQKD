@@ -24,11 +24,12 @@ using EQKDServer.Models.Messages;
 using LiveCharts.Events;
 using System.Windows.Input;
 using EQKDServer.Models;
-using TimeTaggerWPF_Library;
 using TimeTagger_Library.Correlation;
 using QKD_Library;
 using EQKDServer.Views.SettingControls;
 using EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels;
+using QKD_Library.Synchronization;
+using QKD_Library.Characterization;
 
 namespace EQKDServer.ViewModels
 {
@@ -39,9 +40,6 @@ namespace EQKDServer.ViewModels
         //#################################################
 
         private EQKDServerModel _EQKDServer;
-        private int _rateUpdateCounter = 0;
-        private int _rateUpdateCounterLimit = 1;
-        private DateTime _lastTimeTagsReveivedTime = DateTime.Now;
 
         ChartValues<ObservablePoint> _correlationChartValues;
         private LineSeries _correlationLineSeries;
@@ -51,6 +49,8 @@ namespace EQKDServer.ViewModels
 
         private ChartValues<double> _linearDriftCompChartValues;
         private LineSeries _linearDriftCompLineSeries;
+        private ChartValues<double> _globalOffsetChartValues;
+        private LineSeries _globalOffsetLineSeries;
 
         private TimeTaggerChannelView _channelView;
         private ChannelViewModel _channelViewModel;
@@ -188,6 +188,7 @@ namespace EQKDServer.ViewModels
 
         //Charts
         public SeriesCollection LinearDriftCompCollection { get; set; }
+        public SeriesCollection GlobalOffsetCollection { get; set; }
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; } = new SectionsCollection();
         public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
@@ -204,13 +205,31 @@ namespace EQKDServer.ViewModels
         //#################################################
         public MainWindowViewModel()
         {
-            //Create EKQDServer
-            _EQKDServer = new EQKDServerModel(LogMessage);
+            //Create EKQDServer and register Events
+            _EQKDServer = new EQKDServerModel(LogMessage,UserPrompt);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
-            _EQKDServer.TaggerSynchronization.SyncClocksComplete += SyncClocksComplete;
-            _EQKDServer.densMeas.BasisCompleted += BasisComplete;
-            _EQKDServer.StateCorr.LossFunctionAquired += StateCorr_LossFunctionAquired;
+            _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
+            _EQKDServer.AliceBobSync.SyncCorrComplete += SyncCorrComplete;
+            _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
+
+
+            _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
+             {
+                 ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
+                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
+             };
+            _EQKDServer.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
+            {
+                ClientBufferSize = _EQKDServer.ClientTimeTagger.BufferSize;
+                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferFillStatus;
+            };
+            _EQKDServer.SecQNetServer.TimeTagsReceived += (sender, e) =>
+            {
+                ReceivedClientTagsBufferSize = e.BufferSize;
+                ReceivedClientTagsBufferStatus = e.BufferStatus;
+            };
+
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
@@ -233,6 +252,7 @@ namespace EQKDServer.ViewModels
             //Initialize Chart elements
             LinearDriftCompCollection = new SeriesCollection();           
             CorrelationCollection = new SeriesCollection();
+            GlobalOffsetCollection = new SeriesCollection();
 
             //Exception Handling
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
@@ -263,28 +283,33 @@ namespace EQKDServer.ViewModels
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
-
-            CorrChartXMin = e.HistogramX[0] / 1000.0;
-            CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
+            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);
         }
 
         private void On_OpenCountrateWindowCommand(object obj)
         {
+            //TimeTagger ready?
+            if (!_EQKDServer.ServerTimeTagger.CanCollect) return;
+
+            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.ServerTimeTagger);
+
             if (_channelView != null) if (_channelView.IsVisible) return;
             
             _channelView = new TimeTaggerChannelView();
-            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer);
             _channelView.DataContext = _channelViewModel;
             _channelView.Title = "TimeTagger Stats";
-            _channelView.Show();
-            
+            _channelView.Show();        
         }
 
         private void LogMessage(string mess)
         {
             Messages += DateTime.Now.ToString("HH:mm:ss")+": "+ mess + "\n";
+        }
+        
+        private int UserPrompt(string mess, string senderID)
+        {
+            MessageBoxResult res = MessageBox.Show(mess, senderID, MessageBoxButton.OKCancel);
+            return (int)res;
         }
 
         //Eventhandler
@@ -322,8 +347,19 @@ namespace EQKDServer.ViewModels
             };
             LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
 
+            _globalOffsetChartValues = new ChartValues<double>() { };
+            _globalOffsetLineSeries = new LineSeries()
+            {
+                Title = "Global Time Offset",
+                PointGeometrySize = 0,
+                LineSmoothness = 0.0,
+                Values = _globalOffsetChartValues,
+            };
+            GlobalOffsetCollection.Add(_globalOffsetLineSeries);
+
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
+            _EQKDServer.ReadServerConfig();
 
             LogMessage("Application started");
         }
@@ -427,6 +463,13 @@ namespace EQKDServer.ViewModels
             _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);
 
             _isUpdating = false;
+        }
+
+        private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
+        {
+            if (_globalOffsetChartValues.Count >= 20) _globalOffsetChartValues.RemoveAt(0);
+            _globalOffsetChartValues.Add(_EQKDServer.AliceBobSync.GlobalClockOffset);
+
         }
 
         private void BasisComplete(object sender, BasisCompletedEventArgs e)
