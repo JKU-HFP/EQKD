@@ -43,7 +43,7 @@ namespace EQKDServer.Models
 
         List<byte> _secureKeys = new List<byte>();
         List<byte> _bobKeys = new List<byte>();
-
+        
         //-----------------------------------
         //----  P R O P E R T I E S
         //-----------------------------------
@@ -143,9 +143,10 @@ namespace EQKDServer.Models
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
+            List<SMC100Stage> _smcStages = _smcController.GetStages();
 
-            _HWP_A = _smcController[1];
-            _HWP_B = _smcController[2];
+            _HWP_A = _smcStages[1];
+            _HWP_B = _smcStages[2];
 
             if (_HWP_A != null)
             {

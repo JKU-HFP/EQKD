@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Stage_Library.PI;
 
 namespace ConsoleTestApp
 {
@@ -16,6 +17,11 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
+            var contr = new PI_C843_Controller();
+            contr.Connect("");
+            var stages = contr.GetStages();
+            stages[0].Move_Absolute(242.2);
+
             //QKey alicekey = new QKey();
             //QKey bobkey = new QKey();
 
