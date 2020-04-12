@@ -281,11 +281,6 @@ namespace EQKDServer.ViewModels
             CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
         }
 
-        private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
-        {
-            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);
-        }
-
         private void On_OpenCountrateWindowCommand(object obj)
         {
             //TimeTagger ready?

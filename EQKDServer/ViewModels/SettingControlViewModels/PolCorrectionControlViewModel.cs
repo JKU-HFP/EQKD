@@ -73,8 +73,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         //Private fields
         private EQKDServerModel _EQKDServer;
 
-        private ChartValues<ObservablePoint> _correlationChartValues;
-        private LineSeries _correlationLineSeries;
+        private ChartValues<ObservablePoint> _correlationChartValuesOrtho;
+        private ChartValues<ObservablePoint> _correlationChartValuesColin;
+        private LineSeries _correlationLineSeriesOrtho;
+        private LineSeries _correlationLineSeriesColin;
 
         //Commands
         public RelayCommand<object> StartCorrectionCommand { get; private set; }
@@ -124,16 +126,26 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CorrelationCollection = new SeriesCollection();
             CorrelationSectionsCollection = new SectionsCollection();
 
-            _correlationChartValues = new ChartValues<ObservablePoint> { };
-            _correlationLineSeries = new LineSeries()
+            _correlationChartValuesOrtho = new ChartValues<ObservablePoint> { };
+            _correlationLineSeriesOrtho = new LineSeries()
             {
-                Title = "Polarization correlations",
+                Title = "Correlations Orthogonal",
                 PointGeometrySize = 0,
                 LineSmoothness = 0.0,
-                Values = _correlationChartValues
-
+                Values = _correlationChartValuesOrtho
             };
-            CorrelationCollection.Add(_correlationLineSeries);
+            CorrelationCollection.Add(_correlationLineSeriesOrtho);
+
+            _correlationChartValuesColin = new ChartValues<ObservablePoint> { };
+            _correlationLineSeriesColin = new LineSeries()
+            {
+                Title = "Correlation Colinear",
+                PointGeometrySize = 0,
+                LineSmoothness = 0.0,
+                Values = _correlationChartValuesColin
+            };
+            CorrelationCollection.Add(_correlationLineSeriesColin);
+
 
             //Set and start Position timer
             _posTimer.Elapsed += (sender, e) =>
@@ -145,13 +157,16 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _correlationChartValuesOrtho.Clear();
+            _correlationChartValuesOrtho.AddRange(new ChartValues<ObservablePoint>(e.Ortho_HistogramX.Zip(e.Ortho_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
+            _correlationChartValuesColin.Clear();
+            _correlationChartValuesColin.AddRange(new ChartValues<ObservablePoint>(e.Colin_HistogramX.Zip(e.Colin_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrelationSectionsCollection.Clear();
             CorrelationVisualElementsCollection.Clear();
 
-            foreach (Peak peak in e.Peaks)
+            foreach (Peak peak in e.Ortho_Peaks)
             {
                 var axisSection = new AxisSection
                 {
