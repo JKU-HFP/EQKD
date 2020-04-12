@@ -90,6 +90,11 @@ namespace QKD_Library
         public ulong TimeBin { get; set; } = 1500;
 
         /// <summary>
+        /// Get lossfunction from orthogoan, colinear basis or from both
+        /// </summary>
+        public Orientation LossFunctionBasis { get; set; } = Orientation.Both;
+
+        /// <summary>
         /// Folder for logging state Correction data. No saving if string is empty
         /// </summary>
         public string LogFolder { get; set; } = "StateCorrection";
@@ -103,8 +108,6 @@ namespace QKD_Library
         /// n... Number of points per iteration
         /// t... Time for one integration (+movement)
         /// </summary>
-
-        public object StopWatch { get; private set; }
 
         //#################################################
         //##  P R I V A T E S
@@ -124,15 +127,22 @@ namespace QKD_Library
         private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
 
 
-        private List<(byte cA, byte cB)> _corrConfig2Tagger = new List<(byte cA, byte cB)>
+        private List<(byte cA, byte cB)> _corrConfig2TaggerOrtho = new List<(byte cA, byte cB)>
         {
             (0,6),(1,5),(2,8),(3,7) //hv, vh, da, ad
         };
+        private List<(byte cA, byte cB)> _corrConfig2TaggerColin = new List<(byte cA, byte cB)>
+        {
+            (0,5),(1,6),(2,7),(3,8) //hh, vv, dd, aa
+        };
 
-        private List<(byte cA, byte cB)> _corrConfig1Tagger = new List<(byte cA, byte cB)>
+        private List<(byte cA, byte cB)> _corrConfig1TaggerOrtho = new List<(byte cA, byte cB)>
         {
             (1,6),(2,5),(3,8),(4,7) //hv, vh, da, ad 
-            //(3,8),(4,7) //da, ad
+        };
+        private List<(byte cA, byte cB)> _corrConfig1TaggerColin = new List<(byte cA, byte cB)>
+        {
+            (1,5),(2,6),(3,7),(4,8) //hh, vv, dd, aa
         };
 
 
@@ -161,6 +171,13 @@ namespace QKD_Library
             DownhillSimplex,
             BruteForce,
             Combined
+        }
+
+        public enum Orientation
+        {
+            Orthogonal,
+            Colinear,
+            Both
         }
 
         //#################################################
@@ -482,8 +499,11 @@ namespace QKD_Library
         private (double val, double err) GetLossFunction()
         {
             ulong timewindow = 100000;
-            Histogram hist = new Histogram(NumTagger == 2 ? _corrConfig2Tagger : _corrConfig1Tagger, timewindow, hist_resolution:256);
-            Kurolator corr = new Kurolator(new List<CorrelationGroup> { hist }, 100000);
+            long histres = 256;
+
+            Histogram histOrtho = new Histogram(NumTagger == 2 ? _corrConfig2TaggerOrtho : _corrConfig1TaggerOrtho, timewindow, hist_resolution:histres);
+            Histogram histColin = new Histogram(NumTagger == 2 ? _corrConfig2TaggerColin : _corrConfig1TaggerColin, timewindow, hist_resolution: histres);
+            Kurolator corr = new Kurolator(new List<CorrelationGroup> { histOrtho,histColin }, 100000);
 
             //Collect timetags
             TimeTags tt1, tt2;
@@ -510,10 +530,37 @@ namespace QKD_Library
      
             corr.AddCorrelations(tt1,tt2,0);
 
-            List<Peak> peaks = hist.GetPeaks(6250, 0.1, true, TimeBin);
-            var loss = hist.GetRelativeMiddlePeakArea((long)TimeBin);
+            List<Peak> peaksOrtho = histOrtho.GetPeaks(6250, 0.1, true, TimeBin);
+            var peakAreaOrtho = histOrtho.GetRelativeMiddlePeakArea((long)TimeBin);
 
-            OnLossFunctionAquired(new LossFunctionAquiredEventArgs(hist.Histogram_X, hist.Histogram_Y,loss, peaks));
+            List<Peak> peaksColin = histColin.GetPeaks(6250, 0.1, true, TimeBin);
+            var peakAreaColin= histColin.GetRelativeMiddlePeakArea((long)TimeBin);
+
+            var loss = (.0, .0);
+            switch (LossFunctionBasis)
+            {
+                case Orientation.Orthogonal:
+                    loss = peakAreaOrtho;
+                    break;
+                case Orientation.Colinear:
+                    loss = (-peakAreaColin.val / 2, peakAreaColin.err);
+                    break;
+                case Orientation.Both:
+                    loss = (peakAreaOrtho.val - peakAreaColin.val / 2,
+                            Math.Sqrt(Math.Pow(peakAreaOrtho.err, 2) + Math.Pow(peakAreaColin.err / 2, 2)));
+                    break;
+            }
+           
+            OnLossFunctionAquired(new LossFunctionAquiredEventArgs()
+            {
+                Ortho_HistogramX = histOrtho.Histogram_X,
+                Ortho_HistogramY = histOrtho.Histogram_Y,
+                Colin_HistogramX = histColin.Histogram_X,
+                Colin_HistogramY = histColin.Histogram_Y,
+                Ortho_Peaks = peaksOrtho,
+                Colin_Peaks = peaksColin,
+                Loss = loss
+            });
 
             return loss;
         }
@@ -528,18 +575,13 @@ namespace QKD_Library
 
     public class LossFunctionAquiredEventArgs : EventArgs
     {
-        public long[] HistogramX { get; private set; }
-        public long[] HistogramY { get; private set; }
-        public (double val,double err) Loss { get; private set; }
-        public List<Peak> Peaks { get; private set; }
-
-        public LossFunctionAquiredEventArgs(long[] histX, long[] histY, (double,double) loss, List<Peak> peaks)
-        {
-            HistogramX = histX;
-            HistogramY = histY;
-            Loss = loss;
-            Peaks = peaks;
-        }
+        public long[] Ortho_HistogramX { get; set; }
+        public long[] Ortho_HistogramY { get;  set; }
+        public long[] Colin_HistogramX { get; set; }
+        public long[] Colin_HistogramY { get; set; }
+        public (double val,double err) Loss { get;  set; }
+        public List<Peak> Ortho_Peaks { get; set; }
+        public List<Peak> Colin_Peaks { get; set; }
     }
     
     public class OptimizationCompleteEventArgs : EventArgs
