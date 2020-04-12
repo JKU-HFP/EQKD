@@ -17,6 +17,16 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
+
+            string filein = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona.bmp";
+            string fileout = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona_encr.bmp";
+            string keyfile = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\Data\QKD_2Taggers_10_10_2019\SecureKey_Bob_2Tagger_long.txt";
+
+            Encryption.EncryptAndSaveBMPColor(filein, fileout, keyfile, repeat:true);
+
+
+
+
             var contr = new PI_C843_Controller();
             contr.Connect("");
             var stages = contr.GetStages();

@@ -21,7 +21,7 @@ namespace QKD_Encryption
         private static int white_arbg = Color.White.ToArgb();
         private static int black_arbg = Color.Black.ToArgb();
 
-        public static void EncryptAndSaveBMP(string filein, string fileout, string keyfile)
+        public static void EncryptAndSaveBMPMono(string filein, string fileout, string keyfile)
         {
             QKey key = new QKey();
 
@@ -32,6 +32,66 @@ namespace QKD_Encryption
                 Bitmap encrypted_bmp = jku_logo.QKDEncryptFlipped(key.SecureKey);
                 encrypted_bmp.Save(fileout);
             }
+        }
+
+        public static void EncryptAndSaveBMPColor(string filein, string fileout, string keyfile, bool repeat=false)
+        {
+            List<byte> keylist = File.ReadAllLines(keyfile).Select(k => byte.Parse(k)).ToList(); 
+
+            using (Bitmap bmp = new Bitmap(filein))
+            {
+                int num_req_keys = bmp.Height * bmp.Width * 24; //8 bit (R,G,B) = 24 bit
+
+                while(repeat==true && keylist.Count<num_req_keys)
+                {
+                    keylist.AddRange(keylist);
+                }
+
+                if (num_req_keys > keylist.Count) throw new Exception($"Insufficient keys for enconding bitmap. Required:{num_req_keys}, Available:{keylist.Count}");
+
+                Bitmap rbmp = new Bitmap(bmp);
+
+                byte[] key_bytes = keylist.Take(num_req_keys).ToArray();
+
+                int i = 0;
+
+                for (int h = 0; h < rbmp.Height; h++)
+                {
+                    for (int w = 0; w < rbmp.Width; w++)
+                    {
+                        var pixel = rbmp.GetPixel(w, h);
+                        int r_byte = pixel.R;
+                        int g_byte = pixel.G;
+                        int b_byte = pixel.B;
+
+                        byte[] range = key_bytes.Skip(3 * i).Take(8).ToArray();
+                        //int enc_byte_r = _getKeyBits(key_bytes[new Range(3 * i, 3 * i + 8)], 8);
+                        int enc_byte_r = _getKeyBits(range, 8);
+                        range = key_bytes.Skip((3 * i) + 8).Take(8).ToArray();
+                        int enc_byte_g = _getKeyBits(range, 8);
+                        key_bytes.Skip((3 * i) + 16).Take(8).ToArray();
+                        int enc_byte_b = _getKeyBits(range, 8);
+
+                        rbmp.SetPixel(w, h, Color.FromArgb(0xff, r_byte ^ enc_byte_r, g_byte ^ enc_byte_g, b_byte ^ enc_byte_b));
+
+                        i++;
+                    }
+                }
+
+                rbmp.Save(fileout);
+            }
+        }
+
+        private static int _getKeyBits(byte[] keybytes, int num_bits)
+        {
+            int keybits = 0x0000;
+            for (int bit = 0; bit < num_bits; bit++)
+            {
+                int tmp_byte = keybytes[bit] << bit;
+                keybits |= tmp_byte;
+            }
+
+            return keybits;
         }
 
         public static Bitmap TestCopy(this Bitmap orig_bmp)
