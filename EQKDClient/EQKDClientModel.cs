@@ -134,6 +134,8 @@ namespace EQKDClient
                         case CommandPacket.SecQNetCommands.StartCollecting:
                             TimeTagger.PacketSize = commandPacket.val0;
                             TimeTagger.SyncRate = commandPacket.val1;
+                            TimeTagger.PacketTimeSpan = commandPacket.val2;
+                            TimeTagger.PackageMode = commandPacket.val3 == 1 ? TimeTaggerBase.PMode.ByEllapsedTime : TimeTaggerBase.PMode.ByPackageSize;
                             TimeTagger.StartCollectingTimeTagsAsync();
                             secQNetClient.SendAcknowledge();
                             break;

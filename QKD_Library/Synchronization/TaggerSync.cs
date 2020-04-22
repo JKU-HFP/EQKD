@@ -204,8 +204,12 @@ namespace QKD_Library.Synchronization
             TimeTags ttA = null;
             TimeTags ttB = null;
 
+            //Switch taggers to packet mode
+
             int tmpPacketSize = _tagger1.PacketSize;
+            TimeTaggerBase.PMode tmpMode = _tagger1.PackageMode;
             _tagger1.PacketSize = _tagger2.PacketSize = 200000;
+            _tagger1.PackageMode = _tagger2.PackageMode = TimeTaggerBase.PMode.ByPackageSize;
 
             while (!GlobalOffsetDefined)
             {
@@ -255,11 +259,12 @@ namespace QKD_Library.Synchronization
             _tagger1.ClearTimeTagBuffer();
             _tagger2.ClearTimeTagBuffer();
             _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketSize;
+            _tagger1.PackageMode = _tagger2.PackageMode = tmpMode;
 
             return;
         }
 
-        public TaggerSyncResults GetSyncedTimeTags(int packetSize = 100000)
+        public TaggerSyncResults GetSyncedTimeTags(int packetSize = 100000, long packetTimeSpan=2000000000000)
         {
             if (_tagger1 == null || _tagger2 == null)
             {
@@ -271,6 +276,8 @@ namespace QKD_Library.Synchronization
             TimeTags ttB = null;
 
             _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
+            _tagger1.PacketTimeSpan = _tagger2.PacketTimeSpan = packetTimeSpan;
+            _tagger1.PackageMode = _tagger2.PackageMode = TimeTaggerBase.PMode.ByEllapsedTime;
 
             //Refresh sync rate
             //_tagger2.SyncRate = _tagger1.SyncRate;
@@ -296,24 +303,15 @@ namespace QKD_Library.Synchronization
                 else UserPrompt("Place polarizer in optical path.");     
             }
 
-            _tagger1.ClearTimeTagBuffer();
-            _tagger2.ClearTimeTagBuffer();
+            //_tagger1.ClearTimeTagBuffer();
+            //_tagger2.ClearTimeTagBuffer();
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
 
-            //Check packet overlap and get new packet if not overlapping
-            Kurolator.CorrResult overlapResult = Kurolator.CheckPacketOverlap(ttA, ttB, (long)ClockSyncTimeWindow, GlobalClockOffset);
-            switch (overlapResult)
-            {
-                case Kurolator.CorrResult.PartnerAhead:
-                    while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
-                    break;
-                case Kurolator.CorrResult.PartnerBehind:
-                    while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
-                    break;
-            }
-
+            //Check packet overlap
+            double overlap = Kurolator.GetOverlapRatio(ttA, ttB, (long)ClockSyncTimeWindow, GlobalClockOffset);
+            WriteLog($"Server- and Clienttagger timetag packet overlap: {overlap:0.3f}");
 
             TaggerSyncResults result = new TaggerSyncResults()
             {

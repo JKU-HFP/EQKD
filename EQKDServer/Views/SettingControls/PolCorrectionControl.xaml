@@ -37,6 +37,8 @@
         <StackPanel Margin="0,0,0,20" Grid.Row="1" Grid.Column="1"  Orientation="Vertical">
             <TextBlock Text="Packet Size"/>
             <TextBox Width="100" Text="{Binding PacketSize}"/>
+            <TextBlock Text="Packet Time Span"/>
+            <TextBox Width="100" Text="{Binding PacketTImeSpan}"/>
         </StackPanel>
 
         
