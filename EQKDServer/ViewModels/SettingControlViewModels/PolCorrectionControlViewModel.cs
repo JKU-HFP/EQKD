@@ -41,6 +41,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private long _packetTimeSpan;
+
+        public long PacketTImeSpan
+        {
+            get { return _packetTimeSpan; }
+            set 
+            {
+                _packetTimeSpan = value;
+                OnPropertyChanged("PacketTImeSpan");
+            }
+        }
+
+
         private ObservableCollection<StagePosModel> _targetPos =
             new ObservableCollection<StagePosModel>(Enumerable.Range(0, 3).Select(i => new StagePosModel() { Value = 0 }).ToList());
         public ObservableCollection<StagePosModel> TargetPos {
@@ -93,11 +106,13 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             StartCorrectionCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.FiberCorrection.PacketSize = PacketSize;
+                _EQKDServer.FiberCorrection.PacketTimeSpan = PacketTImeSpan;
                 _EQKDServer.StartFiberCorrectionAsync().SafeFireAndForget();
             });
             StartKeyGenerationCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.PacketSize = PacketSize;
+                _EQKDServer.PacketTImeSpan = PacketTImeSpan;
                  _EQKDServer.StartKeyGeneration().SafeFireAndForget();
             });
 

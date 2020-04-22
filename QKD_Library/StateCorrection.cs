@@ -75,9 +75,14 @@ namespace QKD_Library
         public double InitRange { get; set; } = 20;
         
         /// <summary>
-        /// Integration time in seconds
+        /// Packet size
         /// </summary>
         public int PacketSize { get; set; } = 1000000;
+
+        /// <summary>
+        /// Integration time in picoseconds
+        /// </summary>
+        public long PacketTimeSpan { get; set; } = 2000000000000;
 
         /// <summary>
         /// Coarse Clock Offset between TimeTaggers
@@ -513,7 +518,7 @@ namespace QKD_Library
                 TaggerSyncResults syncRes;
                 int retries = 1;
                 
-                while (!(syncRes = _taggerSync.GetSyncedTimeTags(PacketSize)).IsSync)
+                while (!(syncRes = _taggerSync.GetSyncedTimeTags(packetSize:PacketSize, packetTimeSpan: PacketTimeSpan)).IsSync)
                 {
                     if (retries > NUM_SYNC_RETRIES) throw new Exception("Tagger synchronization error");
                     WriteLog($"TimeTags not in sync, retry {retries} of {NUM_SYNC_RETRIES}.");

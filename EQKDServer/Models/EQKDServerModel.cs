@@ -56,6 +56,7 @@ namespace EQKDServer.Models
 
         //SecQNet Connection
         public int PacketSize { get; set; } = 100000;
+        public long PacketTImeSpan { get; set; } = 2000000000000;
         public SecQNetServer SecQNetServer { get; private set; }
 
         //Time Tagger
@@ -138,7 +139,6 @@ namespace EQKDServer.Models
 
             ServerTimeTagger = hydra;
             ClientTimeTagger = sitagger;
-
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -248,7 +248,7 @@ namespace EQKDServer.Models
           {
               //while (!_cts.Token.IsCancellationRequested)
               //{
-              TaggerSyncResults syncClockRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+              TaggerSyncResults syncClockRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
 
 
               if(syncClockRes.IsSync)
@@ -337,7 +337,7 @@ namespace EQKDServer.Models
                 while (!ct.IsCancellationRequested)
                 {
                     //Get Key Correlations
-                    TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                    TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
 
                     if (!syncRes.IsSync)
                     {
@@ -402,7 +402,7 @@ namespace EQKDServer.Models
                    {
                         //Two timertaggers (Hydra + SI)
                         case true:
-                            TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(PacketSize);
+                            TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
 
                             if (!syncRes.IsSync)
                             {
