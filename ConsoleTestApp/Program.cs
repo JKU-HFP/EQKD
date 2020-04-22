@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Stage_Library.PI;
+using Controller.XYStage;
 
 namespace ConsoleTestApp
 {
@@ -17,12 +18,18 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
+            int s = 0;
+            while(true)
+            {
+                var xy = StepFunctions.AlternatingZigZagYX(s, 5);
+                s++;
+            }
 
-            string filein = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona.bmp";
-            string fileout = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona_encr.bmp";
-            string keyfile = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\Data\QKD_2Taggers_10_10_2019\SecureKey_Bob_2Tagger_long.txt";
+            //string filein = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona.bmp";
+            //string fileout = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\pics\corona_encr.bmp";
+            //string keyfile = @"C:\Users\Christian\Dropbox\PhD\QKD\Publication\Data\QKD_2Taggers_10_10_2019\SecureKey_Bob_2Tagger_long.txt";
 
-            Encryption.EncryptAndSaveBMPColor(filein, fileout, keyfile, repeat:true);
+            //Encryption.EncryptAndSaveBMPColor(filein, fileout, keyfile, repeat:true);
 
 
 
