@@ -21,7 +21,7 @@ namespace Controller.XYStage
         public double SetPoint { get; set; }
         
         /// <summary>
-        /// Setpoint tolerance
+        /// Absolute Setpoint tolerance
         /// </summary>
         public double SPTolerance { get; set; }
 
