@@ -317,22 +317,24 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 };
                 CorrelationXSectionsCollection.Add(aliceStartAxisSection);
             }
-           
+
             //BOB
+
+            double bob_timeoffset = e.ResultA.StartTime != 0 && e.ResultB.StartTime != 0 ? e.ResultA.StartTime - e.ResultB.StartTime : 0;
 
             //Rates
             _correlationChartValues[2].Clear();
             if (e.ResultB.Status > SignalStartStatus.ThresholdNotFound)
-                _correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(e.ResultB.Times.Zip(e.ResultB.Rates, (X, Y) => new ObservablePoint(X / 1E6, Y))));
+                _correlationChartValues[2].AddRange(new ChartValues<ObservablePoint>(e.ResultB.Times.Zip(e.ResultB.Rates, (X, Y) => new ObservablePoint((X+bob_timeoffset) / 1E6, Y))));
 
             //Fitted rates
             _correlationChartValues[3].Clear();
             if (e.ResultA.Status > SignalStartStatus.SignalFittingFailed)
-                _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(e.ResultB.FittingTimes.Zip(e.ResultB.FittedRates, (X, Y) => new ObservablePoint(X / 1E6, Y))));
+                _correlationChartValues[3].AddRange(new ChartValues<ObservablePoint>(e.ResultB.FittingTimes.Zip(e.ResultB.FittedRates, (X, Y) => new ObservablePoint((X+bob_timeoffset) / 1E6, Y))));
 
 
-            CorrChartXMin = Math.Min(e.ResultA.StartTime,e.ResultB.StartTime)/1E6 - 2000;
-            CorrChartXMax = double.NaN;
+            CorrChartXMin =e.ResultA.StartTime/1E6 - 4000;
+            CorrChartXMax = e.ResultA.StartTime/1E6 + 4000;
 
             if (e.ResultB.StartTime!=0)
             {

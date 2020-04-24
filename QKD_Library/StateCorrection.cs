@@ -25,6 +25,12 @@ namespace QKD_Library
     public class StateCorrection
     {
         //#################################################
+        //##  C O N S T A N T S
+        //#################################################
+
+        private const int NUM_SYNC_RETRIES = 5;
+
+        //#################################################
         //##  P R O P E R T I E S
         //#################################################
 
@@ -484,9 +490,15 @@ namespace QKD_Library
 
             if(NumTagger==2)
             {
-                TaggerSyncResults syncRes = _taggerSync.GetSyncedTimeTags(PacketSize);
-
-                if (!syncRes.IsSync) throw new Exception("Tagger synchronization error");
+                TaggerSyncResults syncRes;
+                int retries = 1;
+                
+                while (!(syncRes = _taggerSync.GetSyncedTimeTags(PacketSize)).IsSync)
+                {
+                    if (retries > NUM_SYNC_RETRIES) throw new Exception("Tagger synchronization error");
+                    WriteLog($"TimeTags not in sync, retry {retries} of {NUM_SYNC_RETRIES}.");
+                    retries++;
+                }
 
                 tt1 = syncRes.TimeTags_Alice;
                 tt2 = syncRes.CompTimeTags_Bob;

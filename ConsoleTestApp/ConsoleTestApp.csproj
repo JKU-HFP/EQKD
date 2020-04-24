@@ -52,6 +52,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\ProjectLibrary\Stage_Library_x64\Stage_Library_x64.csproj">
+      <Project>{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}</Project>
+      <Name>Stage_Library_x64</Name>
+    </ProjectReference>
     <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
       <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
       <Name>QKD_Library</Name>
