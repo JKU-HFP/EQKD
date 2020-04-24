@@ -113,7 +113,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer.PacketSize = PacketSize;
                 _EQKDServer.PacketTImeSpan = PacketTImeSpan;
-                 _EQKDServer.StartKeyGeneration().SafeFireAndForget();
+                 _EQKDServer.StartKeyGenerationAsync().SafeFireAndForget();
             });
 
             CancelCommand = new RelayCommand<object>((o) =>

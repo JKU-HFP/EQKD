@@ -1,4 +1,5 @@
-﻿using Extensions_Library;
+﻿using Controller.XYStage;
+using Extensions_Library;
 using QKD_Library;
 using QKD_Library.Characterization;
 using QKD_Library.Synchronization;
@@ -301,7 +302,7 @@ namespace EQKDServer.Models
             _cts?.Cancel();
         }
 
-        public async Task StartKeyGeneration()
+        public async Task StartKeyGenerationAsync()
         {
             _cts = new CancellationTokenSource();
             var token = _cts.Token;

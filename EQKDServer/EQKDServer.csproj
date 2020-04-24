@@ -231,6 +231,10 @@
       <Project>{93b5b765-f8c5-4538-bc61-cda4f98cfb28}</Project>
       <Name>TimeTagger_Library_64</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Controller\Controller.csproj">
+      <Project>{DF267971-F1B8-40B7-9691-F416DBB83355}</Project>
+      <Name>Controller</Name>
+    </ProjectReference>
     <ProjectReference Include="..\QKD_Library\QKD_Library.csproj">
       <Project>{df65e344-a52a-4d85-ab5d-8509abc3a9e5}</Project>
       <Name>QKD_Library</Name>
