@@ -104,14 +104,20 @@ namespace Controller.XYStage
 
         public StabilizerResult Correct()
         {
+            StabilizerResult result = new StabilizerResult();
+
+            if (StabilizationActive)
+            {
+                WriteLog("Stabilization already active.");
+                return result;
+            }
+
             StabilizationActive = true;
             _cts = new CancellationTokenSource();
 
             int currStep = 0;
             double startX = _stageX.Position;
             double startY = _stageY.Position;
-
-            StabilizerResult result = new StabilizerResult();
 
             int ydist = (int)Math.Ceiling(Math.Sqrt(MaxSteps));
 
