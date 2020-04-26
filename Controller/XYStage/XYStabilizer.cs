@@ -119,19 +119,31 @@ namespace Controller.XYStage
             double startX = _stageX.Position;
             double startY = _stageY.Position;
 
+            void returnToHome()
+            {
+                _stageX.Move_Absolute(startX);
+                _stageY.Move_Absolute(startY);
+            }
+
             int ydist = (int)Math.Ceiling(Math.Sqrt(MaxSteps));
 
             WriteLog($"Stabilization started at X={startX:e3},Y={startY:e3}, Setpoint={SetPoint}");
             
             while(true)
             {
-                if (_cts.IsCancellationRequested) break;
+                if (_cts.IsCancellationRequested)
+                {
+                    WriteLog("Stabilization cancelled. Returning to start position");
+                    returnToHome();
+                    break;
+                }
+
                 if (!_bufferRefreshed || !PVBufferFilled) continue;
                 if (!PVBufferFilled) continue;
 
                 if (SetpointReached)
                 {
-                    WriteLog($"Setpoint of {SetPoint} reached.");
+                    WriteLog($"Setpoint of {SetPoint} reached. Stabilization complete.");
                     result.Success = true;
                     break;
                 }
@@ -139,7 +151,8 @@ namespace Controller.XYStage
                 if (currStep % StepTimeMultiplier !=0) continue;
                 if (currStep>MaxSteps)
                 {
-                    WriteLog("Maximum Steps Exceeded. Cancelling stabilization.");
+                    WriteLog("Maximum Steps Exceeded. Cancelling stabilization. Returning to start position");
+                    returnToHome();
                     result.MaxStepsExceeded = true;
                     break;
                 }
