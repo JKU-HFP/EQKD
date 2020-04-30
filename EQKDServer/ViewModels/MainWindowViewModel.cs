@@ -30,6 +30,7 @@ using EQKDServer.Views.SettingControls;
 using EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels;
 using QKD_Library.Synchronization;
 using QKD_Library.Characterization;
+using System.IO;
 
 namespace EQKDServer.ViewModels
 {
@@ -56,6 +57,8 @@ namespace EQKDServer.ViewModels
         private ChannelViewModel _channelViewModel;
 
         private bool _isUpdating = false;
+
+        private object _messageLock = new object();
 
         #region Propterties
         //#################################################
@@ -185,6 +188,9 @@ namespace EQKDServer.ViewModels
         }
         #endregion
 
+        //Logging
+        public string LogFolder { get; set; } = "Log";
+        public string LogFile { get; private set; } = "";
 
         //Charts
         public SeriesCollection LinearDriftCompCollection { get; set; }
@@ -206,7 +212,7 @@ namespace EQKDServer.ViewModels
         public MainWindowViewModel()
         {
             //Create EKQDServer and register Events
-            _EQKDServer = new EQKDServerModel(LogMessage,UserPrompt);
+            _EQKDServer = new EQKDServerModel(LogMessage, UserPrompt);
             _EQKDServer.SecQNetServer.ConnectionStatusChanged += SecQNetConnectionStatusChanged;
             _EQKDServer.AliceBobSync.SyncClocksComplete += SyncClocksComplete;
             _EQKDServer.AliceBobSync.SyncCorrComplete += SyncCorrComplete;
@@ -233,7 +239,7 @@ namespace EQKDServer.ViewModels
 
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
-                    
+
             //Route Relay Commands
             WindowLoadedCommand = new RelayCommand<object>(OnMainWindowLoaded);
             WindowClosingCommand = new RelayCommand<object>(OnMainWindowClosing);
@@ -248,9 +254,9 @@ namespace EQKDServer.ViewModels
             ServerBufferStatus = 0;
             ClientBufferSize = 1000;
             ClientBufferStatus = 0;
-            
+
             //Initialize Chart elements
-            LinearDriftCompCollection = new SeriesCollection();           
+            LinearDriftCompCollection = new SeriesCollection();
             CorrelationCollection = new SeriesCollection();
             GlobalOffsetCollection = new SeriesCollection();
 
@@ -270,6 +276,13 @@ namespace EQKDServer.ViewModels
             {
                 MessageBox.Show(e.Exception.Message + "\nInner Exception: " + e.Exception.InnerException.Message, "Unhandled TaskScheduler exception", MessageBoxButton.OK, MessageBoxImage.Error);
             };
+
+            //Logging
+            if (!string.IsNullOrEmpty(LogFolder))
+            {
+                if (!Directory.Exists(LogFolder)) Directory.CreateDirectory(LogFolder);
+                LogFile = System.IO.Path.Combine(LogFolder, "Log_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss") + ".txt");
+            }
         }
 
         private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
@@ -289,16 +302,34 @@ namespace EQKDServer.ViewModels
             if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.ServerTimeTagger);
 
             if (_channelView != null) if (_channelView.IsVisible) return;
-            
+
             _channelView = new TimeTaggerChannelView();
             _channelView.DataContext = _channelViewModel;
             _channelView.Title = "TimeTagger Stats";
-            _channelView.Show();        
+            _channelView.Show();
         }
 
         private void LogMessage(string mess)
         {
-            Messages += DateTime.Now.ToString("HH:mm:ss")+": "+ mess + "\n";
+            lock (_messageLock)
+            {
+                Messages += DateTime.Now.ToString("HH:mm:ss") + ": " + mess + "\n";
+            }
+
+            if (Messages.Length > 10000) _dumpMessages(20);
+        }
+
+        private void _dumpMessages(int remain)
+        { 
+            lock(_messageLock)
+            {
+                string[] messages = Messages.Split('\n');
+                if (messages.Length <= remain) return;
+
+                if (!string.IsNullOrEmpty(LogFile)) File.AppendAllLines(LogFile, messages.Take(messages.Length - remain));
+
+                Messages = string.Join("\n",messages.Skip(messages.Length - remain).ToArray());
+            }
         }
         
         private int UserPrompt(string mess, string senderID)
@@ -361,7 +392,7 @@ namespace EQKDServer.ViewModels
 
         private void OnMainWindowClosing(object obj)
         {
-
+            _dumpMessages(0);
         }
 
         #region ChartEventhandler
