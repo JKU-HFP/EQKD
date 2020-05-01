@@ -16,6 +16,7 @@ using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 using QKD_Library.Synchronization;
+using SharpLearning.Optimization;
 
 namespace QKD_Library
 {
@@ -127,6 +128,9 @@ namespace QKD_Library
         private Action<string> _loggerCallback;
         private CancellationTokenSource _cts;
 
+        private double _minCost = 2;
+        private double[] _min_pos_tmp = new double[] { 0, 0, 0 };
+
         private string _logFolder = "";
         private string _currLogfile = "";
         private bool writeLog { get => !String.IsNullOrEmpty(_logFolder); }
@@ -174,6 +178,7 @@ namespace QKD_Library
         public enum Mode
         {
             DownhillSimplex,
+            Bayesian,
             BruteForce,
             Combined
         }
@@ -246,6 +251,8 @@ namespace QKD_Library
                        
             Stopwatch stopwatch = new Stopwatch();
 
+            _minCost = 2;
+
             WriteLog("-------------------------------------");
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
 
@@ -267,6 +274,9 @@ namespace QKD_Library
             {
                 case Mode.DownhillSimplex:
                     DownhillSimplex(ct);
+                    break;
+                case Mode.Bayesian:
+                    Bayesian(ct);
                     break;
 
                 case Mode.BruteForce:
@@ -318,18 +328,77 @@ namespace QKD_Library
 
             //Move stages to optimum position
             WriteLog($"Moving stages to optimum position ({ MinPos[0]},{ MinPos[1]},{ MinPos[2]})");
-            _rotationStages[0].Move_Absolute(MinPos[0]);
-            _rotationStages[1].Move_Absolute(MinPos[1]);
-            _rotationStages[2].Move_Absolute(MinPos[2]);
+            _gotoPosition(MinPos);
 
+        }
+
+        private double _objectiveFunction(double[] p)
+        {
+            _gotoPosition(p.ToArray());
+
+            var loss = GetLossFunction();
+
+            WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
+
+            //Record minimum value
+            if (loss.val < _minCost)
+            {
+                _minCost = loss.val;
+                _min_pos_tmp = new double[] { p[0], p[1], p[2] };
+            }
+
+            return loss.val;
+        }
+
+        private void Bayesian(CancellationToken ct)
+        {
+            _currLogfile = Path.Combine(_logFolder, $"BayesianOpt.txt");
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Restart();
+
+            WriteLog($"Starting Bayesian Minimization with MaxIterations = {MaxIterations}", true);
+
+            Func<double[], OptimizerResult> loss_func = (double[] p) =>
+            {
+                ct.ThrowIfCancellationRequested(); //Exit by throwing exception
+                return new OptimizerResult(p,_objectiveFunction(p));
+            };
+
+            BayesianOptimizer bopt = new BayesianOptimizer(new IParameterSpec[]
+            {
+                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2),
+                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2),
+                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2)
+            }, MaxIterations);
+
+
+            OptimizerResult optResult = null;
+
+            try
+            {
+                optResult = bopt.OptimizeBest(loss_func);
+            }
+            catch (OperationCanceledException) //Cancelled by token
+            {
+                WriteLog("Bayesian optimization cancelled", true);
+                MinPos = _min_pos_tmp;
+                WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3}): {_minCost:F4}");
+
+                //Move stages to optimum position
+                _gotoPosition(MinPos);
+                return;
+            }
+
+            stopwatch.Stop();
+
+            MinPos = optResult.ParameterSet;
+            WriteLog($"Bayesian opt. finished at optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3}): {optResult.Error}", true);
+            WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
+            _gotoPosition(MinPos);
         }
 
         private void DownhillSimplex(CancellationToken ct)
         {
-            //Nelder Mead Sigleton Minimization
-            double[] min_pos_tmp = new double[] { 0, 0, 0 };
-            double minCost = 1;
-
             _currLogfile = Path.Combine(_logFolder, $"NelderMead_Minimization.txt");
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Restart();
@@ -339,25 +408,7 @@ namespace QKD_Library
             Func<Vector<double>, double> loss_func = (Vector<double> p) =>
             {
                 ct.ThrowIfCancellationRequested(); //Exit by throwing exception
-
-                Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
-                Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
-                Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[2]));
-
-                Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
-
-                var loss = GetLossFunction();
-
-                WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
-                
-                //Record minimum value
-                if(loss.val<minCost)
-                {
-                    minCost = loss.val;
-                    min_pos_tmp = new double[] { p[0], p[1], p[2] };
-                }
-
-                return loss.val;
+                return _objectiveFunction(p.ToArray());
             };
 
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
@@ -392,9 +443,7 @@ namespace QKD_Library
                     //MinPosAcc[0] = MinPosAcc[1] = MinPosAcc[2] = Accurracy_Simplex * 10;
 
                     //Move stages to optimum position
-                    _rotationStages[0].Move_Absolute(MinPos[0]);
-                    _rotationStages[1].Move_Absolute(MinPos[1]);
-                    _rotationStages[2].Move_Absolute(MinPos[2]);
+                    _gotoPosition(MinPos);
                     break;
 
                 case ExitCondition.ExceedIterations:
@@ -404,13 +453,11 @@ namespace QKD_Library
                 case null: //Cancelled by token
                     WriteLog("Downhill simplex cancelled",true);
 
-                    MinPos = min_pos_tmp;
-                    WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
+                    MinPos = _min_pos_tmp;
+                    WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3}): {_minCost:F4}");
 
                     //Move stages to optimum position
-                    _rotationStages[0].Move_Absolute(MinPos[0]);
-                    _rotationStages[1].Move_Absolute(MinPos[1]);
-                    _rotationStages[2].Move_Absolute(MinPos[2]);
+                    _gotoPosition(MinPos);
                     break;
 
                 default:
@@ -488,11 +535,11 @@ namespace QKD_Library
             return opt_pos;
         }
 
-        private void _gotoPosition(double p0, double p1, double p2)
+        private void _gotoPosition(params double[] p)
         {
-            Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p0));
-            Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p1));
-            Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p2));
+            Task taskpos1 = Task.Run(() => _rotationStages[0].Move_Absolute(p[0]));
+            Task taskpos2 = Task.Run(() => _rotationStages[1].Move_Absolute(p[1]));
+            Task taskpos3 = Task.Run(() => _rotationStages[2].Move_Absolute(p[2]));
 
             Task.WhenAll(taskpos1, taskpos2, taskpos3).GetAwaiter().GetResult();
         }
