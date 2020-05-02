@@ -50,6 +50,8 @@ namespace QKD_Library
             }
         }
 
+        //------- General ------
+
         /// <summary>
         /// Number of tagger involved
         /// 0.. only ServerTagger
@@ -58,20 +60,28 @@ namespace QKD_Library
         /// </summary>
         public int NumTagger { get; set; } = 2;
 
-        //Downhill Simplex
-        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
-        public int MaxIterations { get; set; } = 500;
-        public double Accurracy_Simplex { get; set; } = 0.3;
-
-        //Bruteforce
-        public double Accurracy_BruteForce { get; set; } = 0.5;
-        public double[] MinPos { get; set; } = new double[] { 77, 85, 129 };
-        public double[] MinPosAcc { get; set; } = new double[] { 45, 45, 45 };
+        public Mode OptimizationMode { get; set; } = Mode.Bayesian;
 
         /// <summary>
-        /// Perform initial "brute force" optimization in combined mode
+        /// Found MinPosion and Starting position for Downhill Simplex and Bruteforce
+        /// </summary>
+        public double[] MinPos { get; set; } = new double[] { 0, 0, 0 };
+
+        /// <summary>
+        /// Max Iterations for Downhill Simplex or Bayesian
+        /// </summary>
+        public int MaxIterations { get; set; } = 50;
+
+        //Downhill Simplex    
+        public double Accurracy_Simplex { get; set; } = 0.3;
+        public double[] Simplex_Init_Perturb { get; set; } = new double[] { 45, 45, 45 };
+
+        //Bruteforce
+        /// <summary>
+        /// Perform initial "brute force" optimization
         /// </summary>
         public bool DoInitOptimization { get; set; } = false;
+        public double Accurracy_BruteForce { get; set; } = 0.5;
         public int InitNumPoints { get; set; } = 6;
         public double InitRange { get; set; } = 20;
         
@@ -84,11 +94,6 @@ namespace QKD_Library
         /// Integration time in picoseconds
         /// </summary>
         public long PacketTimeSpan { get; set; } = 2000000000000;
-
-        /// <summary>
-        /// Coarse Clock Offset between TimeTaggers
-        /// </summary>
-        public long TaggerOffset { get; set; } = 0;
 
         /// <summary>
         /// Peak Integration Time Bin
@@ -105,15 +110,14 @@ namespace QKD_Library
         /// </summary>
         public string LogFolder { get; set; } = "StateCorrection";
 
-        /// <summary>
-        /// T = ln(d/e)/ln(n-1) (t n)^3
-        /// ------------------------------
-        /// T... Overall measurement time
-        /// d... Initial Range
-        /// e... Target accuracy
-        /// n... Number of points per iteration
-        /// t... Time for one integration (+movement)
-        /// </summary>
+      
+        // T = ln(d/e)/ln(n-1) (t n)^3
+        // ------------------------------
+        // T... Overall measurement time
+        // d... Initial Range
+        // e... Target accuracy
+        // n... Number of points per iteration
+        // t... Time for one integration (+movement)     
 
         //#################################################
         //##  P R I V A T E S
@@ -180,7 +184,6 @@ namespace QKD_Library
             DownhillSimplex,
             Bayesian,
             BruteForce,
-            Combined
         }
 
         public enum Orientation
@@ -262,8 +265,7 @@ namespace QKD_Library
                 WriteLog($"Initial Optimization | n={InitNumPoints} | range={InitRange}", true);
                 stopwatch.Restart();
 
-                MinPos = GetOptimumPositions(MinPos, InitNumPoints, InitRange, ct);
-                MinPosAcc = Enumerable.Repeat(InitRange / (InitNumPoints - 1),MinPosAcc.Length).ToArray();
+                MinPos = _getOptimumPositions(MinPos, InitNumPoints, InitRange, ct);
                 stopwatch.Stop();
                 WriteLog($"Iteration done in {stopwatch.Elapsed} | Positions: ({MinPos[0]},{MinPos[1]},{MinPos[2]})", true);
             }
@@ -283,13 +285,6 @@ namespace QKD_Library
                     //Bisect until Accuracy is reached
                     if (DoInitOptimization) BruteForce(InitRange / (InitNumPoints - 1), ct);
                     else BruteForce(InitRange, ct);
-                    break;
-
-                case Mode.Combined:
-                    double finetune_range = 10;
-                    DownhillSimplex(ct);
-                    if (ct.IsCancellationRequested) _cts = new CancellationTokenSource(); //Reset cancellation token
-                    BruteForce(finetune_range, _cts.Token);
                     break;
             }
 
@@ -315,7 +310,7 @@ namespace QKD_Library
 
                 stopwatch.Restart();
 
-                MinPos = GetOptimumPositions(MinPos, n, Range, ct);
+                MinPos = _getOptimumPositions(MinPos, n, Range, ct);
                 if (ct.IsCancellationRequested) break;
                 Range = Range / 2;
 
@@ -413,7 +408,7 @@ namespace QKD_Library
 
             IObjectiveFunction obj_function = ObjectiveFunction.Value(loss_func);
             Vector<double> init_guess = new DenseVector(MinPos);
-            Vector<double> init_perturb = new DenseVector(new double[] { MinPosAcc[0], MinPosAcc[1], MinPosAcc[2] });
+            Vector<double> init_perturb = new DenseVector(new double[] { Simplex_Init_Perturb[0], Simplex_Init_Perturb[1], Simplex_Init_Perturb[2] });
             NelderMeadSimplex solver = new NelderMeadSimplex(Accurracy_Simplex, MaxIterations);
 
             MinimizationResult solver_result = null;
@@ -471,7 +466,7 @@ namespace QKD_Library
             _cts?.Cancel();
         }
 
-        private double[] GetOptimumPositions(double[] StartPos, int num_points, double range, CancellationToken ct)
+        private double[] _getOptimumPositions(double[] StartPos, int num_points, double range, CancellationToken ct)
         {
             double[] opt_pos = new double[] { 0, 0, 0 };
 
@@ -548,7 +543,7 @@ namespace QKD_Library
         /// Returns relative middle peak area of combined histogram
         /// </summary>
         /// <returns></returns>
-        private (double val, double err) GetLossFunction()
+        public (double val, double err) GetLossFunction()
         {
             ulong timewindow = 100000;
             long histres = 256;
