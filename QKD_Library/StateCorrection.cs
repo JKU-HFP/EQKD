@@ -60,17 +60,22 @@ namespace QKD_Library
         /// </summary>
         public int NumTagger { get; set; } = 2;
 
-        public Mode OptimizationMode { get; set; } = Mode.Bayesian;
+        public Mode OptimizationMode { get; set; } = Mode.BruteForce;
+
+        /// <summary>
+        /// Get lossfunction from orthogoan, colinear basis or from both
+        /// </summary>
+        public Orientation LossFunctionBasis { get; set; } = Orientation.Orthogonal;
 
         /// <summary>
         /// Found MinPosion and Starting position for Downhill Simplex and Bruteforce
         /// </summary>
-        public double[] MinPos { get; set; } = new double[] { 0, 0, 0 };
+        public double[] MinPos { get; set; } = new double[] { -25.23, 139.24, 7.43 };
 
         /// <summary>
         /// Max Iterations for Downhill Simplex or Bayesian
         /// </summary>
-        public int MaxIterations { get; set; } = 50;
+        public int MaxIterations { get; set; } = 1000;
 
         //Downhill Simplex    
         public double Accurracy_Simplex { get; set; } = 0.3;
@@ -83,7 +88,7 @@ namespace QKD_Library
         public bool DoInitOptimization { get; set; } = false;
         public double Accurracy_BruteForce { get; set; } = 0.5;
         public int InitNumPoints { get; set; } = 6;
-        public double InitRange { get; set; } = 20;
+        public double InitRange { get; set; } = 5;
         
         /// <summary>
         /// Packet size
@@ -100,10 +105,6 @@ namespace QKD_Library
         /// </summary>
         public ulong TimeBin { get; set; } = 1500;
 
-        /// <summary>
-        /// Get lossfunction from orthogoan, colinear basis or from both
-        /// </summary>
-        public Orientation LossFunctionBasis { get; set; } = Orientation.Both;
 
         /// <summary>
         /// Folder for logging state Correction data. No saving if string is empty
@@ -133,6 +134,8 @@ namespace QKD_Library
         private CancellationTokenSource _cts;
 
         private double _minCost = 2;
+        private int _optStepNr = 1;
+
         private double[] _min_pos_tmp = new double[] { 0, 0, 0 };
 
         private string _logFolder = "";
@@ -255,6 +258,7 @@ namespace QKD_Library
             Stopwatch stopwatch = new Stopwatch();
 
             _minCost = 2;
+            _optStepNr = 1;
 
             WriteLog("-------------------------------------");
             _currLogfile = Path.Combine(_logFolder, $"Init_Optimization.txt");
@@ -283,7 +287,7 @@ namespace QKD_Library
 
                 case Mode.BruteForce:
                     //Bisect until Accuracy is reached
-                    if (DoInitOptimization) BruteForce(InitRange / (InitNumPoints - 1), ct);
+                    if (DoInitOptimization) BruteForce(InitRange, ct);
                     else BruteForce(InitRange, ct);
                     break;
             }
@@ -333,7 +337,7 @@ namespace QKD_Library
 
             var loss = GetLossFunction();
 
-            WriteLog($"Position Nr.:({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
+            WriteLog($"Position Nr.{_optStepNr}/{MaxIterations}: ({p[0]:F3},{p[1]:F3},{p[2]:F3}): {loss.val:F4} ({loss.err:F4}, {100 * loss.err / loss.val:F1}%)", true);
 
             //Record minimum value
             if (loss.val < _minCost)
@@ -342,6 +346,7 @@ namespace QKD_Library
                 _min_pos_tmp = new double[] { p[0], p[1], p[2] };
             }
 
+            _optStepNr++;
             return loss.val;
         }
 
@@ -361,9 +366,9 @@ namespace QKD_Library
 
             BayesianOptimizer bopt = new BayesianOptimizer(new IParameterSpec[]
             {
-                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2),
-                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2),
-                new MinMaxParameterSpec(-Math.PI/2,Math.PI/2)
+                new MinMaxParameterSpec(0,180),
+                new MinMaxParameterSpec(0,180),
+                new MinMaxParameterSpec(0,180)
             }, MaxIterations);
 
 
@@ -428,10 +433,8 @@ namespace QKD_Library
             switch (solver_result?.ReasonForExit)
             {
                 case ExitCondition.Converged:
-                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed} at optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})", true);
-
                     MinPos = solver_result.MinimizingPoint.ToArray();
-
+                    WriteLog($"Minimization converged with {solver_result.Iterations} iterations in {stopwatch.Elapsed} at optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})", true);              
                     WriteLog($"Moving to optimum position ({MinPos[0]:F3},{MinPos[1]:F3},{MinPos[2]:F3})");
 
                     //Write new initial perturbations
@@ -548,9 +551,13 @@ namespace QKD_Library
             ulong timewindow = 100000;
             long histres = 256;
 
-            Histogram histOrtho = new Histogram(NumTagger == 2 ? _corrConfig2TaggerOrtho : _corrConfig1TaggerOrtho, timewindow, hist_resolution:histres);
+            List<(byte cA, byte cB)> sumConfig1Tagger = _corrConfig1TaggerOrtho.Concat(_corrConfig1TaggerColin).ToList();
+            List<(byte cA, byte cB)> sumConfig2Tagger = _corrConfig2TaggerOrtho.Concat(_corrConfig2TaggerColin).ToList();
+
+            Histogram histOrtho = new Histogram(NumTagger == 2 ? _corrConfig2TaggerOrtho : _corrConfig1TaggerOrtho, timewindow, hist_resolution: histres);
             Histogram histColin = new Histogram(NumTagger == 2 ? _corrConfig2TaggerColin : _corrConfig1TaggerColin, timewindow, hist_resolution: histres);
-            Kurolator corr = new Kurolator(new List<CorrelationGroup> { histOrtho,histColin }, 100000);
+            Histogram histSum = new Histogram(NumTagger == 2 ? sumConfig2Tagger : sumConfig1Tagger, timewindow, hist_resolution: histres);
+            Kurolator corr = new Kurolator(new List<CorrelationGroup> { histOrtho,histColin,histSum }, 100000);
 
             //Collect timetags
             TimeTags tt1, tt2;
@@ -572,7 +579,7 @@ namespace QKD_Library
             }
             else
             {
-                tt1 = tt2 =_taggerSync.GetSingleTimeTags(NumTagger, packetSize: PacketSize);
+                tt1 = tt2 =_taggerSync.GetSingleTimeTags(NumTagger, packetSize: PacketSize, packetTimeSpan: PacketTimeSpan);
             }
      
             corr.AddCorrelations(tt1,tt2,0);
@@ -583,31 +590,40 @@ namespace QKD_Library
             List<Peak> peaksColin = histColin.GetPeaks(6250, 0.1, true, TimeBin);
             var peakAreaColin= histColin.GetRelativeMiddlePeakArea((long)TimeBin);
 
+            List<Peak> peaksSum = histSum.GetPeaks(6250, 0.1, true, TimeBin);
+            var peakSumColin = histSum.GetRelativeMiddlePeakArea((long)TimeBin);
+
             var loss = (.0, .0);
+            var e = new LossFunctionAquiredEventArgs();
+
             switch (LossFunctionBasis)
             {
                 case Orientation.Orthogonal:
                     loss = peakAreaOrtho;
+                    e.Ortho_HistogramX = histOrtho.Histogram_X;
+                    e.Ortho_HistogramY = histOrtho.Histogram_Y;
+                    e.Ortho_Peaks = peaksOrtho;
                     break;
                 case Orientation.Colinear:
                     loss = (-peakAreaColin.val / 2, peakAreaColin.err);
+                    e.Colin_HistogramX = histColin.Histogram_X;
+                    e.Colin_HistogramY = histColin.Histogram_Y;
+                    e.Colin_Peaks = peaksColin;
                     break;
                 case Orientation.Both:
                     loss = (peakAreaOrtho.val - peakAreaColin.val / 2,
                             Math.Sqrt(Math.Pow(peakAreaOrtho.err, 2) + Math.Pow(peakAreaColin.err / 2, 2)));
+                    e.Ortho_HistogramX = histOrtho.Histogram_X;
+                    e.Ortho_HistogramY = histOrtho.Histogram_Y;
+                    e.Ortho_Peaks = peaksOrtho;
+                    e.Colin_HistogramX = histColin.Histogram_X;
+                    e.Colin_HistogramY = histColin.Histogram_Y;
+                    e.Colin_Peaks = peaksColin;
                     break;
             }
-           
-            OnLossFunctionAquired(new LossFunctionAquiredEventArgs()
-            {
-                Ortho_HistogramX = histOrtho.Histogram_X,
-                Ortho_HistogramY = histOrtho.Histogram_Y,
-                Colin_HistogramX = histColin.Histogram_X,
-                Colin_HistogramY = histColin.Histogram_Y,
-                Ortho_Peaks = peaksOrtho,
-                Colin_Peaks = peaksColin,
-                Loss = loss
-            });
+            e.Loss = loss;
+
+            OnLossFunctionAquired(e);
 
             return loss;
         }

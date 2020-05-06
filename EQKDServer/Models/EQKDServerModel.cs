@@ -117,10 +117,10 @@ namespace EQKDServer.Models
             {
                 DiscriminatorLevel = 200,
                 SyncDivider = 8,
-                SyncDiscriminatorLevel=200,
+                SyncDiscriminatorLevel = 200,
                 MeasurementMode = HydraHarp.Mode.MODE_T2,
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
-                PacketSize = 500000
+                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
             hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
 
@@ -129,11 +129,12 @@ namespace EQKDServer.Models
                 RefChan = EXTERNAL_CLOCK ? 1 : 0,
                 SyncDiscriminatorVoltage = 0.2,
                 RefChanDivider=100,
-                SyncRate=10000000
+                SyncRate=10000000,
+                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
 
-            long testoffs = 512;
-            long OIC_Alice750m = 0;//-3493504;
+            long testoffs = 128;
+            long OIC_Alice750m = -3493504;
             sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
 
 
@@ -315,12 +316,12 @@ namespace EQKDServer.Models
 
             SecQNetServer.ObscureClientTimeTags = true;
 
-            XYStabilizer crStabilizer = new XYStabilizer(null, null, _getAverageCountrate, loggerCallback: _loggerCallback)
-            {
-                SetPoint = _getAverageCountrate(),
-                SPTolerance = 10000,
-                XYStep = 500E-9,
-            };
+            //XYStabilizer crStabilizer = new XYStabilizer(null, null, _getAverageCountrate, loggerCallback: _loggerCallback)
+            //{
+            //    SetPoint = _getAverageCountrate(),
+            //    SPTolerance = 10000,
+            //    XYStep = 500E-9,
+            //};
        
             WriteLog("Starting secure key generation");
 
@@ -328,7 +329,7 @@ namespace EQKDServer.Models
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    if (!crStabilizer.SetpointReached) crStabilizer.Correct();
+                    //if (!crStabilizer.SetpointReached) crStabilizer.Correct();
                     
                     switch (ClientTimeTagger)
                     {
@@ -425,7 +426,7 @@ namespace EQKDServer.Models
 
                 //One Timetagger (SI)
                 case false:
-                    ttA = AliceBobSync.GetSingleTimeTags(0, PacketSize);
+                    ttA = AliceBobSync.GetSingleTimeTags(0, packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
                     ttB = ttA;
 
                     tspan = ttA.time.Last() - ttA.time.First();

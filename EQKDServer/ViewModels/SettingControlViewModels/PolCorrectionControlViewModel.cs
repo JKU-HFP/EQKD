@@ -173,15 +173,17 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
             _correlationChartValuesOrtho.Clear();
-            _correlationChartValuesOrtho.AddRange(new ChartValues<ObservablePoint>(e.Ortho_HistogramX.Zip(e.Ortho_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+
+            if(e.Ortho_HistogramX!=null) _correlationChartValuesOrtho.AddRange(new ChartValues<ObservablePoint>(e.Ortho_HistogramX.Zip(e.Ortho_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             _correlationChartValuesColin.Clear();
-            _correlationChartValuesColin.AddRange(new ChartValues<ObservablePoint>(e.Colin_HistogramX.Zip(e.Colin_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            if(e.Colin_HistogramX!=null) _correlationChartValuesColin.AddRange(new ChartValues<ObservablePoint>(e.Colin_HistogramX.Zip(e.Colin_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrelationSectionsCollection.Clear();
             CorrelationVisualElementsCollection.Clear();
 
-            foreach (Peak peak in e.Ortho_Peaks)
+            var peaks = e.Ortho_Peaks ?? e.Colin_Peaks;
+            foreach (Peak peak in peaks)
             {
                 var axisSection = new AxisSection
                 {

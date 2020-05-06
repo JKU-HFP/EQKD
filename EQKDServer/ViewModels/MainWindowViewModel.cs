@@ -57,8 +57,10 @@ namespace EQKDServer.ViewModels
         private ChannelViewModel _channelViewModel;
 
         private bool _isUpdating = false;
+        private long _firstGlobalOffset = 0;
 
         private object _messageLock = new object();
+        
 
         #region Propterties
         //#################################################
@@ -288,6 +290,7 @@ namespace EQKDServer.ViewModels
         private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
         {
             _correlationChartValues.Clear();
+            _fittingChartValues.Clear();
             _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrChartXMin = e.HistogramX[0] / 1000.0;
@@ -493,8 +496,10 @@ namespace EQKDServer.ViewModels
 
         private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
-            if (_globalOffsetChartValues.Count >= 20) _globalOffsetChartValues.RemoveAt(0);
-            _globalOffsetChartValues.Add(_EQKDServer.AliceBobSync.GlobalClockOffset);
+            if (_globalOffsetChartValues.Count >= 100) _globalOffsetChartValues.RemoveAt(0);
+
+            if (_firstGlobalOffset == 0) _firstGlobalOffset = _EQKDServer.AliceBobSync.GlobalClockOffset;
+            _globalOffsetChartValues.Add(_EQKDServer.AliceBobSync.GlobalClockOffset-_firstGlobalOffset);
 
         }
 

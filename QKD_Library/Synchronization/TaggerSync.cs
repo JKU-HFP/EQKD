@@ -84,23 +84,8 @@ namespace QKD_Library.Synchronization
 
             //Obscured Basis
             (0,oR),(0,oD),(1,oR),(1,oD),(2,oR),(2,oD),(3,oR),(3,oD)
-
-            ////Funky generator
-            //(0,2)
         };
-        //List<(byte cA, byte cB)> _clockChanConfig = new List<(byte cA, byte cB)>
-        //        {
-        //            //Laser
-        //            (2,7)
-
-        //            //Funky generator
-        //            //(0,1)
-        //        };
-
-        private List<(byte cA, byte cB)> _corrChanConfig = new List<(byte cA, byte cB)>
-        {
-            (2,7)
-        };
+   
 
         //#################################################
         //##  E V E N T S 
@@ -146,7 +131,7 @@ namespace QKD_Library.Synchronization
         //#################################################
         //##  M E T H O D S 
         //#################################################
-        public TimeTags GetSingleTimeTags(int TaggerNr, int packetSize = 100000)
+        public TimeTags GetSingleTimeTags(int TaggerNr, int packetSize = 100000, long packetTimeSpan=2000000000000)
         {
             if (TaggerNr < 0 || TaggerNr > 1 || TaggerNr == 1 && _tagger2 == null)
             {
@@ -157,6 +142,7 @@ namespace QKD_Library.Synchronization
             ITimeTagger tagger = TaggerNr == 0 ? _tagger1 : _tagger2;
 
             tagger.PacketSize = packetSize;
+            tagger.PacketTimeSpan = packetTimeSpan;
 
             tagger.ClearTimeTagBuffer();
             tagger.StartCollectingTimeTagsAsync();
@@ -303,15 +289,15 @@ namespace QKD_Library.Synchronization
                 else UserPrompt("Place polarizer in optical path.");     
             }
 
-            //_tagger1.ClearTimeTagBuffer();
-            //_tagger2.ClearTimeTagBuffer();
+            _tagger1.ClearTimeTagBuffer();
+            _tagger2.ClearTimeTagBuffer();
 
             while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
             while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
 
             //Check packet overlap
-            double overlap = Kurolator.GetOverlapRatio(ttA, ttB, (long)ClockSyncTimeWindow, GlobalClockOffset);
-            WriteLog($"Server- and Clienttagger timetag packet overlap: {overlap:0.3f}");
+            double overlap = Kurolator.GetOverlapRatio(ttA, ttB, GlobalClockOffset, (long)ClockSyncTimeWindow);
+            WriteLog($"Server- and Clienttagger timetag packet overlap: {overlap*100:F2}%");
 
             TaggerSyncResults result = new TaggerSyncResults()
             {
@@ -355,9 +341,6 @@ namespace QKD_Library.Synchronization
         private SyncClockResult SyncClocks(TimeTags ttAlice, TimeTags ttBob, bool testMode=false)
         {
             Stopwatch sw = new Stopwatch();
-
-            //Initialize
-            WriteLog("Start synchronizing clocks");
 
             sw.Start();
 
@@ -753,9 +736,6 @@ namespace QKD_Library.Synchronization
 
                         OnSyncCorrComplete(new SyncCorrCompleteEventArgs(res));
                         results = res;
-
-                        //DEBUG DELAY!!!
-                        Thread.Sleep(1000);
 
                         break;
 
