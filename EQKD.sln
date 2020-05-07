@@ -23,13 +23,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions_Library", "..\Pr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TimeTagger_Library_64", "..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_64.csproj", "{93B5B765-F8C5-4538-BC61-CDA4F98CFB28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controller", "Controller\Controller.csproj", "{DF267971-F1B8-40B7-9691-F416DBB83355}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Controller", "Controller\Controller.csproj", "{DF267971-F1B8-40B7-9691-F416DBB83355}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{105b3f84-f045-4ec7-b75c-de9a85f2d3e9}*SharedItemsImports = 13
 		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{721af447-1302-4af1-bc15-b3d878afbbf8}*SharedItemsImports = 13
-		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}*SharedItemsImports = 4
+		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{93b5b765-f8c5-4538-bc61-cda4f98cfb28}*SharedItemsImports = 5
+		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}*SharedItemsImports = 5
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -67,12 +67,12 @@ namespace EQKDServer.Models
 
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
+        public string KeyFolder { get; set; } = "Key";
 
         public QKey AliceKey { get; private set; } = new QKey()
         {
             RectZeroChan =0,
-            DiagZeroChan=2,
-            FileName= "SecureKey_Alice.txt"
+            DiagZeroChan=2
         };
         //Rotation Stages
         public SMC100Controller _smcController { get; private set; }
@@ -141,7 +141,7 @@ namespace EQKDServer.Models
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
 
             ServerTimeTagger = hydra;
-            ClientTimeTagger = sitagger;
+            ClientTimeTagger = nwtagger;
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -199,6 +199,9 @@ namespace EQKDServer.Models
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
 
+
+            //Create key folder
+            if (!Directory.Exists(KeyFolder)) Directory.CreateDirectory(KeyFolder);
         }
 
         private void PolarizerControl(bool status)
@@ -349,8 +352,10 @@ namespace EQKDServer.Models
 
         private void _generateKeysNetworkAsync()
         {
-            string ratesfile = "RawKeyRates.txt";
-            File.WriteAllLines(ratesfile, new string[] { });
+            AliceKey.FileName = Path.Combine(KeyFolder, "Key_Alice");
+            string stats_file = Path.Combine(KeyFolder,"Stats.txt");
+
+            if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t GlobalTimeOffset \t PacketOverlap" });
 
             //Get Key Correlations
             TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
@@ -362,20 +367,18 @@ namespace EQKDServer.Models
             }
                  
             var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
-            //double bias = QKey.GetBias(key_entries.Select(ke => ke.alice_key_value));
-            //var filtered_entries = QKey.RemoveBias(key_entries) ;
-            double bias = QKey.GetBias(key_entries.Select(fe => fe.alice_key_value));
             AliceKey.AddKey(key_entries);
-
-            double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
-            WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s | Initial Bias {bias:F4}");
-            File.AppendAllLines(ratesfile, new string[] { rate.ToString() });
-
             //Register key at Bob                
             TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, key_entries.Select(fe => (long)fe.index_bob).ToArray());
             //Send sifted tags to bob
-            SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);               
-  
+            SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
+
+            //Statistics
+            double overlap = Kurolator.GetOverlapRatio(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+            double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
+            WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s");
+            File.AppendAllLines(stats_file, new string[] { DateTime.Now.ToString()+"\t"+rate.ToString("F2")+"\t"+
+                                                           AliceBobSync.GlobalClockOffset.ToString()+"\t"+overlap.ToString("F2") });
         }
 
         private void _generateKeysLocalAsync()

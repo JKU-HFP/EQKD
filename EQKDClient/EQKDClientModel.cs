@@ -26,7 +26,7 @@ namespace EQKDClient
         {
             RectZeroChan = 5,
             DiagZeroChan = 7,
-            FileName= "SecureKey_Bob.txt"
+            FileName= "Key_Bob.txt"
         };
         public SecQClient secQNetClient { get; private set; }
 
