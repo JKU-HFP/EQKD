@@ -289,9 +289,9 @@ namespace EQKDServer.ViewModels
 
         private void _EQKDServer_KeysGenerated(object sender, KeysGeneratedEventArgs e)
         {
-            _correlationChartValues.Clear();
-            _fittingChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _correlationChartValues?.Clear();
+            _fittingChartValues?.Clear();
+            _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrChartXMin = e.HistogramX[0] / 1000.0;
             CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
@@ -432,14 +432,14 @@ namespace EQKDServer.ViewModels
             // Correlation Chart
             //-------------------------
 
-            CorrelationSectionsCollection.Clear();
-            CorrelationVisualElementsCollection.Clear();
+            CorrelationSectionsCollection?.Clear();
+            CorrelationVisualElementsCollection?.Clear();
 
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
+            _correlationChartValues?.Clear();
+            _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
 
-            _fittingChartValues.Clear();
-            if(e.SyncRes.HistogramYFit!=null) _fittingChartValues.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _fittingChartValues?.Clear();
+            if(e.SyncRes.HistogramYFit!=null) _fittingChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
             CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
@@ -457,7 +457,7 @@ namespace EQKDServer.ViewModels
                         StrokeThickness = 1,
                         StrokeDashArray = new DoubleCollection(new[] { 4d })
                     };
-                    CorrelationSectionsCollection.Add(axisSection);
+                    CorrelationSectionsCollection?.Add(axisSection);
                 }
             }
 
@@ -480,7 +480,7 @@ namespace EQKDServer.ViewModels
                     Y = e.SyncRes.MiddlePeak.Height_Absolute,
                     UIElement = b
                 };
-                CorrelationVisualElementsCollection.Add(ve);
+                CorrelationVisualElementsCollection?.Add(ve);
             }
 
 
@@ -488,18 +488,18 @@ namespace EQKDServer.ViewModels
             // Linear Drift Comp Chart
             //-------------------------
 
-            if (_linearDriftCompChartValues.Count >= 20) _linearDriftCompChartValues.RemoveAt(0);
-            _linearDriftCompChartValues.Add(e.SyncRes.NewLinearDriftCoeff);
+            if (_linearDriftCompChartValues?.Count >= 20) _linearDriftCompChartValues?.RemoveAt(0);
+            _linearDriftCompChartValues?.Add(e.SyncRes.NewLinearDriftCoeff);
 
             _isUpdating = false;
         }
 
         private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
-            if (_globalOffsetChartValues.Count >= 100) _globalOffsetChartValues.RemoveAt(0);
+            if (_globalOffsetChartValues?.Count >= 100) _globalOffsetChartValues?.RemoveAt(0);
 
             if (_firstGlobalOffset == 0) _firstGlobalOffset = _EQKDServer.AliceBobSync.GlobalClockOffset;
-            _globalOffsetChartValues.Add(_EQKDServer.AliceBobSync.GlobalClockOffset-_firstGlobalOffset);
+            _globalOffsetChartValues?.Add(_EQKDServer.AliceBobSync.GlobalClockOffset-_firstGlobalOffset);
 
         }
 
@@ -510,11 +510,11 @@ namespace EQKDServer.ViewModels
 
         private void ShowCorrelationPeaks(long[] HistogramX, long[] HistogramY, List<Peak> peaks)
         {
-            _correlationChartValues.Clear();
-            _correlationChartValues.AddRange(new ChartValues<ObservablePoint>(HistogramX.Zip(HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _correlationChartValues?.Clear();
+            _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(HistogramX.Zip(HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            CorrelationSectionsCollection.Clear();
-            CorrelationVisualElementsCollection.Clear();
+            CorrelationSectionsCollection?.Clear();
+            CorrelationVisualElementsCollection?.Clear();
 
 
             CorrChartXMin = HistogramX[0] / 1000.0;
@@ -530,7 +530,7 @@ namespace EQKDServer.ViewModels
                     StrokeThickness = 1,
                     StrokeDashArray = new DoubleCollection(new[] { 4d })
                 };
-                CorrelationSectionsCollection.Add(axisSection);
+                CorrelationSectionsCollection?.Add(axisSection);
             }
         }
 

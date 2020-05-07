@@ -172,15 +172,15 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private void StateCorr_LossFunctionAquired(object sender, LossFunctionAquiredEventArgs e)
         {
-            _correlationChartValuesOrtho.Clear();
+            _correlationChartValuesOrtho?.Clear();
 
-            if(e.Ortho_HistogramX!=null) _correlationChartValuesOrtho.AddRange(new ChartValues<ObservablePoint>(e.Ortho_HistogramX.Zip(e.Ortho_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            if(e.Ortho_HistogramX!=null) _correlationChartValuesOrtho?.AddRange(new ChartValues<ObservablePoint>(e.Ortho_HistogramX.Zip(e.Ortho_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            _correlationChartValuesColin.Clear();
-            if(e.Colin_HistogramX!=null) _correlationChartValuesColin.AddRange(new ChartValues<ObservablePoint>(e.Colin_HistogramX.Zip(e.Colin_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            _correlationChartValuesColin?.Clear();
+            if(e.Colin_HistogramX!=null) _correlationChartValuesColin?.AddRange(new ChartValues<ObservablePoint>(e.Colin_HistogramX.Zip(e.Colin_HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            CorrelationSectionsCollection.Clear();
-            CorrelationVisualElementsCollection.Clear();
+            CorrelationSectionsCollection?.Clear();
+            CorrelationVisualElementsCollection?.Clear();
 
             var peaks = e.Ortho_Peaks ?? e.Colin_Peaks;
             foreach (Peak peak in peaks)
@@ -193,7 +193,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                     StrokeThickness = 1,
                     StrokeDashArray = new DoubleCollection(new[] { 4d })
                 };
-                CorrelationSectionsCollection.Add(axisSection);
+                CorrelationSectionsCollection?.Add(axisSection);
             }
         }
     }
