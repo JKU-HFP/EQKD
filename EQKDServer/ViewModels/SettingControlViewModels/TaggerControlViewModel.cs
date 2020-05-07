@@ -83,6 +83,18 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private long _packetTimeSpan;
+
+        public long PacketTImeSpan
+        {
+            get { return _packetTimeSpan; }
+            set
+            {
+                _packetTimeSpan = value;
+                OnPropertyChanged("PacketTImeSpan");
+            }
+        }
+
         private double _linearDriftCoefficient;
 
         public double LinearDriftCoefficient
@@ -400,7 +412,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         private void SetSyncParameters()
         {
             _EQKDServer.PacketSize = PacketSize;
-
+            _EQKDServer.PacketTImeSpan = PacketTImeSpan;
+            
             _EQKDServer.AliceBobSync.ClockTimeBin = Resolution;
             _EQKDServer.AliceBobSync.ClockSyncTimeWindow = TimeWindow;
             _EQKDServer.AliceBobSync.LinearDriftCoefficient = LinearDriftCoefficient;

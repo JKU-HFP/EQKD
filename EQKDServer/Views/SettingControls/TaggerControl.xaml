@@ -71,6 +71,10 @@
                 <TextBlock Text="Sync Freq. offset"/>
                 <TextBox Width="100" Text="{Binding SyncFreqOffset}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Packet Time Span"/>
+                <TextBox Width="100" Text="{Binding PacketTImeSpan}"/>
+            </StackPanel>
         </StackPanel>
 
         
