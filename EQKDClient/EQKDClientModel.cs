@@ -41,10 +41,13 @@ namespace EQKDClient
             //TimeTagger = timeTaggerFactory.GetDefaultTimeTagger();
             TimeTagger = new SITimeTagger(_loggerCallback)
             {
-                RefChan = 1
+                RefChan = 1,
+                SyncDiscriminatorVoltage = 0.2,
+                SyncRate = 10000000,
+                RefChanDivider = 100,
+                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            TimeTagger.Connect(new List<long> { 0, 0, -2388, -2388, -6016, -256, -1152, 2176 });
-
+            TimeTagger.Connect(new List<long> { 0, 0, -75648, -78208, 2176, 2176, 1164, 2176});
             //List<int> countrate = TimeTagger.GetCountrate();
             //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
 
