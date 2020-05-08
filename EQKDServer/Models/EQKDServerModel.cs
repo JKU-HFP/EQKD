@@ -319,6 +319,9 @@ namespace EQKDServer.Models
 
             SecQNetServer.ObscureClientTimeTags = true;
 
+            int check_qber_counter = 0;
+            int check_qber_period = 4;
+
             //XYStabilizer crStabilizer = new XYStabilizer(null, null, _getAverageCountrate, loggerCallback: _loggerCallback)
             //{
             //    SetPoint = _getAverageCountrate(),
@@ -337,11 +340,19 @@ namespace EQKDServer.Models
                     switch (ClientTimeTagger)
                     {
                         case NetworkTagger nwtag:
-                            _generateKeysNetworkAsync();
+
+                            if(check_qber_counter>=check_qber_period)
+                            {
+                                _checkQberNetwork();
+                                check_qber_counter = 0;
+                            }
+                            else _generateKeysNetwork();
+
+                            check_qber_counter++;
                             break;
 
                         default:
-                            _generateKeysLocalAsync();
+                            _generateKeysLocal();
                             break;
                     }
                 }
@@ -350,7 +361,26 @@ namespace EQKDServer.Models
             WriteLog("Secure key generation stopped.");
         }
 
-        private void _generateKeysNetworkAsync()
+        private void _checkQberNetwork()
+        {
+            SecQNetServer.ObscureClientTimeTags = false;
+
+            TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
+            if (!syncRes.IsSync)
+            {
+                WriteLog("Not in sync, QBER not checked");
+                return;
+            }
+
+
+            LocalSiftingResult sr = _localKeySifting(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+
+            WriteLog($"Current QBER: {sr.QBER:F2}");
+
+            SecQNetServer.ObscureClientTimeTags = true;
+        }
+
+        private void _generateKeysNetwork()
         {
             AliceKey.FileName = Path.Combine(KeyFolder, "Key_Alice");
             string stats_file = Path.Combine(KeyFolder,"Stats.txt");
@@ -381,33 +411,11 @@ namespace EQKDServer.Models
                                                            AliceBobSync.GlobalClockOffset.ToString()+"\t"+overlap.ToString("F2") });
         }
 
-        private void _generateKeysLocalAsync()
+        private void _generateKeysLocal()
         { 
-            List<byte> newAliceKeys = new List<byte>();
-            List<byte> newBobKeys = new List<byte>();
 
             TimeTags ttA = new TimeTags();
-            TimeTags ttB = new TimeTags();
-
-            List<(byte cA, byte cB)> keyCorrConfig = EXTERNAL_CLOCK
-                ? new List<(byte cA, byte cB)>
-                    {
-                        //Rectilinear
-                        (0,5),(0,6),(1,5),(1,6),
-                        //Diagonal
-                        (2,7),(2,8),(3,7),(3,8)
-                    }
-                : new List<(byte cA, byte cB)>
-                    {
-                        //Rectilinear
-                        (1,5),(1,6),(2,5),(2,6),
-                        //Diagonal
-                        (3,7),(3,8),(4,7),(4,8)
-                    };
-
-            Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
-            Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
-            long tspan = 0;                  
+            TimeTags ttB = new TimeTags();                     
 
             switch(EXTERNAL_CLOCK)
             {
@@ -422,32 +430,58 @@ namespace EQKDServer.Models
                     }
 
                     ttA = syncRes.TimeTags_Alice;
-                    ttB = syncRes.CompTimeTags_Bob;
-
-                    tspan = Math.Max(ttA.time.Last(), ttB.time.Last()) - Math.Min(ttA.time.First(), ttB.time.First());
+                    ttB = syncRes.CompTimeTags_Bob;               
                     break;
 
                 //One Timetagger (SI)
                 case false:
                     ttA = AliceBobSync.GetSingleTimeTags(0, packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
-                    ttB = ttA;
-
-                    tspan = ttA.time.Last() - ttA.time.First();
+                    ttB = ttA;               
                     break;
             }
 
+            LocalSiftingResult sr = _localKeySifting(ttA, ttB, EXTERNAL_CLOCK);
+ 
+            //Write to file
+            File.AppendAllLines("AliceKey.txt", sr.newAliceKeys.Select(k => k.ToString()));
+            File.AppendAllLines("BobKey.txt", sr.newBobKeys.Select(k => k.ToString()));
 
+            File.AppendAllLines("KeyStats.txt", new string[] { DateTime.Now.ToString() + "," + sr.rate.ToString() + "," + sr.QBER.ToString() });
+            WriteLog($"QBER: {sr.QBER:F3} | rate: {sr.rate:F3}");
+
+        }
+
+        private LocalSiftingResult _localKeySifting(TimeTags ttA, TimeTags ttB, bool two_taggers=true)
+        {
+
+            List<byte> newAliceKeys = new List<byte>();
+            List<byte> newBobKeys = new List<byte>();
+
+            List<(byte cA, byte cB)> keyCorrConfig = two_taggers
+            ? new List<(byte cA, byte cB)>
+                {
+                                //Rectilinear
+                                (0,5),(0,6),(1,5),(1,6),
+                                //Diagonal
+                                (2,7),(2,8),(3,7),(3,8)
+                }
+            : new List<(byte cA, byte cB)>
+                {
+                                //Rectilinear
+                                (1,5),(1,6),(2,5),(2,6),
+                                //Diagonal
+                                (3,7),(3,8),(4,7),(4,8)
+                };
+
+            Histogram key_hist = new Histogram(keyCorrConfig, Key_TimeBin);
+            Kurolator key_corr = new Kurolator(new List<CorrelationGroup> { key_hist }, Key_TimeBin);
             key_corr.AddCorrelations(ttA, ttB);
-
-            OnKeysGenerated(new KeysGeneratedEventArgs(key_hist.Histogram_X, key_hist.Histogram_Y));
-
-            //KEY SIFTING            
 
             //Register key at Alice
             foreach (int i in key_hist.CorrelationIndices.Select(i => i.i1))
             {
                 byte act_chan = ttA.chan[i];
-                newAliceKeys.Add(act_chan == (EXTERNAL_CLOCK ? 0:1) || act_chan == (EXTERNAL_CLOCK? 2:3) ? (byte)0 : (byte)1);
+                newAliceKeys.Add(act_chan == (two_taggers ? 0 : 1) || act_chan == (two_taggers ? 2 : 3) ? (byte)0 : (byte)1);
             };
 
             //Register key at Bob
@@ -467,19 +501,22 @@ namespace EQKDServer.Models
                 if (_secureKeys[i] != _bobKeys[i]) sum_err++;
             }
 
-            //Write to file
-            File.AppendAllLines("AliceKey.txt", newAliceKeys.Select(k => k.ToString()));
-            File.AppendAllLines("BobKey.txt", newBobKeys.Select(k => k.ToString()));
-
+            long tspan = Math.Max(ttA.time.Last(), ttB.time.Last()) - Math.Min(ttA.time.First(), ttB.time.First());
             double QBER = (double)sum_err / _secureKeys.Count;
             double rate = key_hist.CorrelationIndices.Count / (tspan / 1E12);
 
-            File.AppendAllLines("KeyStats.txt", new string[] { DateTime.Now.ToString() + "," + rate.ToString() + "," + QBER.ToString() });
 
-            WriteLog($"QBER: {QBER:F3} | rate: {rate:F3}");
+            OnKeysGenerated(new KeysGeneratedEventArgs(key_hist.Histogram_X, key_hist.Histogram_Y));
 
+            return new LocalSiftingResult()
+            {
+                newAliceKeys = newAliceKeys,
+                newBobKeys = newBobKeys,
+                QBER = QBER,
+                rate = rate,
+                tspan = tspan
+            };
         }
-
 
         public void ReadServerConfig()
         {

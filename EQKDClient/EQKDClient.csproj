@@ -82,6 +82,7 @@
       <DependentUpon>ClientMainWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="EQKDClientModel.cs" />
+    <Compile Include="LocalSiftingResult.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="ClientMainWindow.resx">

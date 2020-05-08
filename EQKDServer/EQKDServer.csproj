@@ -111,6 +111,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\LocalSiftingResult.cs" />
     <Compile Include="Models\ChannelDiagnosis.cs" />
     <Compile Include="Models\EQKDServerModel.cs" />
     <Compile Include="Models\Messages\EQKDServerCreatedMessage.cs" />
