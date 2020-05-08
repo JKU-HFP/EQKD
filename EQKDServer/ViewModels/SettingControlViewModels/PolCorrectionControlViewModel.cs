@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using TimeTagger_Library.Correlation;
 using System.ComponentModel;
+using System;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -41,7 +42,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private long _packetTimeSpan;
+        private long _packetTimeSpan = 2000000000000;
 
         public long PacketTImeSpan
         {
@@ -52,6 +53,47 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 OnPropertyChanged("PacketTImeSpan");
             }
         }
+
+        private StateCorrection.Mode _correctionMode = StateCorrection.Mode.DownhillSimplex;
+
+        public StateCorrection.Mode CorrectionMode
+        {
+            get { return _correctionMode; }
+            set { 
+                _correctionMode = value;
+                OnPropertyChanged("CorrectionMode");
+            }
+        }
+
+        public IEnumerable<StateCorrection.Mode> ModeValues
+        {
+            get
+            {
+                return Enum.GetValues(typeof(StateCorrection.Mode)).Cast<StateCorrection.Mode>();
+            }
+        }
+
+        private int _iterations = 100;
+        public int Iterations
+        {
+            get { return _iterations; }
+            set {
+                _iterations = value;
+                OnPropertyChanged("Iterations");
+            }
+        }
+
+        private double _bruteForceRange=5;
+        public double BruteForceRange
+        {
+            get { return _bruteForceRange; }
+            set {
+                _bruteForceRange = value;
+                OnPropertyChanged("BruteForceRange");
+            }
+        }
+
+
 
 
         private ObservableCollection<StagePosModel> _targetPos =
@@ -107,6 +149,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer.FiberCorrection.PacketSize = PacketSize;
                 _EQKDServer.FiberCorrection.PacketTimeSpan = PacketTImeSpan;
+
+                _EQKDServer.FiberCorrection.MinPos = TargetPos.Select(t => t.Value).ToArray();
+                _EQKDServer.FiberCorrection.MaxIterations = Iterations;
+                _EQKDServer.FiberCorrection.OptimizationMode = CorrectionMode;
+
+                _EQKDServer.FiberCorrection.InitRange = BruteForceRange;
+                _EQKDServer.FiberCorrection.Accurracy_BruteForce = BruteForceRange / Iterations;
+
                 _EQKDServer.StartFiberCorrectionAsync().SafeFireAndForget();
             });
             StartKeyGenerationCommand = new RelayCommand<object>((o) =>

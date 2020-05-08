@@ -42,6 +42,8 @@ namespace EQKDServer.Models
         string _serverSettings_XMLFilename = "ServerSettings.xml";
         CancellationTokenSource _cts;
 
+        private double _currQber;
+
         List<byte> _secureKeys = new List<byte>();
         List<byte> _bobKeys = new List<byte>();
         
@@ -233,7 +235,7 @@ namespace EQKDServer.Models
         {
             WriteLog("Start Testing Clocks...");
             SecQNetServer.ObscureClientTimeTags = false;
-            await Task.Run(() => AliceBobSync.TestClock(PacketSize));
+            await Task.Run(() => AliceBobSync.TestClock(PacketSize,PacketTImeSpan));
         }
 
         public async Task StartSynchronizeAsync()
@@ -317,10 +319,8 @@ namespace EQKDServer.Models
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
-            SecQNetServer.ObscureClientTimeTags = true;
-
-            int check_qber_counter = 0;
-            int check_qber_period = 4;
+            int check_qber_period = 10;
+            int check_qber_counter = check_qber_period;
 
             //XYStabilizer crStabilizer = new XYStabilizer(null, null, _getAverageCountrate, loggerCallback: _loggerCallback)
             //{
@@ -328,7 +328,9 @@ namespace EQKDServer.Models
             //    SPTolerance = 10000,
             //    XYStep = 500E-9,
             //};
-       
+
+            SecQNetServer.ObscureClientTimeTags = true;
+
             WriteLog("Starting secure key generation");
 
             await Task.Run(() =>
@@ -343,7 +345,9 @@ namespace EQKDServer.Models
 
                             if(check_qber_counter>=check_qber_period)
                             {
+                                SecQNetServer.ObscureClientTimeTags = false;
                                 _checkQberNetwork();
+                                SecQNetServer.ObscureClientTimeTags = true;
                                 check_qber_counter = 0;
                             }
                             else _generateKeysNetwork();
@@ -352,6 +356,7 @@ namespace EQKDServer.Models
                             break;
 
                         default:
+
                             _generateKeysLocal();
                             break;
                     }
@@ -363,8 +368,7 @@ namespace EQKDServer.Models
 
         private void _checkQberNetwork()
         {
-            SecQNetServer.ObscureClientTimeTags = false;
-
+            
             TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
             if (!syncRes.IsSync)
             {
@@ -372,20 +376,19 @@ namespace EQKDServer.Models
                 return;
             }
 
-
             LocalSiftingResult sr = _localKeySifting(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
 
-            WriteLog($"Current QBER: {sr.QBER:F2}");
+            WriteLog($"Current QBER: {sr.QBER:F4}");
+            _currQber = sr.QBER; 
 
-            SecQNetServer.ObscureClientTimeTags = true;
         }
 
         private void _generateKeysNetwork()
         {
-            AliceKey.FileName = Path.Combine(KeyFolder, "Key_Alice");
+            AliceKey.FileName = Path.Combine(KeyFolder, "Key_Alice.txt");
             string stats_file = Path.Combine(KeyFolder,"Stats.txt");
 
-            if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t GlobalTimeOffset \t PacketOverlap" });
+            if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t Qber \t GlobalTimeOffset \t PacketOverlap" });
 
             //Get Key Correlations
             TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
@@ -407,8 +410,8 @@ namespace EQKDServer.Models
             double overlap = Kurolator.GetOverlapRatio(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
             double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
             WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s");
-            File.AppendAllLines(stats_file, new string[] { DateTime.Now.ToString()+"\t"+rate.ToString("F2")+"\t"+
-                                                           AliceBobSync.GlobalClockOffset.ToString()+"\t"+overlap.ToString("F2") });
+            File.AppendAllLines(stats_file, new string[] { DateTime.Now.ToString()+"\t"+rate.ToString("F2")+"\t"+_currQber.ToString("F4")+"\t"+
+                                                           AliceBobSync.GlobalClockOffset_Relative.ToString()+"\t"+overlap.ToString("F2") });
         }
 
         private void _generateKeysLocal()

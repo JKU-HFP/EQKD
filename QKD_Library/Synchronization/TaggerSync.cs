@@ -33,6 +33,7 @@ namespace QKD_Library.Synchronization
         /// Defined by: time ALICE - time BOB
         /// </summary>
         public long GlobalClockOffset { get; set; } = 0;
+        public long GlobalClockOffset_Relative => GlobalClockOffset - _globalOffsetInit;
         public double SyncFreqOffset { get; set; } = 0;
         public double LinearDriftCoefficient { get; set; } = 0;
         public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
@@ -70,6 +71,7 @@ namespace QKD_Library.Synchronization
         private CorrSyncStatus _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
         private long _coarseTimeOffset = 0;
         private int _numCoarseSearches = 0;
+        private long _globalOffsetInit = 0;
 
 
         private static byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
@@ -157,7 +159,7 @@ namespace QKD_Library.Synchronization
         }
 
 
-        public SyncClockResult TestClock(int packetSize=100000)
+        public SyncClockResult TestClock(int packetSize=100000, long packetTimeSpan = 2000000000000)
         {
             _tagger2.SyncRate = 10000000+SyncFreqOffset;
 
@@ -165,6 +167,8 @@ namespace QKD_Library.Synchronization
             TimeTags ttB = null;
 
             _tagger1.PacketSize = _tagger2.PacketSize = packetSize;
+            _tagger1.PacketTimeSpan = _tagger2.PacketTimeSpan = packetTimeSpan;
+            _tagger1.PackageMode = _tagger2.PackageMode = TimeTaggerBase.PMode.ByEllapsedTime;
 
             //Refresh sync rate
             //_tagger2.SyncRate = _tagger1.SyncRate;
@@ -236,7 +240,7 @@ namespace QKD_Library.Synchronization
 
                 if (startresA.Status == SignalStartStatus.SlopeOK && startresB.Status == SignalStartStatus.SlopeOK)
                 {
-                    GlobalClockOffset = startresA.GlobalStartTime - startresB.GlobalStartTime;
+                    GlobalClockOffset = _globalOffsetInit = startresA.GlobalStartTime - startresB.GlobalStartTime;
                     GlobalOffsetDefined = true;
                 }
                          
@@ -734,6 +738,7 @@ namespace QKD_Library.Synchronization
                             }
                         }
 
+                        _globalOffsetInit = GlobalClockOffset;
                         OnSyncCorrComplete(new SyncCorrCompleteEventArgs(res));
                         results = res;
 

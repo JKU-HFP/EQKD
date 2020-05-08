@@ -20,6 +20,7 @@
             <RowDefinition Height="20"/>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="10" />
             <RowDefinition Height="30" />
             <RowDefinition Height="20" />
@@ -58,7 +59,7 @@
         </StackPanel>
 
 
-        <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Vertical">
+        <StackPanel Grid.Row="2" Grid.Column="2" Margin="10,0,0,20" Orientation="Vertical">
             <TextBlock Text="Current Pos."/>
             <ItemsControl ItemsSource="{Binding CurrPos}">
                 <ItemsControl.ItemTemplate>
@@ -72,13 +73,25 @@
             </ItemsControl>
         </StackPanel>
 
+        <StackPanel Margin="0,0,0,20" Grid.Row="3" Grid.Column="1" Orientation="Vertical">
+            <TextBlock Text="Optimization Mode"/>
+            <ComboBox SelectedItem="{Binding CorrectionMode}" ItemsSource="{Binding ModeValues}"/>
+        </StackPanel>
 
-        <Button Grid.Row="4" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
-        <Button Grid.Row="4" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
-        <Button Grid.Row="4" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+        <StackPanel Margin="10,0,0,20" Grid.Row="3" Grid.Column="2" Orientation="Vertical">
+            <TextBlock Text="Iterations"/>
+            <TextBox Width="100" Text="{Binding Iterations}"/>
+            <TextBlock Text="Bruteforce Range"/>
+            <TextBox Width="100" Text="{Binding BruteForceRange}"/>
+        </StackPanel>
 
 
-        <lvc:CartesianChart   Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Grid.RowSpan="2"  MinWidth="300"
+        <Button Grid.Row="5" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
+        <Button Grid.Row="5" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
+        <Button Grid.Row="5" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+
+
+        <lvc:CartesianChart   Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Grid.RowSpan="3"  MinWidth="300"
                                 DisableAnimations="True"
                                 Series="{Binding CorrelationCollection}"
                                 VisualElements="{Binding CorrelationVisualElementsCollection}">

@@ -83,7 +83,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private long _packetTimeSpan;
+        private long _packetTimeSpan = 2000000000000;
 
         public long PacketTImeSpan
         {

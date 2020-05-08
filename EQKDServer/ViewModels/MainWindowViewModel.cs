@@ -57,7 +57,6 @@ namespace EQKDServer.ViewModels
         private ChannelViewModel _channelViewModel;
 
         private bool _isUpdating = false;
-        private long _firstGlobalOffset = 0;
 
         private object _messageLock = new object();
         
@@ -497,9 +496,8 @@ namespace EQKDServer.ViewModels
         private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
             if (_globalOffsetChartValues?.Count >= 100) _globalOffsetChartValues?.RemoveAt(0);
-
-            if (_firstGlobalOffset == 0) _firstGlobalOffset = _EQKDServer.AliceBobSync.GlobalClockOffset;
-            _globalOffsetChartValues?.Add(_EQKDServer.AliceBobSync.GlobalClockOffset-_firstGlobalOffset);
+            
+            _globalOffsetChartValues?.Add(_EQKDServer.AliceBobSync.GlobalClockOffset_Relative);
 
         }
 
