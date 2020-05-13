@@ -147,6 +147,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             //Map RelayCommmands
             StartCorrectionCommand = new RelayCommand<object>((o) =>
             {
+                _EQKDServer.PacketTImeSpan = PacketTImeSpan;
+
                 _EQKDServer.FiberCorrection.PacketSize = PacketSize;
                 _EQKDServer.FiberCorrection.PacketTimeSpan = PacketTImeSpan;
 

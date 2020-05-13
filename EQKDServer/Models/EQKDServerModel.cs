@@ -136,7 +136,7 @@ namespace EQKDServer.Models
             };
 
             long testoffs = 128;
-            long OIC_Alice750m = -3493504;
+            long OIC_Alice750m = 0;// -3493504;
             sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
 
 
@@ -166,7 +166,7 @@ namespace EQKDServer.Models
 
             //_HWP_C = new KPRM1EStage(_loggerCallback);
             //_HWP_C.Connect("27254524");
-            //_HWP_C.Offset = 58.5+90;
+            //_HWP_C.Offset = 58.5 + 90;
 
             _QWP_A = new KPRM1EStage(_loggerCallback);
             _QWP_A.Connect("27254310");
@@ -184,22 +184,13 @@ namespace EQKDServer.Models
             //_QWP_D.Connect("27254574");
             //_QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
-            ////-19.53,31.97,-40.94
-            //_QWP_A.Move_Absolute(0);
-            //_HWP_B.Move_Absolute(0);
-            //_QWP_B.Move_Absolute(0);
-
-            //_QWP_A.Move_Absolute(-25.5);
-            //_HWP_B.Move_Absolute(24.19);
-            //_QWP_B.Move_Absolute(-50.81);
-
             PolarizerStage = new KBD101Stage(_loggerCallback);
             PolarizerStage.Connect("28250918");
             
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_C, _loggerCallback); //in Alice/Bob Boxes
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //in Alice/Bob Boxes
 
 
             //Create key folder
@@ -298,14 +289,16 @@ namespace EQKDServer.Models
         {
             SecQNetServer.ObscureClientTimeTags = false;
 
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
+            await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            await FiberCorrection.StartOptimizationAsync();
+            //await FiberCorrection.StartOptimizationAsync();
         }
 
 
         public void StopKeyGeneration()
         {
+            AliceBobDensMatrix?.CancelMeasurement();
             _cts?.Cancel();
         }
 

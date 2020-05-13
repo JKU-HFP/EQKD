@@ -95,9 +95,10 @@ namespace QKD_Library.Characterization
         /// Integration time per Basis in seconds
         /// </summary>
         public int PacketSize { get; set; } = 3000000;
-        public uint ChannelA { get; set; } = 0;
-        public uint ChannelB { get; set; } = 1;
-        public long OffsetChanB { get; set; } = 2816; // 34820+7040;
+        public long PacketTimeSpan { get; set; } = 5000000000000;
+        public uint ChannelA { get; set; } = 1;
+        public uint ChannelB { get; set; } = 5;
+        public long OffsetChanB { get; set; } = 0;//2816; // 34820+7040;
 
         /// <summary>
         /// Folder for logging Density matrix Correction data. No saving if string is empty
@@ -251,7 +252,7 @@ namespace QKD_Library.Characterization
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
                 //Get TimeTags
-                TimeTags tt = _sync.GetSingleTimeTags(0, PacketSize);
+                TimeTags tt = _sync.GetSingleTimeTags(0, PacketSize, PacketTimeSpan);
 
                 //Create Histogram
                 basis.CreateHistogram(tt, OffsetChanB);
