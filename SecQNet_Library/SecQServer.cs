@@ -162,12 +162,12 @@ namespace SecQNet
             return false;
         }
 
-        public bool SendSiftedTimeTags(TimeTags tt)
+        public bool SendSiftedTimeTags(TimeTags tt, int currKeyNr)
         {
             try
             {
                 //Request Timetags
-                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ReceiveSiftedTags));
+                SendPacket(new CommandPacket(CommandPacket.SecQNetCommands.ReceiveSiftedTags) { val0 = currKeyNr });
 
                 SendTimeTags(tt);
             }

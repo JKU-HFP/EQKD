@@ -400,7 +400,7 @@ namespace EQKDServer.Models
             //Register key at Bob                
             TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, key_entries.Select(fe => (long)fe.index_bob).ToArray());
             //Send sifted tags to bob
-            SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags);
+            SecQNetServer.SendSiftedTimeTags(bobSiftedTimeTags,_currKeyNr);
 
             //Statistics
             double overlap = Kurolator.GetOverlapRatio(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
