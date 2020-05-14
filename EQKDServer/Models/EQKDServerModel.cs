@@ -43,6 +43,7 @@ namespace EQKDServer.Models
         CancellationTokenSource _cts;
 
         private double _currQber;
+        private int _currKeyNr = 0;
 
         List<byte> _secureKeys = new List<byte>();
         List<byte> _bobKeys = new List<byte>();
@@ -290,9 +291,9 @@ namespace EQKDServer.Models
             SecQNetServer.ObscureClientTimeTags = false;
 
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
-            await AliceBobDensMatrix.MeasurePeakAreasAsync();
+            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
 
-            //await FiberCorrection.StartOptimizationAsync();
+            await FiberCorrection.StartOptimizationAsync();
         }
 
 
@@ -321,6 +322,8 @@ namespace EQKDServer.Models
             //    SPTolerance = 10000,
             //    XYStep = 500E-9,
             //};
+
+            while (File.Exists(Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}.txt"))) _currKeyNr++;
 
             SecQNetServer.ObscureClientTimeTags = true;
 
@@ -378,8 +381,8 @@ namespace EQKDServer.Models
 
         private void _generateKeysNetwork()
         {
-            AliceKey.FileName = Path.Combine(KeyFolder, "Key_Alice.txt");
-            string stats_file = Path.Combine(KeyFolder,"Stats.txt");
+            AliceKey.FileName = Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}.txt");
+            string stats_file = Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}_Stats.txt");
 
             if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t Qber \t GlobalTimeOffset \t PacketOverlap" });
 

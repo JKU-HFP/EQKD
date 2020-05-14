@@ -4,6 +4,7 @@ using SecQNet;
 using SecQNet.SecQNetPackets;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -22,6 +23,8 @@ namespace EQKDClient
         private bool _obscureBasis = false;
 
         //Properties
+        public string KeyFolder { get; set; } = "Key";
+
         public QKey SecureKey { get; private set; } = new QKey()
         {
             RectZeroChan = 5,
@@ -52,6 +55,9 @@ namespace EQKDClient
             //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
 
             secQNetClient = new SecQClient(_loggerCallback);
+
+            //Create key folder
+            if (!Directory.Exists(KeyFolder)) Directory.CreateDirectory(KeyFolder);
         }
 
         public async Task StartListeningAsync()
@@ -117,11 +123,13 @@ namespace EQKDClient
                         case CommandPacket.SecQNetCommands.ReceiveSiftedTags:
 
                             receive_tt = secQNetClient.ReceiveSiftedTimeTags();
+                            int currKeyNr = commandPacket.val0;
 
                             if (receive_tt == null) break;
 
                             List<int> key_indices = receive_tt.time.Select(t => (int)t).ToList();
 
+                            SecureKey.FileName = Path.Combine(KeyFolder, $"Key_Bob_{currKeyNr:D4}.txt");
                             SecureKey.AddKey(orgin_send_tt, key_indices);    
                     
                             break;

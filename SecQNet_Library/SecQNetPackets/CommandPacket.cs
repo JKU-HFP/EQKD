@@ -30,12 +30,12 @@ namespace SecQNet.SecQNetPackets
         private SecQNetCommands _command;
 
         //Optional values
-        //          |   StartCollecting   |    
-        //---------------------------------
-        //  val0    |     Packet Size
-        //  val1    |     Sync Rate
-        //  val2    |   PackageEllapsedTime
-        //  val3    |    Packaging Mode
+        //          |   StartCollecting       |    ReceiveSiftedKey
+        //----------------------------------------------------------
+        //  val0    |     Packet Size         |   current key number
+        //  val1    |     Sync Rate           |
+        //  val2    |   PackageEllapsedTime   |
+        //  val3    |    Packaging Mode       |
 
         public int val0 = 0;
         public double val1 = 0;

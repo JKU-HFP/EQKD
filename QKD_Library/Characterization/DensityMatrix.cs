@@ -211,7 +211,7 @@ namespace QKD_Library.Characterization
 
         public void CancelMeasurement()
         {
-            _cts.Cancel();
+            _cts?.Cancel();
         }
 
         private bool DoMeasureHistograms(CancellationToken ct)
