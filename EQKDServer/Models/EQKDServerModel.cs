@@ -382,7 +382,7 @@ namespace EQKDServer.Models
         private void _generateKeysNetwork()
         {
             AliceKey.FileName = Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}.txt");
-            string stats_file = Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}_Stats.txt");
+            string stats_file = Path.Combine(KeyFolder, $"Stats_{_currKeyNr:D4}.txt");
 
             if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t Qber \t GlobalTimeOffset \t PacketOverlap" });
 
