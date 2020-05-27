@@ -102,9 +102,9 @@
       <Project>{a72e8128-6414-4dad-aa0c-b2f673a90ff8}</Project>
       <Name>Extensions_Library</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_64.csproj">
-      <Project>{93b5b765-f8c5-4538-bc61-cda4f98cfb28}</Project>
-      <Name>TimeTagger_Library_64</Name>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{803c4d5f-67f8-494f-92bb-e69000c7e505}</Project>
+      <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

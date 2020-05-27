@@ -31,6 +31,10 @@ namespace ConsoleTestApp
 
             //Encryption.EncryptAndSaveBMPColor(filein, fileout, keyfile, repeat:true);
 
+            var controller = new PI_GCS2_Stage(s => Console.WriteLine(s));
+            controller.Connect("");
+
+
 
             var contr = new PI_C843_Controller();
             contr.Connect("");

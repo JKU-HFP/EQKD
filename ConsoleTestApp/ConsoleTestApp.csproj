@@ -56,6 +56,10 @@
       <Project>{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}</Project>
       <Name>Stage_Library_x64</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{803c4d5f-67f8-494f-92bb-e69000c7e505}</Project>
+      <Name>TimeTagger_Library_x64</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Controller\Controller.csproj">
       <Project>{df267971-f1b8-40b7-9691-f416dbb83355}</Project>
       <Name>Controller</Name>

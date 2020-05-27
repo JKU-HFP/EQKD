@@ -228,9 +228,9 @@
       <Project>{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}</Project>
       <Name>Stage_Library_x64</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_64.csproj">
-      <Project>{93b5b765-f8c5-4538-bc61-cda4f98cfb28}</Project>
-      <Name>TimeTagger_Library_64</Name>
+    <ProjectReference Include="..\..\ProjectLibrary\TimeTagger_Library_x64\TimeTagger_Library_x64.csproj">
+      <Project>{803c4d5f-67f8-494f-92bb-e69000c7e505}</Project>
+      <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
     <ProjectReference Include="..\Controller\Controller.csproj">
       <Project>{DF267971-F1B8-40B7-9691-F416DBB83355}</Project>
