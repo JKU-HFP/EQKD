@@ -25,7 +25,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
             if (timetagger == null) return;
 
             _timetagger = timetagger;
-            ChanDiag = new ObservableCollection<ChannelDiagnosis> ( Enumerable.Range(0,_timetagger.NumChannels).Select(i => new ChannelDiagnosis(i)) );      
+            ChanDiag = new ObservableCollection<ChannelDiagnosis> ( Enumerable.Range(0,_timetagger.NumChannels).Select(i => new ChannelDiagnosis(i)) );
+            ChanDiag.Add(new ChannelDiagnosis(-1)); //Sum of all
 
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Tick += OnRefreshTimerClick;
@@ -40,7 +41,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
 
             if (tagger_Countrate.Count < ChanDiag.Count) return;
 
-            for (int i = 0; i < ChanDiag.Count; i++) ChanDiag[i].CountRate = tagger_Countrate[i];
+            for (int i = 0; i < ChanDiag.Count-1; i++) ChanDiag[i].CountRate = tagger_Countrate[i];
+            ChanDiag.Last().CountRate = tagger_Countrate.Sum();
         }
 
         //Events
