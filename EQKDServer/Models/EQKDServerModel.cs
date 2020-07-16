@@ -7,6 +7,7 @@ using SecQNet;
 using Stage_Library;
 using Stage_Library.NewPort;
 using Stage_Library.Thorlabs;
+using Stage_Library.PI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -68,6 +69,9 @@ namespace EQKDServer.Models
         public ITimeTagger ServerTimeTagger { get; set; }
         public ITimeTagger ClientTimeTagger { get; set; }
 
+        //Stabilization
+        public XYStabilizer XYStabilizer { get; private set; }
+
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
         public string KeyFolder { get; set; } = "Key";
@@ -86,8 +90,12 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_B { get; private set; }
         public KPRM1EStage _QWP_C { get; private set; }
         public KPRM1EStage _QWP_D { get; private set; }
-        public KBD101Stage PolarizerStage { get; private set; }
 
+        //Linear stages
+        public KBD101Stage PolarizerStage { get; private set; }
+        public PI_C843_Controller XY_Controller { get; private set; }
+        public PI_C843_Stage XStage { get; private set; }
+        public PI_C843_Stage YStage { get; private set; }
 
         //-----------------------------------
         //----  E V E N T S
@@ -185,9 +193,23 @@ namespace EQKDServer.Models
             //_QWP_D.Connect("27254574");
             //_QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
+            //Instanciate and connect linear stages
             PolarizerStage = new KBD101Stage(_loggerCallback);
             PolarizerStage.Connect("28250918");
-            
+
+            XY_Controller = new PI_C843_Controller(_loggerCallback);
+            XY_Controller.Connect("M-505.2DG\nM-505.2DG");
+            XStage = XY_Controller.GetStages()[0];
+            YStage = XY_Controller.GetStages()[1];
+
+
+            //Instanciate XYStabilizer
+            XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
+            {
+                XYStep = 500E-9
+            };
+                
+
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
@@ -222,7 +244,47 @@ namespace EQKDServer.Models
         //--------------------------------------
         //----  M E T H O D S
         //--------------------------------------
-        
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="direction"> 
+        /// 0 ... Y+
+        /// 1 ... Y-
+        /// 2 ... X+
+        /// 3 ... X-
+        /// </param>
+        /// <returns></returns>
+        public Task MoveXYStage(int direction)
+        {
+            double step = 0.2;
+            
+            return Task.Run( () =>
+            {
+                switch (direction)
+                {
+                    case 0:
+                        YStage.Move_Relative(step);
+                        break;
+                    case 1:
+                        YStage.Move_Relative(-step);
+                        break;
+                    case 2:
+                        XStage.Move_Relative(step);
+                        break;
+                    case 3:
+                        XStage.Move_Relative(-step);
+                        break;
+                }
+            });
+        }
+
+        public Task XYStageOptimize()
+        {
+            return XYStabilizer.CorrectAsync();          
+        }
+
+
         public async Task TestClock()
         {
             WriteLog("Start Testing Clocks...");
@@ -297,15 +359,11 @@ namespace EQKDServer.Models
         }
 
 
-        public void StopKeyGeneration()
+        public void Cancel()
         {
             AliceBobDensMatrix?.CancelMeasurement();
             _cts?.Cancel();
-        }
-
-        public double _getAverageCountrate()
-        {
-            return ServerTimeTagger.GetCountrate().Average();
+            XYStabilizer?.Cancel();
         }
 
         public async Task StartKeyGenerationAsync()
@@ -315,13 +373,6 @@ namespace EQKDServer.Models
 
             int check_qber_period = 10;
             int check_qber_counter = check_qber_period;
-
-            //XYStabilizer crStabilizer = new XYStabilizer(null, null, _getAverageCountrate, loggerCallback: _loggerCallback)
-            //{
-            //    SetPoint = _getAverageCountrate(),
-            //    SPTolerance = 10000,
-            //    XYStep = 500E-9,
-            //};
 
             while (File.Exists(Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}.txt"))) _currKeyNr++;
 
@@ -333,7 +384,7 @@ namespace EQKDServer.Models
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    //if (!crStabilizer.SetpointReached) crStabilizer.Correct();
+                    //if (!_XYStabilizer.SetpointReached) _XYStabilizer.Correct();
                     
                     switch (ClientTimeTagger)
                     {

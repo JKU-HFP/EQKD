@@ -119,6 +119,33 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+
+        private double _stage_XPos;
+        public double Stage_XPos
+        {
+            get { return _stage_XPos; }
+            set {
+                _stage_XPos = value;
+                OnPropertyChanged("Stage_XPos");
+            }
+        }
+
+
+        private double _stage_YPos;
+
+        public double Stage_YPos
+        {
+            get { return _stage_YPos; }
+            set {
+                _stage_YPos = value;
+                OnPropertyChanged("Stage_YPos");
+            }
+        }
+
+        public double CountrateSetpoint { get; set; } = 1E5;
+        public double CountrateSetpointTolerance { get; set; } = 1E4;
+
+
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
@@ -141,6 +168,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public RelayCommand<object> CancelCommand { get; private set; }
 
         public RelayCommand<object> GoToPositionCommand { get; private set; }
+
+        public RelayCommand<object> Stage_Yplus_Command { get; private set; }
+        public RelayCommand<object> Stage_Yminus_Command { get; private set; }
+        public RelayCommand<object> Stage_Xplus_Command { get; private set; }
+        public RelayCommand<object> Stage_Xminus_Command { get; private set; }
+        public RelayCommand<object> Stage_Optimize_Command { get; private set; }
+
+        public RelayCommand<object> SetCountrateSP_Command { get; private set; }
 
         public PolCorrectionControlViewModel()
         {
@@ -171,7 +206,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             CancelCommand = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.FiberCorrection.StopCorrection();
-                _EQKDServer.StopKeyGeneration();
+                _EQKDServer.Cancel();
             });
 
             GoToPositionCommand = new RelayCommand<object>((o) =>
@@ -179,6 +214,19 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _EQKDServer.FiberCorrection.GotoPosition(TargetPos.Select(t=>t.Value).ToList()).SafeFireAndForget();
             },
             (o) => !_EQKDServer?.FiberCorrection?.IsActive ?? false);
+
+
+            Stage_Yplus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(0));
+            Stage_Yminus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(1));
+            Stage_Xplus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(2));
+            Stage_Xminus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(3));
+            Stage_Optimize_Command = new RelayCommand<object>((o) => _EQKDServer.XYStageOptimize());
+
+            SetCountrateSP_Command = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.XYStabilizer.SetPoint = CountrateSetpoint;
+                _EQKDServer.XYStabilizer.SPTolerance = CountrateSetpointTolerance;
+            });
 
             //Handle Messages
             Messenger.Default.Register<EQKDServerCreatedMessage>(this, (servermsg) =>
@@ -218,6 +266,9 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _posTimer.Elapsed += (sender, e) =>
             {
                 CurrPos = new ObservableCollection<StagePosModel>(_EQKDServer?.FiberCorrection?.StagePositions.Select(pos => new StagePosModel { Value = pos }).ToList());
+
+                Stage_XPos = _EQKDServer?.XStage?.Position ?? double.NaN;
+                Stage_YPos = _EQKDServer?.YStage?.Position ?? double.NaN;
             };
             _posTimer.Start();
         }

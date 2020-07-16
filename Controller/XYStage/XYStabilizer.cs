@@ -82,7 +82,7 @@ namespace Controller.XYStage
         private volatile bool _bufferRefreshed;
         private CancellationTokenSource _cts = new CancellationTokenSource();
  
-        public XYStabilizer(ILinearStage stageX, ILinearStage stageY, Func<double> getPV, int bufferStepTime=1000, Action<string> loggerCallback=null)
+        public XYStabilizer(ILinearStage stageX, ILinearStage stageY, Func<double> getPV, Action<string> loggerCallback = null, int bufferStepTime=1000)
         {
             this._stageX = stageX;
             this._stageY = stageY;
@@ -139,11 +139,10 @@ namespace Controller.XYStage
                 }
 
                 if (!_bufferRefreshed || !PVBufferFilled) continue;
-                if (!PVBufferFilled) continue;
 
                 if (SetpointReached)
                 {
-                    WriteLog($"Setpoint of {SetPoint} reached. Stabilization complete.");
+                    WriteLog($"Setpoint of {SetPoint} reached. Stabilization complete. Ok?");
                     result.Success = true;
                     break;
                 }
