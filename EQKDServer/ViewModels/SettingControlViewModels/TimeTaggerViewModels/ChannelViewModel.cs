@@ -39,7 +39,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels.TimeTaggerViewModels
         {
             List<int> tagger_Countrate = _timetagger.GetCountrate();
 
-            if (tagger_Countrate.Count < ChanDiag.Count) return;
+            if (tagger_Countrate.Count < ChanDiag.Count-1) return;
 
             for (int i = 0; i < ChanDiag.Count-1; i++) ChanDiag[i].CountRate = tagger_Countrate[i];
             ChanDiag.Last().CountRate = tagger_Countrate.Sum();

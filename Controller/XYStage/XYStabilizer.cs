@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -48,9 +49,9 @@ namespace Controller.XYStage
         public int MaxSteps { get; set; } = 100;
 
         /// <summary>
-        /// Stepsize in m
+        /// Stepsize in mm
         /// </summary>
-        public double StepSize { get; set; } = 500E-9;
+        public double StepSize { get; set; } = 5E-4;
         
         /// <summary>
         /// Process variable buffer is filled -> Value is valid
@@ -60,14 +61,9 @@ namespace Controller.XYStage
         public bool StabilizationActive { get; private set; }
 
         /// <summary>
-        /// Stage Step size in m
-        /// </summary>
-        public double XYStep { get; set; } = 200E-9;
-
-        /// <summary>
         /// Do control steps every <var> timer cycles
         /// </summary>
-        public double StepTimeMultiplier { get; set; } = 2;
+        public double StepTimeMultiplier { get; set; } = 3;
 
         //--------------------------
         // P R I V A T E S
@@ -115,19 +111,24 @@ namespace Controller.XYStage
             StabilizationActive = true;
             _cts = new CancellationTokenSource();
 
-            int currStep = 0;
+            int procStep = 0;
+            int stageStep = 0;
             double startX = _stageX.Position;
             double startY = _stageY.Position;
+            double step_x = 0;
+            double step_y = 0;
 
             void returnToHome()
             {
+                WriteLog($"Returning to start position X ={startX} Y={startY}");
                 _stageX.Move_Absolute(startX);
                 _stageY.Move_Absolute(startY);
             }
 
             int ydist = (int)Math.Ceiling(Math.Sqrt(MaxSteps));
 
-            WriteLog($"Stabilization started at X={startX:e3},Y={startY:e3}, Setpoint={SetPoint}");
+            WriteLog("-------------------------------");
+            WriteLog($"Stabilization started at X={startX:e6},Y={startY:e6}| Setpoint={SetPoint} | Tolerance={SPTolerance} | MaxSteps={MaxSteps} | Stepwidth={StepSize}");
             
             while(true)
             {
@@ -142,31 +143,37 @@ namespace Controller.XYStage
 
                 if (SetpointReached)
                 {
-                    WriteLog($"Setpoint of {SetPoint} reached. Stabilization complete. Ok?");
+                    WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete. Ok?");
                     result.Success = true;
                     break;
                 }
 
-                if (currStep % StepTimeMultiplier !=0) continue;
-                if (currStep>MaxSteps)
+
+                _bufferRefreshed = false;
+                procStep++;
+                if (procStep % StepTimeMultiplier != 0) continue;
+          
+                if (stageStep>MaxSteps)
                 {
-                    WriteLog("Maximum Steps Exceeded. Cancelling stabilization. Returning to start position");
+                    WriteLog($"Maximum Steps of {MaxSteps} Exceeded. Cancelling stabilization.");
                     returnToHome();
                     result.MaxStepsExceeded = true;
                     break;
-                }
+                }      
 
                 //Main Control sequence
-                var (x, y) = StepFunctions.AlternatingZigZagYX(currStep, ydist);
-                double posX = startX + StepSize * x;
-                double posY = startY + StepSize * y;
-                WriteLog($"Current PV: {ProcessValue}. Moving to X={posX:e4}, Y={posY:e4}");
+                var (x, y) = StepFunctions.AlternatingZigZagYX(stageStep, ydist);
+                step_x = StepSize * x;
+                step_y = StepSize * y;
+                double posX = startX + step_x;
+                double posY = startY + step_y;
+                WriteLog($"StepNr: {stageStep}/{MaxSteps} | PV: {ProcessValue} | Moving to Rel: X={step_x:e6} Y={step_y:e6}");
                 _stageX.Move_Absolute(posX);
                 _stageY.Move_Absolute(posY);
 
-
-                currStep++;
                 _bufferRefreshed = false;
+
+                stageStep++;
             }
 
             StabilizationActive = false;
@@ -195,6 +202,7 @@ namespace Controller.XYStage
         private void WriteLog(string message)
         {
             _loggerCallback?.Invoke("XYStabilization: "+message);
+            File.AppendAllLines(@"Log\XYStabilization.txt", new string[] { DateTime.Now.ToString("HH:mm:ss") + ": " + message });
         }
     }
 }

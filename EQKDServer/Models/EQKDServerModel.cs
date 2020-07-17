@@ -31,7 +31,7 @@ namespace EQKDServer.Models
         const double REMOVEDPOS = 40;
         const double INSERTEDPOS = 91.5;
 
-        private bool EXTERNAL_CLOCK = true;
+        private bool EXTERNAL_CLOCK = false;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -48,6 +48,8 @@ namespace EQKDServer.Models
 
         List<byte> _secureKeys = new List<byte>();
         List<byte> _bobKeys = new List<byte>();
+
+        System.Timers.Timer _stabTestTimer = new System.Timers.Timer();
         
         //-----------------------------------
         //----  P R O P E R T I E S
@@ -71,6 +73,7 @@ namespace EQKDServer.Models
 
         //Stabilization
         public XYStabilizer XYStabilizer { get; private set; }
+        public bool AutoStabilization { get; set; }
 
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
@@ -206,7 +209,7 @@ namespace EQKDServer.Models
             //Instanciate XYStabilizer
             XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
             {
-                XYStep = 500E-9
+                StepSize = 5E-4
             };
                 
 
@@ -218,7 +221,13 @@ namespace EQKDServer.Models
 
             //Create key folder
             if (!Directory.Exists(KeyFolder)) Directory.CreateDirectory(KeyFolder);
+
+            //Set and start Stabilization Test Timer
+            _stabTestTimer.Elapsed += _stabTestTimer_Elapsed;
+            _stabTestTimer.Interval = 5000;
+            _stabTestTimer.Start();
         }
+
 
         private void PolarizerControl(bool status)
         {
@@ -257,7 +266,7 @@ namespace EQKDServer.Models
         /// <returns></returns>
         public Task MoveXYStage(int direction)
         {
-            double step = 0.2;
+            double step = 0.2E-3;
             
             return Task.Run( () =>
             {
@@ -284,6 +293,15 @@ namespace EQKDServer.Models
             return XYStabilizer.CorrectAsync();          
         }
 
+        private void _stabTestTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (AutoStabilization &&
+                !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
+                && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 2*(XYStabilizer.SPTolerance)))
+            {
+                XYStabilizer.CorrectAsync();
+            }
+        }
 
         public async Task TestClock()
         {

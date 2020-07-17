@@ -146,6 +146,20 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
         public double CountrateSetpointTolerance { get; set; } = 1E4;
 
 
+        private int _autoStabilization = 0;
+
+        public int AutoStabilization
+        {
+            get { return _autoStabilization; }
+            set {
+                _autoStabilization = value;
+                OnPropertyChanged("AutoStabilization");
+                _EQKDServer.AutoStabilization = value==1;
+            }
+        }
+
+
+
         //Charts
         public SeriesCollection CorrelationCollection { get; set; }
         public SectionsCollection CorrelationSectionsCollection { get; set; }
