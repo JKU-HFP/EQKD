@@ -21,5 +21,42 @@ namespace Controller.XYStage
 
             return (x, y);
         }
+
+        public static (int x, int y) Spiral(int s)
+        {
+            int s_temp = 0;
+            int position_x = 0;
+            int position_y = 0;
+            int n = 0;
+
+            while(true)
+            {
+                n += 1;
+                int step = (int)Math.Pow(-1, n - 1) * n;
+                int step_x = 1;
+                int step_y = 1;
+
+                int i = 1;
+                while(i<=Math.Abs(step))
+                {
+                    while(s_temp<s && step_y<=Math.Abs(step))
+                    {
+                        position_y += Math.Sign(step);
+                        s_temp += 1;
+                        step_y += 1;
+                    }
+                    while(s_temp<s && step_x<=Math.Abs(step))
+                    {
+                        position_x += Math.Sign(step);
+                        s_temp += 1;
+                        step_x += 1;
+                    }
+                    if(s_temp==s) break;
+                }
+
+                return (position_x, position_y);
+            }
+
+        }
     }
 }
