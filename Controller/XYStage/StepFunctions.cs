@@ -51,12 +51,11 @@ namespace Controller.XYStage
                         s_temp += 1;
                         step_x += 1;
                     }
-                    if(s_temp==s) break;
+                    i += 1;                
                 }
-
-                return (position_x, position_y);
+                if (s_temp == s) break;
             }
-
+            return (position_x, position_y);
         }
     }
 }
