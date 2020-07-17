@@ -123,9 +123,7 @@ namespace Controller.XYStage
                 WriteLog($"Returning to start position X ={startX} Y={startY}");
                 _stageX.Move_Absolute(startX);
                 _stageY.Move_Absolute(startY);
-            }
-
-            int ydist = (int)Math.Ceiling(Math.Sqrt(MaxSteps));
+            }     
 
             WriteLog("-------------------------------");
             WriteLog($"Stabilization started at X={startX:e6},Y={startY:e6}| Setpoint={SetPoint} | Tolerance={SPTolerance} | MaxSteps={MaxSteps} | Stepwidth={StepSize}");
@@ -162,7 +160,7 @@ namespace Controller.XYStage
                 }      
 
                 //Main Control sequence
-                var (x, y) = StepFunctions.AlternatingZigZagYX(stageStep, ydist);
+                var (x, y) = StepFunctions.Spiral(stageStep);
                 step_x = StepSize * x;
                 step_y = StepSize * y;
                 double posX = startX + step_x;
