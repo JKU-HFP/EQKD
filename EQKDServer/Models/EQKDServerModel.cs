@@ -28,10 +28,10 @@ namespace EQKDServer.Models
         //---- C O N S T A N T S 
         //-----------------------------------
 
-        const double REMOVEDPOS = 40;
-        const double INSERTEDPOS = 91.5;
+        const double REMOVEDPOS = 50;
+        const double INSERTEDPOS = 98;
 
-        private bool EXTERNAL_CLOCK = false;
+        private bool EXTERNAL_CLOCK = true;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -214,7 +214,7 @@ namespace EQKDServer.Models
                 
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
-            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_B }, _loggerCallback);
+            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
             AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //in Alice/Bob Boxes
 
@@ -402,8 +402,14 @@ namespace EQKDServer.Models
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    //if (!_XYStabilizer.SetpointReached) _XYStabilizer.Correct();
-                    
+
+                    if (AutoStabilization &&
+                       !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
+                       && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 4 * (XYStabilizer.SPTolerance)))
+                    {
+                        XYStabilizer.Correct();
+                    }
+
                     switch (ClientTimeTagger)
                     {
                         case NetworkTagger nwtag:
