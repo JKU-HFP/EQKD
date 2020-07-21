@@ -115,8 +115,13 @@ namespace Controller.XYStage
             int stageStep = 0;
             double startX = _stageX.Position;
             double startY = _stageY.Position;
+            (int x, int y) coords = (0, 0);
             double step_x = 0;
             double step_y = 0;
+
+            (int x, int y) max_coords = (0, 0);
+            double max_PV = ProcessValue;
+            bool newMaxFound = false;
 
             void returnToHome()
             {
@@ -139,6 +144,13 @@ namespace Controller.XYStage
 
                 if (!_bufferRefreshed || !PVBufferFilled) continue;
 
+                if(ProcessValue>max_PV)
+                {
+                    newMaxFound = true;
+                    max_coords = coords;
+                    max_PV = ProcessValue;
+                }
+
                 if (SetpointReached)
                 {
                     WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete. Ok?");
@@ -154,15 +166,24 @@ namespace Controller.XYStage
                 if (stageStep>MaxSteps)
                 {
                     WriteLog($"Maximum Steps of {MaxSteps} Exceeded. Cancelling stabilization.");
-                    returnToHome();
+                    if(newMaxFound)
+                    {
+                        step_x = StepSize * max_coords.x;
+                        step_y = StepSize * max_coords.y;
+                        WriteLog($"Moving to new maximum of {max_PV} at Rel: X={step_x:e6} Y={step_y:e6}");
+                        _stageX.Move_Absolute(startX+step_x);
+                        _stageY.Move_Absolute(startY+step_y);
+                    }
+                    else returnToHome();
+
                     result.MaxStepsExceeded = true;
                     break;
                 }      
 
                 //Main Control sequence
-                var (x, y) = StepFunctions.Spiral(stageStep);
-                step_x = StepSize * x;
-                step_y = StepSize * y;
+                coords = StepFunctions.Spiral(stageStep);
+                step_x = StepSize * coords.x;
+                step_y = StepSize * coords.y;
                 double posX = startX + step_x;
                 double posY = startY + step_y;
                 WriteLog($"StepNr: {stageStep}/{MaxSteps} | PV: {ProcessValue} | Moving to Rel: X={step_x:e6} Y={step_y:e6}");
