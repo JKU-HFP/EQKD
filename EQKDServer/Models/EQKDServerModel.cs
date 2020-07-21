@@ -295,12 +295,12 @@ namespace EQKDServer.Models
 
         private void _stabTestTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (AutoStabilization &&
-                !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
-                && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 2*(XYStabilizer.SPTolerance)))
-            {
-                XYStabilizer.CorrectAsync();
-            }
+            //if (AutoStabilization &&
+            //    !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
+            //    && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 2*(XYStabilizer.SPTolerance)))
+            //{
+            //    XYStabilizer.CorrectAsync();
+            //}
         }
 
         public async Task TestClock()

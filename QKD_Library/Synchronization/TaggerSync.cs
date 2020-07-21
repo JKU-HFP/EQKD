@@ -569,7 +569,7 @@ namespace QKD_Library.Synchronization
         {
             SyncCorrResults results = new SyncCorrResults();
 
-            double coarseCorrelationSignificance = 0.4;
+            double coarseCorrelationSignificance = 0.7;
             int maxNumCoarseSearches = 12;
 
             ulong FineTimeWindow = 10 * ExcitationPeriod;

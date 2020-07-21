@@ -37,9 +37,9 @@
     
         <StackPanel Margin="0,0,0,20" Grid.Row="1" Grid.Column="1"  Orientation="Vertical">
             <TextBlock Text="Packet Size"/>
-            <TextBox Width="100" Text="{Binding Stage_XPos, StringFormat=F2}"/>
+            <TextBox Width="100" Text="{Binding PacketSize}"/>
             <TextBlock Text="Packet Time Span"/>
-            <TextBox Width="100" Text="{Binding Stage_YPos ,StringFormat=F2}"/>
+            <TextBox Width="100" Text="{Binding PacketTImeSpan}"/>
         </StackPanel>
 
 
@@ -76,11 +76,11 @@
         
             <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal">
                 <TextBlock Text="X" Margin="0,0,10,0"/>
-                <TextBox Text="{Binding Stage_XPos}"/>
+                <TextBox Text="{Binding Stage_XPos, StringFormat=F6}"/>
             </StackPanel>
             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal">
                 <TextBlock Text="Y" Margin="0,0,10,0"/>
-                <TextBox Text="{Binding Stage_YPos}"/>
+                <TextBox Text="{Binding Stage_YPos, StringFormat=F6}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
                 <TextBlock Text="Countrate SP"/>
