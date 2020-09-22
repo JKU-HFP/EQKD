@@ -16,6 +16,8 @@ namespace Controller.XYStage
         // P R O P E R T I E S
         //--------------------------
 
+        public string Logfile { get; set; } = @"Log\XYStabilization.txt";
+
         /// <summary>
         /// Target Setpoint
         /// </summary>
@@ -68,6 +70,8 @@ namespace Controller.XYStage
         //--------------------------
         // P R I V A T E S
         //--------------------------
+        private bool _writeLog => string.IsNullOrEmpty(Logfile);
+
         private readonly ILinearStage _stageX;
         private readonly ILinearStage _stageY;
         private readonly Func<double> _getPV;
@@ -77,8 +81,8 @@ namespace Controller.XYStage
         private readonly Queue<double> _PVbuffer = new Queue<double>();
         private volatile bool _bufferRefreshed;
         private CancellationTokenSource _cts = new CancellationTokenSource();
- 
-        public XYStabilizer(ILinearStage stageX, ILinearStage stageY, Func<double> getPV, Action<string> loggerCallback = null, int bufferStepTime=1000)
+
+        public XYStabilizer(ILinearStage stageX, ILinearStage stageY, Func<double> getPV, Action<string> loggerCallback = null, int bufferStepTime = 1000)
         {
             this._stageX = stageX;
             this._stageY = stageY;
@@ -90,6 +94,8 @@ namespace Controller.XYStage
             _PVtimer.Elapsed += _pvTimer_Elapsed;
             _PVtimer.Interval = BufferStepTime;
             _PVtimer.Start();
+
+            if (_writeLog) File.WriteAllLines(Logfile, new string[] { "Time,success,pV,posX,posY"});
         }
 
         
@@ -118,6 +124,8 @@ namespace Controller.XYStage
             (int x, int y) coords = (0, 0);
             double step_x = 0;
             double step_y = 0;
+            double posX = startX;
+            double posY = startY;
 
             (int x, int y) max_coords = (0, 0);
             double max_PV = ProcessValue;
@@ -154,6 +162,7 @@ namespace Controller.XYStage
                 if (SetpointReached)
                 {
                     WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete. Ok?");
+                    if (_writeLog) File.AppendAllLines(Logfile, new string[] { $"{DateTime.Now.ToString("yyyy:MM:dd:HH:mm:ss")},1,{stageStep},{ProcessValue},{posX},{posY}" });
                     result.Success = true;
                     break;
                 }
@@ -170,9 +179,12 @@ namespace Controller.XYStage
                     {
                         step_x = StepSize * max_coords.x;
                         step_y = StepSize * max_coords.y;
+                        posX = startX + step_x;
+                        posY = startY + step_y;
                         WriteLog($"Moving to new maximum of {max_PV} at Rel: X={step_x:e6} Y={step_y:e6}");
-                        _stageX.Move_Absolute(startX+step_x);
-                        _stageY.Move_Absolute(startY+step_y);
+                        if (_writeLog) File.AppendAllLines(Logfile, new string[] { $"{DateTime.Now.ToString("yyyy:MM:dd:HH:mm:ss")},0,{stageStep},{max_PV},{posX},{posY}" });
+                        _stageX.Move_Absolute(posX);
+                        _stageY.Move_Absolute(posY);
                     }
                     else returnToHome();
 
@@ -184,8 +196,8 @@ namespace Controller.XYStage
                 coords = StepFunctions.Spiral(stageStep);
                 step_x = StepSize * coords.x;
                 step_y = StepSize * coords.y;
-                double posX = startX + step_x;
-                double posY = startY + step_y;
+                posX = startX + step_x;
+                posY = startY + step_y;
                 WriteLog($"StepNr: {stageStep}/{MaxSteps} | PV: {ProcessValue} | Moving to Rel: X={step_x:e6} Y={step_y:e6}");
                 _stageX.Move_Absolute(posX);
                 _stageY.Move_Absolute(posY);
@@ -220,8 +232,7 @@ namespace Controller.XYStage
 
         private void WriteLog(string message)
         {
-            _loggerCallback?.Invoke("XYStabilization: "+message);
-            File.AppendAllLines(@"Log\XYStabilization.txt", new string[] { DateTime.Now.ToString("HH:mm:ss") + ": " + message });
+            _loggerCallback?.Invoke("XYStabilization: "+message);    
         }
     }
 }
