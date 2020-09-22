@@ -22,7 +22,7 @@ namespace Controller.XYStage
             return (x, y);
         }
 
-        public static (int x, int y) Spiral(int s)
+        public static (int x, int y) AndreasSpiral(int s)
         {
             int s_temp = 0;
             int position_x = 0;

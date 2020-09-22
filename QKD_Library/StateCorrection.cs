@@ -426,6 +426,10 @@ namespace QKD_Library
             {
 
             }
+            catch(MaximumIterationsException)
+            {
+
+            }
             
 
             stopwatch.Stop();

@@ -28,7 +28,7 @@ namespace Controller.XYStage
         /// </summary>
         public double SPTolerance { get; set; }
 
-        public bool SetpointReached => Math.Abs(ProcessValue - SetPoint) < SPTolerance;
+        public bool SetpointReached => SetPoint - ProcessValue < SPTolerance;
 
         /// <summary>
         /// Current Process Value
@@ -48,7 +48,7 @@ namespace Controller.XYStage
         /// <summary>
         /// Maximum number of steps searched
         /// </summary>
-        public int MaxSteps { get; set; } = 100;
+        public int MaxSteps { get; set; } = 50;
 
         /// <summary>
         /// Stepsize in mm
@@ -193,7 +193,7 @@ namespace Controller.XYStage
                 }      
 
                 //Main Control sequence
-                coords = StepFunctions.Spiral(stageStep);
+                coords = StepFunctions.AndreasSpiral(stageStep);
                 step_x = StepSize * coords.x;
                 step_y = StepSize * coords.y;
                 posX = startX + step_x;
