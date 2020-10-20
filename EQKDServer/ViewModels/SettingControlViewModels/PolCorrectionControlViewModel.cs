@@ -179,6 +179,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         public RelayCommand<object> StartKeyGenerationCommand { get; private set; }
 
+        public RelayCommand<object> StartDensityMatrixCommand { get; private set; }
         public RelayCommand<object> CancelCommand { get; private set; }
 
         public RelayCommand<object> GoToPositionCommand { get; private set; }
@@ -214,7 +215,14 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer.PacketSize = PacketSize;
                 _EQKDServer.PacketTImeSpan = PacketTImeSpan;
-                 _EQKDServer.StartKeyGenerationAsync().SafeFireAndForget();
+                _EQKDServer.StartKeyGenerationAsync().SafeFireAndForget();
+            });
+
+            StartDensityMatrixCommand = new RelayCommand<object>((o) =>
+            {
+                _EQKDServer.PacketSize = PacketSize;
+                _EQKDServer.PacketTImeSpan = PacketTImeSpan;
+                _EQKDServer.StartDensityMatrixAsync().SafeFireAndForget();
             });
 
             CancelCommand = new RelayCommand<object>((o) =>
@@ -239,7 +247,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             SetCountrateSP_Command = new RelayCommand<object>((o) =>
             {
                 _EQKDServer.XYStabilizer.SetPoint = CountrateSetpoint;
-                _EQKDServer.XYStabilizer.SPTolerance = CountrateSetpointTolerance;
+                _EQKDServer.XYStabilizer.TriggerTolerance = CountrateSetpointTolerance;
             });
 
             //Handle Messages

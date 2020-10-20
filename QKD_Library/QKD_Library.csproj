@@ -116,6 +116,10 @@
       <Project>{803c4d5f-67f8-494f-92bb-e69000c7e505}</Project>
       <Name>TimeTagger_Library_x64</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Controller\Controller.csproj">
+      <Project>{DF267971-F1B8-40B7-9691-F416DBB83355}</Project>
+      <Name>Controller</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SecQNet_Library\SecQNet_Library.csproj">
       <Project>{5c6e66f9-dacb-42ce-b420-3e708e28faaf}</Project>
       <Name>SecQNet_Library</Name>

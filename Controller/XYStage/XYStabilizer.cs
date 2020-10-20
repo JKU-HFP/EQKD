@@ -16,19 +16,26 @@ namespace Controller.XYStage
         // P R O P E R T I E S
         //--------------------------
 
-        public string Logfile { get; set; } = @"Log\XYStabilization.txt";
+        public string Logfile { get; set; } = "XYStabilization.txt";
 
         /// <summary>
         /// Target Setpoint
         /// </summary>
         public double SetPoint { get; set; }
-        
-        /// <summary>
-        /// Absolute Setpoint tolerance
-        /// </summary>
-        public double SPTolerance { get; set; }
 
-        public bool SetpointReached => SetPoint - ProcessValue < SPTolerance;
+        /// <summary>
+        /// Setpoint tolerance in fraction of Setpoint
+        /// </summary>
+        public double SPTolerance { get; set; } = 0.9;
+
+        public bool IsBelowSPTolerance => !((SetPoint - ProcessValue) < (SetPoint * SPTolerance));
+
+        /// <summary>
+        /// Tolerance before triggering Correction in fraction of Setpoint
+        /// </summary>
+        public double TriggerTolerance { get; set; } = 0.8;
+
+        public bool IsBelowTriggerPoint => !((SetPoint - ProcessValue) < (SetPoint * TriggerTolerance));
 
         /// <summary>
         /// Current Process Value
@@ -159,7 +166,7 @@ namespace Controller.XYStage
                     max_PV = ProcessValue;
                 }
 
-                if (SetpointReached)
+                if (!IsBelowSPTolerance)
                 {
                     WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete. Ok?");
                     if (_writeLog) File.AppendAllLines(Logfile, new string[] { $"{DateTime.Now.ToString("yyyy:MM:dd:HH:mm:ss")},1,{stageStep},{ProcessValue},{posX},{posY}" });

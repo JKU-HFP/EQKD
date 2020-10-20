@@ -216,7 +216,7 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback); //in Alice/Bob Boxes
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_C, _HWP_C, _QWP_D, _loggerCallback, XYStabilizer); //in Alice/Bob Boxes
 
 
             //Create key folder
@@ -376,6 +376,14 @@ namespace EQKDServer.Models
             await FiberCorrection.StartOptimizationAsync();
         }
 
+        public Task StartDensityMatrixAsync()
+        {
+            //Read generated basis configuration
+            var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
+            List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
+
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: bases);
+        }
 
         public void Cancel()
         {
@@ -405,7 +413,7 @@ namespace EQKDServer.Models
 
                     if (AutoStabilization &&
                        !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
-                       && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 4 * (XYStabilizer.SPTolerance)))
+                       && XYStabilizer.IsBelowTriggerPoint)
                     {
                         XYStabilizer.Correct();
                     }

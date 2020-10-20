@@ -12,6 +12,7 @@ using System.Diagnostics;
 using Extensions_Library;
 using System.IO;
 using QKD_Library.Synchronization;
+using Controller.XYStage;
 
 namespace QKD_Library.Characterization
 {
@@ -117,6 +118,7 @@ namespace QKD_Library.Characterization
         private CancellationTokenSource _cts;
         private List<DMBasis> _basisMeasurements;
         private Action<string> _loggerCallback;
+        private XYStabilizer _xyStabilizer;
 
         private string _logFolder = "";
         private string _currLogfile = "";
@@ -141,7 +143,7 @@ namespace QKD_Library.Characterization
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public DensityMatrix(TaggerSync sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback)
+        public DensityMatrix(TaggerSync sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback=null, XYStabilizer xystab=null)
         {
             _sync = sync;
 
@@ -151,13 +153,14 @@ namespace QKD_Library.Characterization
             _QWP_B = QWP_B;
 
             _loggerCallback = loggerCallback;
+            _xyStabilizer = xystab;
         }
 
 
         //#################################################
         //##  M E T H O D S
         //#################################################
-        public async Task MeasurePeakAreasAsync()
+        public async Task MeasurePeakAreasAsync(List<double[]> userBasisConfigs=null)
         {
             if(_HWP_A == null || _HWP_B==null || _QWP_A == null | _QWP_B==null | !_HWP_A.StageReady || !_HWP_B.StageReady || !_QWP_A.StageReady || !_QWP_B.StageReady)
             {
@@ -166,7 +169,7 @@ namespace QKD_Library.Characterization
             }
 
             //Use standard basis if no other given
-            List<double[]> basisConfigs = StdBasis36;
+            List<double[]> basisConfigs = userBasisConfigs ?? StdBasis36;
 
             if (!basisConfigs.TrueForAll(p => p.Count() == 4))
             {
@@ -222,9 +225,17 @@ namespace QKD_Library.Characterization
             //measure
             foreach (var basis in _basisMeasurements)
             {
+
+                //Stabilize XY stage if present
+                if(_xyStabilizer!=null)
+                {
+                    if (_xyStabilizer.IsBelowTriggerPoint) _xyStabilizer.Correct();
+                }
+
+
                 if (ct.IsCancellationRequested) return false;
 
-                WriteLog("Collecting coincidences in configuration Nr." + index + $"({Std36Basis_Names[index - 1]})" + ": " + basis.BasisConfig[0] + "," + basis.BasisConfig[1] + "," + basis.BasisConfig[2] + "," + basis.BasisConfig[3]);
+                WriteLog($"Collecting coincidences in configuration Nr.{index}: {basis.BasisConfig[0]}, {basis.BasisConfig[1]}, {basis.BasisConfig[2]}, {basis.BasisConfig[3]}");
                 stopwatch.Restart();
 
                 //Asynchronously Rotate stages to position

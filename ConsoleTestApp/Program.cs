@@ -20,39 +20,43 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
-            ITimeTagger hydra = new HydraHarp((s) => Console.WriteLine(s))
-            {
-                DiscriminatorLevel = 200,
-                SyncDivider = 8,
-                SyncDiscriminatorLevel = 200,
-                MeasurementMode = HydraHarp.Mode.MODE_T2,
-                ClockMode = HydraHarp.Clock.Internal,
-                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime,
-                PacketTimeSpan=1000000000,
-                BufferSize=10000000
-            };
-            hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
 
-            Task.Run(() =>
-            { 
-                while(true)
-                {
-                    hydra.StartCollectingTimeTagsAsync();
-                    Thread.Sleep(2000);
-                    hydra.StopCollectingTimeTags();
-                    Thread.Sleep(1000);
-                    Console.WriteLine($"Num: {hydra.GetAllTimeTags().Count}");
-                    hydra.ClearTimeTagBuffer();
-                }
-            });
+            var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
+            List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
-            while(true)
-            {
-                Console.WriteLine("Press key to get countrate");
-                Console.ReadKey();
-                List<int> rate = hydra.GetCountrate();
-                Console.WriteLine(string.Join(",",rate.Select(r => r.ToString()).ToList()));
-            }
+            //ITimeTagger hydra = new HydraHarp((s) => Console.WriteLine(s))
+            //{
+            //    DiscriminatorLevel = 200,
+            //    SyncDivider = 8,
+            //    SyncDiscriminatorLevel = 200,
+            //    MeasurementMode = HydraHarp.Mode.MODE_T2,
+            //    ClockMode = HydraHarp.Clock.Internal,
+            //    PackageMode = TimeTaggerBase.PMode.ByEllapsedTime,
+            //    PacketTimeSpan=1000000000,
+            //    BufferSize=10000000
+            //};
+            //hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
+
+            //Task.Run(() =>
+            //{ 
+            //    while(true)
+            //    {
+            //        hydra.StartCollectingTimeTagsAsync();
+            //        Thread.Sleep(2000);
+            //        hydra.StopCollectingTimeTags();
+            //        Thread.Sleep(1000);
+            //        Console.WriteLine($"Num: {hydra.GetAllTimeTags().Count}");
+            //        hydra.ClearTimeTagBuffer();
+            //    }
+            //});
+
+            //while(true)
+            //{
+            //    Console.WriteLine("Press key to get countrate");
+            //    Console.ReadKey();
+            //    List<int> rate = hydra.GetCountrate();
+            //    Console.WriteLine(string.Join(",",rate.Select(r => r.ToString()).ToList()));
+            //}
             
             //int s = 0;
             //while(true)

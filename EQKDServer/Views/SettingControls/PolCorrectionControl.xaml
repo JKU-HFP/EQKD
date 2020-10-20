@@ -141,9 +141,12 @@
         </StackPanel>
 
 
-        <Button Grid.Row="5" Grid.Column="1" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
-        <Button Grid.Row="5" Grid.Column="2" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
-        <Button Grid.Row="5" Grid.Column="3" Content="Cancel" Command="{Binding CancelCommand}" />
+        <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal">
+            <Button Width="100" Content="Start Correction" Command="{Binding StartCorrectionCommand}" />
+            <Button Width="100" Content="Generate Keys" Command="{Binding StartKeyGenerationCommand}" />
+            <Button Width="100" Content="Cancel" Command="{Binding CancelCommand}" />
+        </StackPanel>
+        <Button  Grid.Row="5" Grid.Column="4" HorizontalAlignment="Left" Width="100" Content="Density Matrix" Command="{Binding StartDensityMatrixCommand}" />
 
 
         <lvc:CartesianChart   Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="1" Grid.RowSpan="3"  MinWidth="300"
