@@ -75,6 +75,25 @@ namespace Controller.XYStage
         public double StepTimeMultiplier { get; set; } = 3;
 
         //--------------------------
+        // E V E N T S
+        //--------------------------
+
+        public event EventHandler<BufferTimerEventArgs> BufferTimerEllapsed;
+
+        private void _onBufferTimerEllapsed(BufferTimerEventArgs e)
+        {
+            BufferTimerEllapsed?.Invoke(this, e);
+        }
+
+        public event EventHandler<StabilizerResult> StabilizationCompleted;
+
+        private void _onStabilizationCompleted(StabilizerResult e)
+        {
+            StabilizationCompleted?.Invoke(this, e);
+        }
+
+
+        //--------------------------
         // P R I V A T E S
         //--------------------------
         private bool _writeLog => string.IsNullOrEmpty(Logfile);
@@ -108,7 +127,7 @@ namespace Controller.XYStage
         
         public Task<StabilizerResult> CorrectAsync()
         {
-            return Task.Run(() => Correct());
+            return Task.Run(Correct);
         }
 
         public StabilizerResult Correct()
@@ -215,6 +234,7 @@ namespace Controller.XYStage
             }
 
             StabilizationActive = false;
+            _onStabilizationCompleted(result);
             return result;
 
         }
@@ -235,11 +255,18 @@ namespace Controller.XYStage
 
             PVBufferFilled = _PVbuffer.Count >= NumBuffer;
             _bufferRefreshed = true;
+
+            _onBufferTimerEllapsed(new BufferTimerEventArgs());
         }
 
         private void WriteLog(string message)
         {
             _loggerCallback?.Invoke("XYStabilization: "+message);    
         }
+    }
+
+    public class BufferTimerEventArgs: EventArgs
+    {
+
     }
 }
