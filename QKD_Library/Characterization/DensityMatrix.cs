@@ -23,7 +23,7 @@ namespace QKD_Library.Characterization
         //#################################################
 
         //Standard-Basis sequence 36 elements
-        public readonly List<string> Std36Basis_Names = new List<string>
+        public static readonly List<string> Std36Basis_Names = new List<string>
         {
             "HH", "HV", "HD", "HA", "HR", "HL",
             "VH", "VV", "VD", "VA", "VR", "VL",
@@ -33,7 +33,7 @@ namespace QKD_Library.Characterization
             "LH", "LV", "LD", "LA", "LR", "LL",
         };
 
-        public readonly List<double[]> StdBasis36 = new List<double[]>
+        public static readonly List<double[]> StdBasis36 = new List<double[]>
         {
             // HWP_A, QWP_A, HWP_B, QWP_B
 
@@ -84,9 +84,31 @@ namespace QKD_Library.Characterization
             new double[] { 22.5, 90, -22.5,45}, //xA 34
             new double[] { 22.5, 90, 22.5,0}, //xR 35
             new double[] { 22.5, 90, 22.5, 90}, //xL 36
+                
         };
 
+        public static readonly List<double[]> StdBasis16 = new List<double[]>
+        {
+            // HWP_A, QWP_A, HWP_B, QWP_B
+            // ATTENTION: R and L changed in sign compared to StdBasis32
 
+            new double[] {45,0, 45, 0}, //HH 1
+            new double[] {45,0,0,0}, //HV 2
+            new double[] {0,0,0,0}, //VV 3
+            new double[] {0,0, 45, 0}, //VH 4
+            new double[] {22.5,90, 45, 0}, //RH 5
+            new double[] {22.5,90,0,0}, //RV 6
+            new double[] {22.5,45,0,0}, //DV 7
+            new double[] {22.5,45, 45, 0}, //DH 8
+            new double[] {22.5,45,22.5,90}, //DR 9
+            new double[] {22.5,45,22.5,45}, //DD 10
+            new double[] {22.5, 90, 22.5,45}, //RD 11
+            new double[] {45,0,22.5,45}, //HD 12
+            new double[] {0,0,22.5,45}, //VD 13
+            new double[] {0,0,22.5, 0}, //VL 14
+            new double[] {45,0,22.5, 0}, //HL 15
+            new double[] {22.5, 0, 22.5, 0}, //RL 16
+        };
 
         //#################################################
         //##  P R O P E R T I E S

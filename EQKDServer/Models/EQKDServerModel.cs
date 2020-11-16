@@ -382,7 +382,8 @@ namespace EQKDServer.Models
             var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
             List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: bases);
+            //Use 16 Basis
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis16);
         }
 
         public void Cancel()
