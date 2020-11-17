@@ -31,7 +31,7 @@ namespace EQKDServer.Models
         const double REMOVEDPOS = 50;
         const double INSERTEDPOS = 98;
 
-        private bool EXTERNAL_CLOCK = true;
+        private bool EXTERNAL_CLOCK = false;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -136,7 +136,7 @@ namespace EQKDServer.Models
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
+            hydra.Connect(new List<long> { 0, 0, 0, -5688 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -216,7 +216,11 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab:null); //in Alice/Bob Boxes
+            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: null)
+            {
+                ChannelA = 2,
+                ChannelB = 3
+            }; //in Alice/Bob Boxes
 
 
             //Create key folder
