@@ -167,7 +167,7 @@ namespace EQKDServer.Models
 
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 45.01+90;
+                _HWP_A.Offset = 45.01;
             }
 
             if (_HWP_B != null)
@@ -230,6 +230,7 @@ namespace EQKDServer.Models
             _stabTestTimer.Elapsed += _stabTestTimer_Elapsed;
             _stabTestTimer.Interval = 5000;
             _stabTestTimer.Start();
+
         }
 
 
@@ -388,7 +389,7 @@ namespace EQKDServer.Models
 
             //Use 16 Basis
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: new List<double[]> { DensityMatrix.StdBasis16.Last() });
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs:  DensityMatrix.StdBasis36);
         }
 
         public void Cancel()
