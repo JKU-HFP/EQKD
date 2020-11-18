@@ -107,7 +107,7 @@ namespace QKD_Library.Characterization
             new double[] {0,0,22.5,45}, //VD 13
             new double[] {0,0,22.5, 0}, //VL 14
             new double[] {45,0,22.5, 0}, //HL 15
-            new double[] {22.5, 0, 22.5, 0}, //RL 16
+            new double[] {22.5, 90, 22.5, 0}, //RL 16
         };
 
         //#################################################

@@ -136,7 +136,7 @@ namespace EQKDServer.Models
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, 0, 0, -5688 });
+            hydra.Connect(new List<long> { 0, 0, 0, -5688+1100 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -383,11 +383,12 @@ namespace EQKDServer.Models
         public Task StartDensityMatrixAsync()
         {
             //Read generated basis configuration
-            var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
-            List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
+            //var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
+            //List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
             //Use 16 Basis
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis16);
+            AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: new List<double[]> { DensityMatrix.StdBasis16.Last() });
         }
 
         public void Cancel()
