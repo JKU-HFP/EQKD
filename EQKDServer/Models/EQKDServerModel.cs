@@ -167,12 +167,12 @@ namespace EQKDServer.Models
 
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 45.01;
+                _HWP_A.Offset = 45.47; //old: 45.01;
             }
 
             if (_HWP_B != null)
             {
-                _HWP_B.Offset = 100.06;
+                _HWP_B.Offset = 100.27; //old: 100.06;
             }
 
 
@@ -182,11 +182,11 @@ namespace EQKDServer.Models
 
             _QWP_A = new KPRM1EStage(_loggerCallback);
             _QWP_A.Connect("27254310");
-            _QWP_A.Offset = 35.15;
+            _QWP_A.Offset = 35.92; //old: 35.15
 
             _QWP_B = new KPRM1EStage(_loggerCallback);
             _QWP_B.Connect("27504148");
-            _QWP_B.Offset = 63.84;
+            _QWP_B.Offset = 63.51; //old: 63.84;
 
             //_QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_C.Connect("27003707");
