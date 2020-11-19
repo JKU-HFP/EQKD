@@ -42,55 +42,54 @@ namespace QKD_Library.Characterization
             new double[] {45,0,0,0}, //xV 2
             new double[] {45,0,22.5,45}, //xD 3
             new double[] {45,0,-22.5,45}, //xA 4
-            new double[] {45,0,22.5,0}, //xR 5
-            new double[] {45,0,22.5, 90}, //xL 6
+            new double[] {45,0,22.5,90}, //xR 5
+            new double[] {45,0,22.5, 0}, //xL 6
 
             //Vx
             new double[] {0,0, 45, 0}, //xH 7
             new double[] {0,0,0,0}, //xV 8
             new double[] {0,0,22.5,45}, //xD 9
             new double[] {0,0,-22.5,45}, //xA 10
-            new double[] {0,0,22.5,0}, //xR 11
-            new double[] {0,0,22.5, 90}, //xL 12
+            new double[] {0,0,22.5,90}, //xR 11
+            new double[] {0,0,22.5, 0}, //xL 12
 
             //Dx
             new double[] {22.5,45, 45, 0}, //xH 13
             new double[] {22.5,45,0,0}, //xV 14
             new double[] {22.5,45,22.5,45}, //xD 15
             new double[] {22.5,45,-22.5,45}, //xA 16
-            new double[] {22.5,45,22.5,0}, //xR 17
-            new double[] {22.5,45,22.5, 90}, //xL 18
+            new double[] {22.5,45,22.5,90}, //xR 17
+            new double[] {22.5,45,22.5, 0}, //xL 18
 
             //Ax
             new double[] {-22.5,45, 45, 0}, //xH 19
             new double[] {-22.5,45,0,0}, //xV 20
             new double[] {-22.5,45,22.5,45}, //xD 21
             new double[] {-22.5,45,-22.5,45}, //xA 22
-            new double[] {-22.5,45,22.5,0}, //xR 23
-            new double[] {-22.5,45,22.5, 90}, //xL 24
+            new double[] {-22.5,45,22.5,90}, //xR 23
+            new double[] {-22.5,45,22.5, 0}, //xL 24
 
             //Rx
-            new double[] {22.5,0, 45, 0}, //xH 25
-            new double[] {22.5,0,0,0}, //xV 26
-            new double[] {22.5, 0, 22.5,45}, //xD 27
-            new double[] {22.5, 0, -22.5,45}, //xA 28
-            new double[] {22.5, 0,22.5,0}, //xR 29
-            new double[] {22.5, 0, 22.5, 90}, //xL 30
+            new double[] {22.5,90, 45, 0}, //xH 25
+            new double[] {22.5,90,0,0}, //xV 26
+            new double[] {22.5, 90, 22.5,45}, //xD 27
+            new double[] {22.5, 90, -22.5,45}, //xA 28
+            new double[] {22.5, 90,22.5,90}, //xR 29
+            new double[] {22.5, 90, 22.5, 0}, //xL 30
 
             //Lx
-            new double[] { 22.5, 90 , 45, 0}, //xH 31
-            new double[] { 22.5, 90, 0,0}, //xV 32
-            new double[] { 22.5, 90, 22.5,45}, //xD 33
-            new double[] { 22.5, 90, -22.5,45}, //xA 34
-            new double[] { 22.5, 90, 22.5,0}, //xR 35
-            new double[] { 22.5, 90, 22.5, 90}, //xL 36
+            new double[] { 22.5, 0 , 45, 0}, //xH 31
+            new double[] { 22.5, 0, 0,0}, //xV 32
+            new double[] { 22.5, 0, 22.5,45}, //xD 33
+            new double[] { 22.5, 0, -22.5,45}, //xA 34
+            new double[] { 22.5, 0, 22.5,90}, //xR 35
+            new double[] { 22.5, 0, 22.5, 0}, //xL 36
                 
         };
 
         public static readonly List<double[]> StdBasis16 = new List<double[]>
         {
             // HWP_A, QWP_A, HWP_B, QWP_B
-            // ATTENTION: R and L changed in sign compared to StdBasis32
 
             new double[] {45,0, 45, 0}, //HH 1
             new double[] {45,0,0,0}, //HV 2
