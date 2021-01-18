@@ -96,7 +96,7 @@ namespace Controller.XYStage
         //--------------------------
         // P R I V A T E S
         //--------------------------
-        private bool _writeLog => string.IsNullOrEmpty(Logfile);
+        private bool _writeLog => !string.IsNullOrEmpty(Logfile);
 
         private readonly ILinearStage _stageX;
         private readonly ILinearStage _stageY;
@@ -187,7 +187,7 @@ namespace Controller.XYStage
 
                 if (!IsBelowSPTolerance)
                 {
-                    WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete. Ok?");
+                    WriteLog($"Setpoint of {SetPoint} reached with PV={ProcessValue} at dX={step_x} dY={step_y}. Stabilization complete.");
                     if (_writeLog) File.AppendAllLines(Logfile, new string[] { $"{DateTime.Now.ToString("yyyy:MM:dd:HH:mm:ss")},1,{stageStep},{ProcessValue},{posX},{posY}" });
                     result.Success = true;
                     break;

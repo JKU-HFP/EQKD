@@ -129,10 +129,15 @@ namespace QKD_Library.Characterization
         /// </summary>
         public string LogFolder { get; set; } = "DensityMatrix";
 
+        /// <summary>
+        /// Backup raw timetags for each basis
+        /// </summary>
+        public bool BackupRawData { get; set; } = false;
+
         //#################################################
         //##  P R I V A T E S 
         //#################################################
-        private TaggerSync _sync;
+        private ITimeTagger _tagger;
         private IRotationStage _HWP_A;
         private IRotationStage _QWP_A;
         private IRotationStage _HWP_B;
@@ -166,9 +171,9 @@ namespace QKD_Library.Characterization
         //#################################################
         //##  C O N S T R U C T O R
         //#################################################
-        public DensityMatrix(TaggerSync sync, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback=null, XYStabilizer xystab=null)
+        public DensityMatrix(ITimeTagger tagger, IRotationStage HWP_A, IRotationStage QWP_A, IRotationStage HWP_B, IRotationStage QWP_B, Action<string> loggerCallback=null, XYStabilizer xystab=null)
         {
-            _sync = sync;
+            _tagger = tagger;
 
             _HWP_A = HWP_A;
             _QWP_A = QWP_A;
@@ -245,7 +250,7 @@ namespace QKD_Library.Characterization
             Stopwatch stopwatch = new Stopwatch();
             int index = 1;
 
-            //measure
+            //Main basis loop
             foreach (var basis in _basisMeasurements)
             {
 
@@ -285,8 +290,23 @@ namespace QKD_Library.Characterization
                 //Wait for all stages to arrive at destination
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
-                //Get TimeTags
-                TimeTags tt = _sync.GetSingleTimeTags(0, PacketSize, PacketTimeSpan);
+                //Update logfile
+                _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}");
+
+                //Get TimeTags               
+                _tagger.PacketSize = PacketSize;
+                _tagger.PacketTimeSpan = PacketTimeSpan;
+
+                _tagger.BackupFilename = BackupRawData ? _currLogfile : "";
+                
+                _tagger.ClearTimeTagBuffer();
+                _tagger.StartCollectingTimeTagsAsync();
+
+                TimeTags tt = null;
+                while (!_tagger.GetNextTimeTags(out tt)) Thread.Sleep(10);
+
+                _tagger.StopCollectingTimeTags();
+                _tagger.ClearTimeTagBuffer();
 
                 //Create Histogram
                 basis.CreateHistogram(tt, OffsetChanB);
@@ -299,8 +319,7 @@ namespace QKD_Library.Characterization
 
                 if (writeLog)
                 {
-                    _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}.txt");
-                    File.WriteAllLines(_currLogfile, basis.CrossCorrHistogram.Histogram_X.Zip(basis.CrossCorrHistogram.Histogram_Y, (x, y) => x.ToString() + "\t" + y.ToString()).ToArray());
+                    File.WriteAllLines(_currLogfile+".txt", basis.CrossCorrHistogram.Histogram_X.Zip(basis.CrossCorrHistogram.Histogram_Y, (x, y) => x.ToString() + "\t" + y.ToString()).ToArray());
                 }
 
                 WriteLog($"Basis {index} completed in {stopwatch.Elapsed} | Rel. peak area {basis.RelPeakArea.val:F4} ({basis.RelPeakArea.err:F4}, {100 * basis.RelPeakArea.err / basis.RelPeakArea.val:F1}%)");

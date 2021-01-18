@@ -207,16 +207,19 @@ namespace EQKDServer.Models
 
 
             //Instanciate XYStabilizer
+            string xystabdir = "XYStabilization";
+            if (!Directory.Exists(xystabdir)) Directory.CreateDirectory(xystabdir);
             XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
             {
-                StepSize = 5E-4
+                StepSize = 3E-4,
+                Logfile = xystabdir + "//xystab_log.txt"
             };
                 
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: null)
+            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
             {
                 ChannelA = 2,
                 ChannelB = 3
@@ -374,10 +377,6 @@ namespace EQKDServer.Models
         public async Task StartFiberCorrectionAsync()
         {
             SecQNetServer.ObscureClientTimeTags = false;
-
-            AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
-            //await AliceBobDensMatrix.MeasurePeakAreasAsync();
-
             await FiberCorrection.StartOptimizationAsync();
         }
 
@@ -387,8 +386,8 @@ namespace EQKDServer.Models
             //var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
             //List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
-            //Use 16 Basis
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
+            AliceBobDensMatrix.BackupRawData = true;
             return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs:  DensityMatrix.StdBasis36);
         }
 
