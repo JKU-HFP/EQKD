@@ -291,7 +291,7 @@ namespace QKD_Library.Characterization
                 Task.WhenAll(hwpA_Task, qwpA_Task, hwpB_Task, qwpB_Task).GetAwaiter().GetResult();
 
                 //Update logfile
-                _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}");
+                _currLogfile = Path.Combine(_logFolder, $"Histogram_Basis_{index:D2}_{basis.BasisConfig[0]:F0}_{basis.BasisConfig[1]:F0}_{basis.BasisConfig[2]:F0}_{basis.BasisConfig[3]:F0}");
 
                 //Get TimeTags               
                 _tagger.PacketSize = PacketSize;
