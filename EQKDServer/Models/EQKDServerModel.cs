@@ -136,7 +136,7 @@ namespace EQKDServer.Models
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, -5688 + 1100, 0, 0 });
+            hydra.Connect(new List<long> { 0, -5688 + 1100 -768, 0, 0 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -180,17 +180,17 @@ namespace EQKDServer.Models
             //_HWP_C.Connect("27254524");
             //_HWP_C.Offset = 58.5 + 90;
 
-            //_QWP_A = new KPRM1EStage(_loggerCallback);
-            //_QWP_A.Connect("27254310");
-            //_QWP_A.Offset = 35.92; //old: 35.15
+            _QWP_A = new KPRM1EStage(_loggerCallback);
+            _QWP_A.Connect("27254310");
+            _QWP_A.Offset = 35.92; //old: 35.15
 
             _QWP_B = new KPRM1EStage(_loggerCallback);
             _QWP_B.Connect("27504148");
             _QWP_B.Offset = 63.51; //old: 63.84;
 
-            _QWP_C = new KPRM1EStage(_loggerCallback);
-            _QWP_C.Connect("27003707");
-            _QWP_C.Offset = 27.3;
+            //_QWP_C = new KPRM1EStage(_loggerCallback);
+            //_QWP_C.Connect("27003707");
+            //_QWP_C.Offset = 27.3;
 
             //_QWP_D = new KPRM1EStage(_loggerCallback);
             //_QWP_D.Connect("27254574");
@@ -211,7 +211,7 @@ namespace EQKDServer.Models
             if (!Directory.Exists(xystabdir)) Directory.CreateDirectory(xystabdir);
             XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
             {
-                StepSize = 3E-4,
+                StepSize = 5E-4,
                 Logfile = xystabdir + "//xystab_log.txt"
             };
                 
@@ -219,7 +219,7 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_C, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
+            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
             {
                 ChannelA = 0,
                 ChannelB = 1
@@ -383,12 +383,12 @@ namespace EQKDServer.Models
         public Task StartDensityMatrixAsync()
         {
             //Read generated basis configuration
-            var filestrings = File.ReadAllLines(@"I:\public\NANOSCALE SEMICONDUCTOR GROUP\1. DATA\BIG-LAB\2021\01\18\bases.txt");
+            var filestrings = File.ReadAllLines(@"I:\public\NANOSCALE SEMICONDUCTOR GROUP\1. DATA\BIG-LAB\2021\01\20\SA323_qd20\bases.txt");
             List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
             AliceBobDensMatrix.BackupRawData = true;
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: bases);
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis36);
         }
 
         public void Cancel()

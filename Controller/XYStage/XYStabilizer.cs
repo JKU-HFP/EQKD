@@ -56,7 +56,7 @@ namespace Controller.XYStage
         /// <summary>
         /// Maximum number of steps searched
         /// </summary>
-        public int MaxSteps { get; set; } = 50;
+        public int MaxSteps { get; set; } = 100;
 
         /// <summary>
         /// Stepsize in mm
