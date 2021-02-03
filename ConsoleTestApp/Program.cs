@@ -13,6 +13,7 @@ using Stage_Library.PI;
 using Controller.XYStage;
 
 using TimeTagger_Library.TimeTagger;
+using QKD_Library.Characterization;
 
 namespace ConsoleTestApp
 {
@@ -20,9 +21,34 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
+            
+            //Instanciate TimeTaggers
 
-            var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
-            List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
+
+            HydraHarp hydra = new HydraHarp(Console.WriteLine)
+            {
+                DiscriminatorLevel = 200,
+                SyncDivider = 8,
+                SyncDiscriminatorLevel = 200,
+                MeasurementMode = HydraHarp.Mode.MODE_T3,
+                ClockMode = HydraHarp.Clock.Internal,
+                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
+            };
+            hydra.Connect();
+            hydra.PacketTimeSpan = (long)1E12;
+
+            hydra.BackupFilename = "testT3.ptu";
+            hydra.StartCollectingTimeTagsAsync();
+            Thread.Sleep(5000);
+            hydra.StopCollectingTimeTags();
+
+
+
+
+            //File.WriteAllLines("stdBasis32.txt", DensityMatrix.StdBasis36.Select(a => string.Join(",",a)));
+
+            //var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
+            //List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
             //ITimeTagger hydra = new HydraHarp((s) => Console.WriteLine(s))
             //{
@@ -57,7 +83,7 @@ namespace ConsoleTestApp
             //    List<int> rate = hydra.GetCountrate();
             //    Console.WriteLine(string.Join(",",rate.Select(r => r.ToString()).ToList()));
             //}
-            
+
             //int s = 0;
             //while(true)
             //{
