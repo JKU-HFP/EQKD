@@ -136,7 +136,7 @@ namespace EQKDServer.Models
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, 0, 0, -5688+1100 });
+            hydra.Connect(new List<long> { 0, -5688 + 1100 -768, 0, 0 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -211,7 +211,7 @@ namespace EQKDServer.Models
             if (!Directory.Exists(xystabdir)) Directory.CreateDirectory(xystabdir);
             XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
             {
-                StepSize = 3E-4,
+                StepSize = 5E-4,
                 Logfile = xystabdir + "//xystab_log.txt"
             };
                 
@@ -221,8 +221,8 @@ namespace EQKDServer.Models
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
             AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
             {
-                ChannelA = 2,
-                ChannelB = 3
+                ChannelA = 0,
+                ChannelB = 1
             }; //in Alice/Bob Boxes
 
 
@@ -383,12 +383,12 @@ namespace EQKDServer.Models
         public Task StartDensityMatrixAsync()
         {
             //Read generated basis configuration
-            //var filestrings = File.ReadAllLines(@"E:\Dropbox\Dropbox\Coding\Python-Scripts\JKULib\Entanglement\bases.txt");
-            //List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
+            var filestrings = File.ReadAllLines(@"I:\public\NANOSCALE SEMICONDUCTOR GROUP\1. DATA\BIG-LAB\2021\01\20\SA323_qd20\bases.txt");
+            List<double[]> bases = filestrings.Select(line => line.Split(' ').Select(vals => double.Parse(vals)).ToArray()).ToList();
 
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
             AliceBobDensMatrix.BackupRawData = true;
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs:  DensityMatrix.StdBasis36);
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis36);
         }
 
         public void Cancel()

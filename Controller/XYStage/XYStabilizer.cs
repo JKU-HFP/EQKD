@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -26,16 +27,16 @@ namespace Controller.XYStage
         /// <summary>
         /// Setpoint tolerance in fraction of Setpoint
         /// </summary>
-        public double SPTolerance { get; set; } = 0.9;
+        public double SPTolerance { get; set; } = 0.92;
 
-        public bool IsBelowSPTolerance => !((SetPoint - ProcessValue) < (SetPoint * SPTolerance));
+        public bool IsBelowSPTolerance => ProcessValue < (SetPoint * SPTolerance);
 
         /// <summary>
         /// Tolerance before triggering Correction in fraction of Setpoint
         /// </summary>
         public double TriggerTolerance { get; set; } = 0.8;
 
-        public bool IsBelowTriggerPoint => !((SetPoint - ProcessValue) < (SetPoint * TriggerTolerance));
+        public bool IsBelowTriggerPoint => ProcessValue < (SetPoint * TriggerTolerance);
 
         /// <summary>
         /// Current Process Value
@@ -55,7 +56,7 @@ namespace Controller.XYStage
         /// <summary>
         /// Maximum number of steps searched
         /// </summary>
-        public int MaxSteps { get; set; } = 50;
+        public int MaxSteps { get; set; } = 100;
 
         /// <summary>
         /// Stepsize in mm
@@ -73,6 +74,7 @@ namespace Controller.XYStage
         /// Do control steps every <var> timer cycles
         /// </summary>
         public double StepTimeMultiplier { get; set; } = 3;
+        public bool Activated { get; set; } = false;
 
         //--------------------------
         // E V E N T S

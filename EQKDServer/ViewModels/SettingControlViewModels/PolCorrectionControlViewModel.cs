@@ -142,8 +142,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        public double CountrateSetpoint { get; set; } = 1E5;
-        public double CountrateSetpointTolerance { get; set; } = 1E4;
+        public double CountrateSetpoint { get; set; } = 53000;
+        public double CountrateSetpointTolerance { get; set; } = 0.8;
 
 
         private int _autoStabilization = 0;
@@ -155,6 +155,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
                 _autoStabilization = value;
                 OnPropertyChanged("AutoStabilization");
                 _EQKDServer.AutoStabilization = value==1;
+                _EQKDServer.XYStabilizer.Activated = value == 1;
             }
         }
 

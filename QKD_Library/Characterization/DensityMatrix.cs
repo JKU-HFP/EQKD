@@ -255,7 +255,7 @@ namespace QKD_Library.Characterization
             {
 
                 //Stabilize XY stage if present
-                if(_xyStabilizer!=null)
+                if(_xyStabilizer!=null && _xyStabilizer.Activated)
                 {
                     if (_xyStabilizer.IsBelowTriggerPoint) _xyStabilizer.Correct();
                 }
