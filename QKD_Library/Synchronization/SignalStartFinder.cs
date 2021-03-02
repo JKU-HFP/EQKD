@@ -17,7 +17,7 @@ namespace QKD_Library.Synchronization
         //##  P R O P E R T I E S
         //#################################################
         public int AveragingFIFOSize { get; set; } = 30;
-        public int RateThreshold { get; set; } = 30000;
+        public int RateThreshold { get; set; } = 15000;
         /// <summary>
         /// Minimum slope
         /// eg. 30.000E-8 -> 30000 cps per 100 micro second

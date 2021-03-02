@@ -31,7 +31,7 @@ namespace EQKDServer.Models
         const double REMOVEDPOS = 50;
         const double INSERTEDPOS = 98;
 
-        private bool EXTERNAL_CLOCK = false;
+        private bool EXTERNAL_CLOCK = true;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -136,7 +136,7 @@ namespace EQKDServer.Models
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, -5688 + 1100 -768, 0, 0 });
+            hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
 
             SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
             {
@@ -184,17 +184,17 @@ namespace EQKDServer.Models
             _QWP_A.Connect("27254310");
             _QWP_A.Offset = 35.92; //old: 35.15
 
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-            _QWP_B.Connect("27504148");
-            _QWP_B.Offset = 63.51; //old: 63.84;
+            //_QWP_B = new KPRM1EStage(_loggerCallback);
+            //_QWP_B.Connect("27504148");
+            //_QWP_B.Offset = 63.51; //old: 63.84;
 
             //_QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_C.Connect("27003707");
             //_QWP_C.Offset = 27.3;
 
-            //_QWP_D = new KPRM1EStage(_loggerCallback);
-            //_QWP_D.Connect("27254574");
-            //_QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
+            _QWP_D = new KPRM1EStage(_loggerCallback);
+            _QWP_D.Connect("27254574");
+            _QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
             //Instanciate and connect linear stages
             PolarizerStage = new KBD101Stage(_loggerCallback);
@@ -217,7 +217,7 @@ namespace EQKDServer.Models
                 
 
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
-            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_A, _QWP_B }, _loggerCallback);
+            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_D }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
             AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
             {
