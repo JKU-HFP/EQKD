@@ -14,6 +14,7 @@ using Controller.XYStage;
 
 using TimeTagger_Library.TimeTagger;
 using QKD_Library.Characterization;
+using Stage_Library.Thorlabs;
 
 namespace ConsoleTestApp
 {
@@ -21,28 +22,43 @@ namespace ConsoleTestApp
     {
         static void Main(string[] args)
         {
-            
-            //Instanciate TimeTaggers
 
+            MFF101Flipper flipper = new MFF101Flipper(Console.WriteLine);
+            flipper.Connect("37853189");
 
-            HydraHarp hydra = new HydraHarp(Console.WriteLine)
+            while (true)
             {
-                DiscriminatorLevel = 200,
-                SyncDivider = 8,
-                SyncDiscriminatorLevel = 200,
-                MeasurementMode = HydraHarp.Mode.MODE_T3,
-                ClockMode = HydraHarp.Clock.Internal,
-                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
-            };
-            hydra.Connect();
-            hydra.PacketTimeSpan = (long)1E12;
+                Console.WriteLine($"Moving to Position 0");
+                flipper.Move(0);
+                Thread.Sleep(1000);
+                Console.WriteLine($"On Position {flipper.Position}");
+                Thread.Sleep(1000);
+                Console.WriteLine($"Moving to Position 1");
+                flipper.Move(1);
+                Thread.Sleep(1000);
+                Console.WriteLine($"On Position {flipper.Position}");
+                Thread.Sleep(1000);
+            }
+     
 
-            hydra.BackupFilename = "testT3.ptu";
-            hydra.StartCollectingTimeTagsAsync();
-            Thread.Sleep(5000);
-            hydra.StopCollectingTimeTags();
+            //Instanciate TimeTaggers                        
 
+            //HydraHarp hydra = new HydraHarp(Console.WriteLine)
+            //{
+            //    DiscriminatorLevel = 200,
+            //    SyncDivider = 8,
+            //    SyncDiscriminatorLevel = 200,
+            //    MeasurementMode = HydraHarp.Mode.MODE_T3,
+            //    ClockMode = HydraHarp.Clock.Internal,
+            //    PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
+            //};
+            //hydra.Connect();
+            //hydra.PacketTimeSpan = (long)1E12;
 
+            //hydra.BackupFilename = "testT3.ptu";
+            //hydra.StartCollectingTimeTagsAsync();
+            //Thread.Sleep(5000);
+            //hydra.StopCollectingTimeTags();
 
 
             //File.WriteAllLines("stdBasis32.txt", DensityMatrix.StdBasis36.Select(a => string.Join(",",a)));
