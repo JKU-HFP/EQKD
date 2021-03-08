@@ -19,6 +19,7 @@ using System.Xml.Serialization;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
+using System.Windows;
 
 namespace EQKDServer.Models
 {
@@ -28,7 +29,7 @@ namespace EQKDServer.Models
         //---- C O N S T A N T S 
         //-----------------------------------
 
-        const uint REMOVEDPOS = 0;
+        const uint REMOVEDPOS = 2;
         const uint INSERTEDPOS = 1;
 
         private bool EXTERNAL_CLOCK = true;
@@ -158,6 +159,12 @@ namespace EQKDServer.Models
             ServerTimeTagger = hydra;
             ClientTimeTagger = nwtagger;
 
+            //Instanciate and connect filter flippers
+            PolarizerFlipper = new MFF101Flipper(_loggerCallback);
+            PolarizerFlipper.Connect("37853189");
+            ShutterFlipper = new MFF101Flipper(_loggerCallback);
+            ShutterFlipper.Connect("37003303");
+
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
             _smcController.Connect("COM4");
@@ -197,11 +204,7 @@ namespace EQKDServer.Models
             _QWP_D.Connect("27254574");
             _QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
-            //Instanciate and connect filter flippers
-            PolarizerFlipper = new MFF101Flipper(_loggerCallback);
-            PolarizerFlipper.Connect("37853189");
-            ShutterFlipper = new MFF101Flipper(_loggerCallback);
-            ShutterFlipper.Connect("xxxxxxxx");
+       
 
             //Connect linear stages for XY stabilization
             XY_Controller = new PI_C843_Controller(_loggerCallback);
@@ -237,6 +240,24 @@ namespace EQKDServer.Models
             _stabTestTimer.Elapsed += _stabTestTimer_Elapsed;
             _stabTestTimer.Interval = 5000;
             _stabTestTimer.Start();
+
+            //Test stuff
+            //while(true)
+            //{
+            //    _QWP_A.Move_Absolute(90);
+            //    _QWP_D.Move_Absolute(90);
+            //    _HWP_B.Move_Absolute(90);
+            //    TriggerShutter(true);
+            //    PolarizerControl(true);
+            //    Thread.Sleep(4000);
+            //    _QWP_A.Move_Absolute(0);
+            //    _QWP_D.Move_Absolute(0);
+            //    _HWP_B.Move_Absolute(0);
+            //    TriggerShutter(false);
+            //    PolarizerControl(false);
+            //    Thread.Sleep(4000);
+            //}
+
 
         }
 

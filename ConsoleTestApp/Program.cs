@@ -24,17 +24,18 @@ namespace ConsoleTestApp
         {
 
             MFF101Flipper flipper = new MFF101Flipper(Console.WriteLine);
+            var devs = flipper.GetDeviceList();
             flipper.Connect("37853189");
 
             while (true)
             {
-                Console.WriteLine($"Moving to Position 0");
-                flipper.Move(0);
+                Console.WriteLine($"Moving to Position 1");
+                flipper.Move(1);
                 Thread.Sleep(1000);
                 Console.WriteLine($"On Position {flipper.Position}");
                 Thread.Sleep(1000);
-                Console.WriteLine($"Moving to Position 1");
-                flipper.Move(1);
+                Console.WriteLine($"Moving to Position 2");
+                flipper.Move(2);
                 Thread.Sleep(1000);
                 Console.WriteLine($"On Position {flipper.Position}");
                 Thread.Sleep(1000);
