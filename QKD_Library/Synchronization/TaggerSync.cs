@@ -63,7 +63,7 @@ namespace QKD_Library.Synchronization
 
         private Action<string> _loggerCallback;
         private Func<string, string, int> _userprompt;
-        private Action _shutterContr;
+        private Action<bool> _shutterContr;
         private Action<bool> _polarizerContr;
 
         private Kurolator _clockKurolator;
@@ -117,7 +117,7 @@ namespace QKD_Library.Synchronization
         //##  C O N S T R U C T O R
         //#################################################
 
-        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, Action shutterContr=null, Action<bool> polarizerContr=null)
+        public TaggerSync(ITimeTagger tagger1, ITimeTagger tagger2 = null, Action<string> loggerCallback=null, Func<string, string, int> userprompt=null, Action<bool> shutterContr=null, Action<bool> polarizerContr=null)
         {
             _loggerCallback = loggerCallback;
             _userprompt = userprompt;
@@ -211,7 +211,7 @@ namespace QKD_Library.Synchronization
 
                 if (_shutterContr!=null)
                 {
-                    _shutterContr();
+                    _shutterContr(true);
                     Thread.Sleep(2000);
                 }
 
@@ -222,7 +222,7 @@ namespace QKD_Library.Synchronization
                 if(_shutterContr!=null)
                 {
                     Thread.Sleep(3000);
-                    _shutterContr();
+                    _shutterContr(false);
                 }
 
                 while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);

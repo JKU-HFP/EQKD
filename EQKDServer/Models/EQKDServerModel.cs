@@ -28,8 +28,8 @@ namespace EQKDServer.Models
         //---- C O N S T A N T S 
         //-----------------------------------
 
-        const double REMOVEDPOS = 50;
-        const double INSERTEDPOS = 98;
+        const uint REMOVEDPOS = 0;
+        const uint INSERTEDPOS = 1;
 
         private bool EXTERNAL_CLOCK = true;
 
@@ -95,8 +95,9 @@ namespace EQKDServer.Models
         public KPRM1EStage _QWP_D { get; private set; }
 
         //Linear stages
-        public KBD101Stage PolarizerStage { get; private set; }
-        public PI_C843_Controller XY_Controller { get; private set; }
+        public MFF101Flipper PolarizerFlipper { get; private set; }
+        public MFF101Flipper ShutterFlipper { get; private set; }
+    public PI_C843_Controller XY_Controller { get; private set; }
         public PI_C843_Stage XStage { get; private set; }
         public PI_C843_Stage YStage { get; private set; }
 
@@ -196,10 +197,13 @@ namespace EQKDServer.Models
             _QWP_D.Connect("27254574");
             _QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
-            //Instanciate and connect linear stages
-            PolarizerStage = new KBD101Stage(_loggerCallback);
-            PolarizerStage.Connect("28250918");
+            //Instanciate and connect filter flippers
+            PolarizerFlipper = new MFF101Flipper(_loggerCallback);
+            PolarizerFlipper.Connect("37853189");
+            ShutterFlipper = new MFF101Flipper(_loggerCallback);
+            ShutterFlipper.Connect("xxxxxxxx");
 
+            //Connect linear stages for XY stabilization
             XY_Controller = new PI_C843_Controller(_loggerCallback);
             XY_Controller.Connect("M-505.2DG\nM-505.2DG");
             XStage = XY_Controller.GetStages()[0];
@@ -242,20 +246,28 @@ namespace EQKDServer.Models
             switch (status)
             {
                 case true:
-                    PolarizerStage.Move_Absolute(INSERTEDPOS);
+                    PolarizerFlipper.Move(INSERTEDPOS);
                     break;
                 case false:
-                    PolarizerStage.Move_Absolute(REMOVEDPOS);
+                    PolarizerFlipper.Move(REMOVEDPOS);
                     break;
                 default:
                     break;
             }
         }
-        private void TriggerShutter()
+        private void TriggerShutter(bool status)
         {
-            _QWP_A.SetOutput(true);
-            Thread.Sleep(100);
-            _QWP_A.SetOutput(false);
+            switch (status)
+            {
+                case true:
+                    ShutterFlipper.Move(INSERTEDPOS);
+                    break;
+                case false:
+                    ShutterFlipper.Move(REMOVEDPOS);
+                    break;
+                default:
+                    break;
+            }
         }
 
         //--------------------------------------
