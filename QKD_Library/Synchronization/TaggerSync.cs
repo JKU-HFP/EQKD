@@ -29,6 +29,8 @@ namespace QKD_Library.Synchronization
         //Clock Synchronisation
         public bool GlobalOffsetDefined { get; private set; } = false;
         public ulong ClockSyncTimeWindow { get; set; } = 100000;
+
+        public int StartFinderThreshold { get; set; } = 15000;
         /// <summary>
         /// Defined by: time ALICE - time BOB
         /// </summary>
@@ -228,10 +230,10 @@ namespace QKD_Library.Synchronization
                 while (!_tagger1.GetNextTimeTags(out ttA)) Thread.Sleep(10);
                 while (!_tagger2.GetNextTimeTags(out ttB)) Thread.Sleep(10);
 
-                SignalStartFinder serverStartFinder = new SignalStartFinder("Alice", _loggerCallback);
+                SignalStartFinder serverStartFinder = new SignalStartFinder("Alice", _loggerCallback) { RateThreshold = StartFinderThreshold };
                 SignalStartResult startresA = serverStartFinder.FindSignalStartTime(ttA);
 
-                SignalStartFinder clientStartFinder = new SignalStartFinder("Bob", _loggerCallback);
+                SignalStartFinder clientStartFinder = new SignalStartFinder("Bob", _loggerCallback) { RateThreshold = StartFinderThreshold };
                 SignalStartResult startresB = clientStartFinder.FindSignalStartTime(ttB);
 
                 if (startresA.Status < SignalStartStatus.SignalFittingFailed || startresB.Status < SignalStartStatus.SignalFittingFailed) continue;

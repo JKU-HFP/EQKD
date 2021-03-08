@@ -178,6 +178,17 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private int _startFinderThreshold;
+
+        public int StartFinderThreshold
+        {
+            get { return _startFinderThreshold; }
+            set 
+            { 
+                _startFinderThreshold = value;
+                OnPropertyChanged("StartFinderThreshold");
+            }
+        }
 
 
         #endregion
@@ -421,6 +432,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.AliceBobSync.LinearDriftCoeff_NumVar = LinDriftCoeffNumVar;
 
             _EQKDServer.AliceBobSync.SyncFreqOffset = SyncFreqOffset;
+
+            _EQKDServer.AliceBobSync.StartFinderThreshold = StartFinderThreshold;
         }
         private void Synchronize(object o)
         {

@@ -75,6 +75,10 @@
                 <TextBlock Text="Packet Time Span"/>
                 <TextBox Width="100" Text="{Binding PacketTImeSpan}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Startfinder Thresh."/>
+                <TextBox Width="100" Text="{Binding StartFinderThreshold}"/>
+            </StackPanel>
         </StackPanel>
 
         
