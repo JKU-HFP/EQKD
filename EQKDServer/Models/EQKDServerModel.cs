@@ -162,8 +162,13 @@ namespace EQKDServer.Models
             //Instanciate and connect filter flippers
             PolarizerFlipper = new MFF101Flipper(_loggerCallback);
             PolarizerFlipper.Connect("37853189");
+
+            PolarizerControl(false); //Open after homing
+
             ShutterFlipper = new MFF101Flipper(_loggerCallback);
-            ShutterFlipper.Connect("37003303");
+            ShutterFlipper.Connect("37003303"); 
+            
+            TriggerShutter(false); //Open after Homing
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
