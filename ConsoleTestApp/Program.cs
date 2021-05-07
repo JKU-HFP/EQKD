@@ -23,24 +23,44 @@ namespace ConsoleTestApp
         static void Main(string[] args)
         {
 
-            MFF101Flipper flipper = new MFF101Flipper(Console.WriteLine);
-            var devs = flipper.GetDeviceList();
-            flipper.Connect("37853189");
+            var contr = new Stage_Library.Owis.PS10Controller();
+            contr.Connect("COM8");
+            var stage = contr.GetStages()[0];
 
-            while (true)
+            Thread.Sleep(1000);
+
+    
+            stage.SetVelocity(2);
+
+            for(int i=1; i<=5;i++)
             {
-                Console.WriteLine($"Moving to Position 1");
-                flipper.Move(1);
+                Console.Write(stage.Position);
                 Thread.Sleep(1000);
-                Console.WriteLine($"On Position {flipper.Position}");
+                stage.Move_Absolute(200);
                 Thread.Sleep(1000);
-                Console.WriteLine($"Moving to Position 2");
-                flipper.Move(2);
-                Thread.Sleep(1000);
-                Console.WriteLine($"On Position {flipper.Position}");
-                Thread.Sleep(1000);
+                Console.Write(stage.Position);
+                stage.Move_Absolute(150);
             }
-     
+
+
+            //MFF101Flipper flipper = new MFF101Flipper(Console.WriteLine);
+            //var devs = flipper.GetDeviceList();
+            //flipper.Connect("37853189");
+
+            //while (true)
+            //{
+            //    Console.WriteLine($"Moving to Position 1");
+            //    flipper.Move(1);
+            //    Thread.Sleep(1000);
+            //    Console.WriteLine($"On Position {flipper.Position}");
+            //    Thread.Sleep(1000);
+            //    Console.WriteLine($"Moving to Position 2");
+            //    flipper.Move(2);
+            //    Thread.Sleep(1000);
+            //    Console.WriteLine($"On Position {flipper.Position}");
+            //    Thread.Sleep(1000);
+            //}
+
 
             //Instanciate TimeTaggers                        
 

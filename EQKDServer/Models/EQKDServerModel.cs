@@ -140,18 +140,18 @@ namespace EQKDServer.Models
             };
             hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
 
-            SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
-            {
-                RefChan = EXTERNAL_CLOCK ? 1 : 0,
-                SyncDiscriminatorVoltage = 0.2,
-                RefChanDivider=100,
-                SyncRate=10000000,
-                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
-            };
+            //SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
+            //{
+            //    RefChan = EXTERNAL_CLOCK ? 1 : 0,
+            //    SyncDiscriminatorVoltage = 0.2,
+            //    RefChanDivider=100,
+            //    SyncRate=10000000,
+            //    PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
+            //};
 
-            long testoffs = 128;
-            long OIC_Alice750m = 0;// -3493504;
-            sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
+            //long testoffs = 128;
+            //long OIC_Alice750m = 0;// -3493504;
+            //sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
@@ -172,7 +172,7 @@ namespace EQKDServer.Models
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
-            _smcController.Connect("COM4");
+            _smcController.Connect("COM3");
             List<SMC100Stage> _smcStages = _smcController.GetStages();
 
             _HWP_A = _smcStages[1];
