@@ -65,7 +65,7 @@ namespace SecQNet
             _connStatus = conn_stat;
             if (conn_stat != ConnectionStatus.ClientDisconnected)
             {
-                clientIP = _client == null ? "" : (_client.Client == null ? "" : ((IPEndPoint)_client.Client.LocalEndPoint).Address.ToString());
+                clientIP = _client == null ? "" : (_client.Client == null ? "" : ((IPEndPoint)_client.Client.RemoteEndPoint).Address.ToString());
             }
             ConnectionStatusChanged.Raise(this, new ServerConnStatChangedEventArgs() { ClientIPAddress = clientIP, connectionStatus = _connStatus });
         }
