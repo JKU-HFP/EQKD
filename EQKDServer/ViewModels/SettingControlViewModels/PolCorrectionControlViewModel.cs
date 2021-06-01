@@ -54,6 +54,18 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private ulong _keyGenTimebin = 1000;
+
+        public ulong KeyGenTimebin
+        {
+            get { return _keyGenTimebin; }
+            set { 
+                _keyGenTimebin = value;
+                OnPropertyChanged(nameof(KeyGenTimebin));
+            }
+        }
+
+
         private StateCorrection.Mode _correctionMode = StateCorrection.Mode.DownhillSimplex;
 
         public StateCorrection.Mode CorrectionMode
@@ -216,6 +228,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 _EQKDServer.PacketSize = PacketSize;
                 _EQKDServer.PacketTImeSpan = PacketTImeSpan;
+                _EQKDServer.Key_TimeBin = KeyGenTimebin;
                 _EQKDServer.StartKeyGenerationAsync().SafeFireAndForget();
             });
 
