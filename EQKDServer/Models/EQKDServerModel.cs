@@ -430,10 +430,16 @@ namespace EQKDServer.Models
         }
 
         public void Cancel()
-        {
+        {         
             AliceBobDensMatrix?.CancelMeasurement();
             _cts?.Cancel();
             XYStabilizer?.Cancel();
+        }
+
+        public void ResetTaggers()
+        {
+            AliceBobSync.RequestReset();
+            IsSyncActive = false;
         }
 
         public async Task StartKeyGenerationAsync()

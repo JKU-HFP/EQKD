@@ -107,7 +107,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private double _linDriftCoeff_Variation = 0.001E-5;
+        private double _linDriftCoeff_Variation = 1E-11;
 
         public double LinDriftCoeff_Variation
         {
@@ -119,7 +119,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private int _linDriftCoeff_NumVar = 10;
+        private int _linDriftCoeff_NumVar = 0;
 
         public int LinDriftCoeffNumVar
         {
@@ -178,7 +178,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
-        private int _startFinderThreshold;
+        private int _startFinderThreshold = 30000;
 
         public int StartFinderThreshold
         {
@@ -214,7 +214,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
             CancelCommand = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.AliceBobSync.ResetTimeTaggers();
+                _EQKDServer.ResetTaggers();
             });
 
             TestClockCommand = new RelayCommand<object>((o) =>

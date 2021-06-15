@@ -75,6 +75,8 @@ namespace QKD_Library.Synchronization
         private int _numCoarseSearches = 0;
         private long _globalOffsetInit = 0;
 
+        private CancellationTokenSource ct_GlobalOffset;
+        private CancellationTokenSource ct_CoarseSearch;
 
         private static byte oR = SecQNet.SecQNetPackets.TimeTagPacket.RectBasisCodedChan;
         private static byte oD = SecQNet.SecQNetPackets.TimeTagPacket.DiagbasisCodedChan;
@@ -203,7 +205,9 @@ namespace QKD_Library.Synchronization
             _tagger1.PacketSize = _tagger2.PacketSize = 200000;
             _tagger1.PackageMode = _tagger2.PackageMode = TimeTaggerBase.PMode.ByPackageSize;
 
-            while (!GlobalOffsetDefined)
+            ct_GlobalOffset = new CancellationTokenSource();
+
+            while (!GlobalOffsetDefined && !ct_GlobalOffset.Token.IsCancellationRequested)
             {
                 //Move shutter             
                 if (_shutterContr==null) UserPrompt("Global Clock offset undefined. Block signal and release it fast.");
@@ -252,6 +256,8 @@ namespace QKD_Library.Synchronization
             _tagger2.ClearTimeTagBuffer();
             _tagger1.PacketSize = _tagger2.PacketSize = tmpPacketSize;
             _tagger1.PackageMode = _tagger2.PackageMode = tmpMode;
+            _tagger1.StartCollectingTimeTagsAsync();
+            _tagger2.StartCollectingTimeTagsAsync();
 
             return;
         }
@@ -332,7 +338,15 @@ namespace QKD_Library.Synchronization
             return result;
         }
 
-        public void ResetTimeTaggers()
+
+        public void RequestReset()
+        {
+            ResetTimeTaggers();
+            ct_GlobalOffset?.Cancel();
+            ct_CoarseSearch?.Cancel();
+        }
+
+        private void ResetTimeTaggers()
         {
             _tagger1.StopCollectingTimeTags();
             _tagger2?.StopCollectingTimeTags();
@@ -340,6 +354,7 @@ namespace QKD_Library.Synchronization
             _tagger1.ClearTimeTagBuffer();
             _tagger2?.ClearTimeTagBuffer();
 
+            
             GlobalOffsetDefined = false;
             _corrsyncStatus = CorrSyncStatus.SearchingCoarseRange;
         }
@@ -579,8 +594,9 @@ namespace QKD_Library.Synchronization
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
+            ct_CoarseSearch = new CancellationTokenSource();
             // MAIN STATE MACHINE
-            while (true)
+            while (!ct_CoarseSearch.Token.IsCancellationRequested)
             {
               
                 switch (_corrsyncStatus)
@@ -599,6 +615,8 @@ namespace QKD_Library.Synchronization
 
                     case CorrSyncStatus.SearchingCoarseRange:
 
+                        _numCoarseSearches = 0;
+                        
 
                         while (_numCoarseSearches <= maxNumCoarseSearches && _corrsyncStatus == CorrSyncStatus.SearchingCoarseRange)
                         {
@@ -665,6 +683,13 @@ namespace QKD_Library.Synchronization
                                 results = coarseResults;
 
                                 WriteLog($"No coarse correlations found after {sw.Elapsed}. Synchronization FAILED");
+                            }
+
+                            //Cancellation requested
+                            if(ct_CoarseSearch.Token.IsCancellationRequested)
+                            {
+                                WriteLog($"Coarse correlations searching cancelled.");
+                                break;
                             }
                         }
                         break;

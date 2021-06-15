@@ -14,10 +14,10 @@ namespace EQKDServer.Models
         // Clock Synchronization
         //-----------------------
         public double LinearDriftCoefficient { get; set; } = 0.0;
-        public double LinearDriftCoeff_Var { get; set; } = 0.001E-5;
-        public int LinearDriftCoeff_NumVar { get; set; } = 2;
+        public double LinearDriftCoeff_Var { get; set; } = 1E-11;
+        public int LinearDriftCoeff_NumVar { get; set; } = 0;
         public ulong TimeWindow { get; set; } = 100000;
-        public ulong TimeBin { get; set; } = 500;
+        public ulong TimeBin { get; set; } = 256;
 
 
         public long FiberOffset { get; set; } = 0;
