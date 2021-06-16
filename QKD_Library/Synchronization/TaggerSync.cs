@@ -554,7 +554,7 @@ namespace QKD_Library.Synchronization
 
             //Write statistics
 
-            WriteLog($"Clock sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| Fitted FWHM: {opt_driftResults.Sigma.val:F2}({opt_driftResults.Sigma.err:F2})" +
+            WriteLog($"Clock sync cycle complete in {sw.Elapsed} | TimeSpan: {packettimespan}| Fitted Sigma: {opt_driftResults.Sigma.val:F2}({opt_driftResults.Sigma.err:F2})" +
                         $" | Pos: {opt_driftResults.MiddlePeak.MeanTime:F2} | Fitted pos: {opt_driftResults.FittedMeanTime:F2} | new DriftCoeff {opt_driftResults.LinearDriftCoeff}({LinearDriftCoefficient - opt_driftResults.LinearDriftCoeff})");
 
             //Define new Drift Coefficient
