@@ -51,7 +51,9 @@ namespace EQKDServer.Models
         List<byte> _bobKeys = new List<byte>();
 
         System.Timers.Timer _stabTestTimer = new System.Timers.Timer();
-        
+
+        int syncFailedcounter = 0;
+
         //-----------------------------------
         //----  P R O P E R T I E S
         //-----------------------------------
@@ -522,9 +524,22 @@ namespace EQKDServer.Models
             //Get Key Correlations
             TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
 
+
+            //Log timetags and global offset if sync failed
+            string failedTagsFolder = "SyncDebug";
+            if (!Directory.Exists(failedTagsFolder)) Directory.CreateDirectory(failedTagsFolder);
+            var date = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+            File.AppendAllLines(Path.Combine(failedTagsFolder, "GlobalOffsets.txt"), new string[] { $"{date}\t{AliceBobSync.GlobalClockOffset}"} );
+
             if (!syncRes.IsSync)
             {
-                WriteLog("Not in sync, no keys generated");
+                WriteLog("Not in sync, no keys generated");         
+                
+                syncRes.TimeTags_Alice.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_Alice.dat"));
+                syncRes.CompTimeTags_Bob.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_Bob.dat"));
+
+                syncFailedcounter++;
+
                 return;
             }
                  
