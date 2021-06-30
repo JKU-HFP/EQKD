@@ -536,7 +536,8 @@ namespace EQKDServer.Models
                 WriteLog("Not in sync, no keys generated");         
                 
                 syncRes.TimeTags_Alice.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_Alice.dat"));
-                syncRes.CompTimeTags_Bob.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_Bob.dat"));
+                syncRes.TimeTags_Bob.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_Bob.dat"));
+                if (syncRes.CompTimeTags_Bob!=null)syncRes.CompTimeTags_Bob.ToFile(Path.Combine(failedTagsFolder, $"{date}_{syncFailedcounter:D4}_BobComp.dat"));
 
                 syncFailedcounter++;
 

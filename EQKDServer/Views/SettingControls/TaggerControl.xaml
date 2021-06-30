@@ -79,6 +79,10 @@
                 <TextBlock Text="Startfinder Thresh."/>
                 <TextBox Width="100" Text="{Binding StartFinderThreshold}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Corr. Significance"/>
+                <TextBox Width="100" Text="{Binding CorrSignificance}"/>
+            </StackPanel>
         </StackPanel>
 
         

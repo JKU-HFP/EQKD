@@ -190,6 +190,17 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             }
         }
 
+        private double _corrSignificance = 0.8;
+        public double CorrSignificance
+        {
+            get { return _corrSignificance; }
+            set {
+                _corrSignificance = value;
+                OnPropertyChanged(nameof(CorrSignificance));
+            }
+        }
+
+
 
         #endregion
 
@@ -434,6 +445,7 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             _EQKDServer.AliceBobSync.SyncFreqOffset = SyncFreqOffset;
 
             _EQKDServer.AliceBobSync.StartFinderThreshold = StartFinderThreshold;
+            _EQKDServer.AliceBobSync.CorrSignificance = CorrSignificance;
         }
         private void Synchronize(object o)
         {

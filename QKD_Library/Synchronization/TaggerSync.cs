@@ -55,6 +55,7 @@ namespace QKD_Library.Synchronization
         /// Offset by relative fiber distance of Alice and Bob
         /// </summary>
         public ulong CorrSyncTimeWindow { get; set; } = 100000;
+        public double CorrSignificance { get; set; } = 0.8;
 
         //#################################################
         //##  P R I V A T E S
@@ -586,7 +587,6 @@ namespace QKD_Library.Synchronization
         {
             SyncCorrResults results = new SyncCorrResults();
 
-            double coarseCorrelationSignificance = 0.7;
             int maxNumCoarseSearches = 12;
 
             ulong FineTimeWindow = 10 * ExcitationPeriod;
@@ -639,8 +639,8 @@ namespace QKD_Library.Synchronization
                             long maxPoint = croppedHistogramY.Max();
                             double average = croppedHistogramY.Average();
 
-                            bool minPointsignificant = minPoint < (1-coarseCorrelationSignificance) * average;
-                            bool maxPointsignificant = maxPoint > (1+coarseCorrelationSignificance) * average;                       
+                            bool minPointsignificant = minPoint < (1-CorrSignificance) * average;
+                            bool maxPointsignificant = maxPoint > (1+CorrSignificance) * average;                       
 
                             //Is Extremum significant?
                             if (maxPointsignificant)
@@ -747,7 +747,7 @@ namespace QKD_Library.Synchronization
                             int ind_max = ratios.FindIndex(v => v == max_ratio);
 
                             //Is deviation significant?
-                            if(max_ratio > 1.9)
+                            if(max_ratio > (1+CorrSignificance))
                             {
                                 res.CorrPeakPos = peaks[ind_max].MeanTime;
 
