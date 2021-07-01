@@ -519,7 +519,7 @@ namespace EQKDServer.Models
             AliceKey.FileName = Path.Combine(KeyFolder, $"Key_Alice_{_currKeyNr:D4}.txt");
             string stats_file = Path.Combine(KeyFolder, $"Stats_{_currKeyNr:D4}.txt");
 
-            if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t Qber \t GlobalTimeOffset \t PacketOverlap" });
+            if (!File.Exists(stats_file)) File.WriteAllLines(stats_file, new string[] { "Time \t Rate \t Qber \t GlobalTimeOffset \t PacketOverlap \t TimeBin" });
 
             //Get Key Correlations
             TaggerSyncResults syncRes = AliceBobSync.GetSyncedTimeTags(packetSize: PacketSize, packetTimeSpan: PacketTImeSpan);
@@ -544,7 +544,7 @@ namespace EQKDServer.Models
                 return;
             }
                  
-            var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob);
+            var key_entries = AliceKey.GetKeyEntries(syncRes.TimeTags_Alice, syncRes.CompTimeTags_Bob,Key_TimeBin);
             AliceKey.AddKey(key_entries);
             //Register key at Bob                
             TimeTags bobSiftedTimeTags = new TimeTags(new byte[] { }, key_entries.Select(fe => (long)fe.index_bob).ToArray());
@@ -556,7 +556,7 @@ namespace EQKDServer.Models
             double rate = AliceKey.GetRate(syncRes.TimeTags_Alice, key_entries);
             WriteLog($"{key_entries.Count} keys generated with a raw rate of {rate:F3} keys/s");
             File.AppendAllLines(stats_file, new string[] { DateTime.Now.ToString()+"\t"+rate.ToString("F2")+"\t"+_currQber.ToString("F4")+"\t"+
-                                                           AliceBobSync.GlobalClockOffset_Relative.ToString()+"\t"+overlap.ToString("F2") });
+                                                           AliceBobSync.GlobalClockOffset_Relative.ToString()+"\t"+overlap.ToString("F2")+"\t"+Key_TimeBin.ToString() });
         }
 
         private void _generateKeysLocal()
