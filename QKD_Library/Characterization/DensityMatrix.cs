@@ -111,6 +111,41 @@ namespace QKD_Library.Characterization
             new double[] {22.5, 0, 22.5, 90}, //RL 16
         };
 
+
+        public static readonly List<double[]> StdBasis9 = new List<double[]>
+        {
+            // HWP_A, QWP_A, HWP_B, QWP_B
+            // Plates calibrated against V, measured against V
+            // --> (0,0) := H
+
+            new double[] {0,0,0,0}, //HH 1
+            new double[] {0, 0, 22.5,45}, //HD 2
+            new double[] {0,0, 22.5, 0}, //HR 3
+            new double[] {22.5,45, 0, 0}, //DH 4
+            new double[] {22.5,45,22.5,45}, //DD 5
+            new double[] {22.5,45,22.5,0}, //DR 6
+            new double[] {22.5,0, 0, 0}, //RH 7
+            new double[] {22.5, 0, 22.5,45}, //RD 8
+            new double[] {22.5, 0, 22.5, 0}, //RR 9
+        };
+
+        public static readonly List<double[]> StdBasis9corr = new List<double[]>
+        {
+            // HWP_A, QWP_A, HWP_B, QWP_B
+            // Plates calibrated against V, measured against V
+            // --> (0,0) := H
+
+            new double[] {47.69,17.51,38.26,77.84},//HH1
+            new double[] {47.69,17.51,38.60,26.36},//HD2
+            new double[] {47.69,17.51,19.39,33.11},//HR3
+            new double[] {11.08,-6.07,38.26,77.84},//DH4
+            new double[] {11.08,-6.07,38.60,26.36},//DD5
+            new double[] {11.08,-6.07,19.39,33.11},//DR6
+            new double[] {34.09,57.35,38.26,77.84},//RH7
+            new double[] {34.09,57.35,38.60,26.36},//RD8
+            new double[] {34.09,57.35,19.39,33.11},//RR9
+        };
+
         //#################################################
         //##  P R O P E R T I E S
         //#################################################
