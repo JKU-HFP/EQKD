@@ -32,7 +32,7 @@ namespace EQKDServer.Models
         const uint REMOVEDPOS = 2;
         const uint INSERTEDPOS = 1;
 
-        private bool EXTERNAL_CLOCK = true;
+        private bool EXTERNAL_CLOCK = false;
 
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
@@ -136,24 +136,12 @@ namespace EQKDServer.Models
                 DiscriminatorLevel = 200,
                 SyncDivider = 8,
                 SyncDiscriminatorLevel = 200,
-                MeasurementMode = HydraHarp.Mode.MODE_T2,
+                MeasurementMode = HydraHarp.Mode.MODE_T3,
                 ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            hydra.Connect(new List<long> { 0, -3820, -31680, -31424 });
-
-            //SITimeTagger sitagger = new SITimeTagger(_loggerCallback)
-            //{
-            //    RefChan = EXTERNAL_CLOCK ? 1 : 0,
-            //    SyncDiscriminatorVoltage = 0.2,
-            //    RefChanDivider=100,
-            //    SyncRate=10000000,
-            //    PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
-            //};
-
-            //long testoffs = 128;
-            //long OIC_Alice750m = 0;// -3493504;
-            //sitagger.Connect(new List<long> { 0+OIC_Alice750m, 0+OIC_Alice750m, -75648+OIC_Alice750m, -78208+OIC_Alice750m, 2176 + testoffs, 2176 + testoffs, 1164 + testoffs, 2176 + testoffs });
+            //hydra.Connect(new List<long> { 0, -3820, -31680, -31424 }); //QKD
+            hydra.Connect(new List<long> { 0, 2600, 13800, 15100 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
@@ -162,15 +150,15 @@ namespace EQKDServer.Models
             ClientTimeTagger = nwtagger;
 
             //Instanciate and connect filter flippers
-            PolarizerFlipper = new MFF101Flipper(_loggerCallback);
-            PolarizerFlipper.Connect("37853189");
+            //PolarizerFlipper = new MFF101Flipper(_loggerCallback);
+            //PolarizerFlipper.Connect("37853189");
 
-            PolarizerControl(false); //Open after homing
+            //PolarizerControl(false); //Open after homing
 
-            ShutterFlipper = new MFF101Flipper(_loggerCallback);
-            ShutterFlipper.Connect("37003303"); 
+            //ShutterFlipper = new MFF101Flipper(_loggerCallback);
+            //ShutterFlipper.Connect("37003303"); 
             
-            TriggerShutter(false); //Open after Homing
+            //TriggerShutter(false); //Open after Homing
 
             //Instanciate and connect rotation Stages
             _smcController = new SMC100Controller(_loggerCallback);
@@ -182,12 +170,12 @@ namespace EQKDServer.Models
 
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 45.47; //old: 45.01;
+                _HWP_A.Offset = 128.9; //old: 45.01;
             }
 
             if (_HWP_B != null)
             {
-                _HWP_B.Offset = 100.27; //old: 100.06;
+                _HWP_B.Offset = 3.9; //old: 100.06;
             }
 
 
@@ -195,13 +183,13 @@ namespace EQKDServer.Models
             //_HWP_C.Connect("27254524");
             //_HWP_C.Offset = 58.5 + 90;
 
-            _QWP_A = new KPRM1EStage(_loggerCallback);
-            _QWP_A.Connect("27254310");
-            _QWP_A.Offset = 35.92; //old: 35.15
+            //_QWP_A = new KPRM1EStage(_loggerCallback);
+            //_QWP_A.Connect("27254310");
+            //_QWP_A.Offset = 35.92; //old: 35.15
 
-            //_QWP_B = new KPRM1EStage(_loggerCallback);
-            //_QWP_B.Connect("27504148");
-            //_QWP_B.Offset = 63.51; //old: 63.84;
+            _QWP_B = new KPRM1EStage(_loggerCallback);
+            _QWP_B.Connect("27504148");
+            _QWP_B.Offset = 147.33; //old: 63.84;
 
             //_QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_C.Connect("27003707");
@@ -209,7 +197,7 @@ namespace EQKDServer.Models
 
             _QWP_D = new KPRM1EStage(_loggerCallback);
             _QWP_D.Connect("27254574");
-            _QWP_D.Offset = 33.15 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
+            _QWP_D.Offset = 28.12 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
        
 
@@ -233,7 +221,8 @@ namespace EQKDServer.Models
             AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
             FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_D }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback, xystab: XYStabilizer)
+            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_B, _QWP_B, _HWP_A, _QWP_D, _loggerCallback, xystab: XYStabilizer) //Order: HWP_A, QWP_A, HWP_B, QWP_B = same order as used in Basis definition
+
             {
                 ChannelA = 0,
                 ChannelB = 1
@@ -428,7 +417,7 @@ namespace EQKDServer.Models
 
             AliceBobDensMatrix.PacketTimeSpan = PacketTImeSpan;
             AliceBobDensMatrix.BackupRawData = true;
-            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis36);
+            return AliceBobDensMatrix.MeasurePeakAreasAsync(userBasisConfigs: DensityMatrix.StdBasis9corr); //Def Basis here
         }
 
         public void Cancel()
