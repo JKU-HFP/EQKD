@@ -118,15 +118,15 @@ namespace QKD_Library.Characterization
             // Plates calibrated against V, measured against V
             // --> (0,0) := H
 
-            new double[] {0,0,0,0}, //HH 1
-            new double[] {0, 0, 22.5,45}, //HD 2
-            new double[] {0,0, 22.5, 0}, //HR 3
-            new double[] {22.5,45, 0, 0}, //DH 4
-            new double[] {22.5,45,22.5,45}, //DD 5
-            new double[] {22.5,45,22.5,0}, //DR 6
-            new double[] {22.5,0, 0, 0}, //RH 7
-            new double[] {22.5, 0, 22.5,45}, //RD 8
-            new double[] {22.5, 0, 22.5, 0}, //RR 9
+            new double[] {0,90,0,90}, //HH 1
+            new double[] {0, 90, 22.5,135}, //HD 2
+            new double[] {0,90, 22.5, 90}, //HL 3
+            new double[] {22.5,135, 0, 90}, //DH 4
+            new double[] {22.5,135,22.5,135}, //DD 5
+            new double[] {22.5,135,22.5,90}, //DL 6
+            new double[] {22.5,90, 0, 90}, //LH 7
+            new double[] {22.5, 90, 22.5,135}, //LD 8
+            new double[] {22.5, 90, 22.5, 90}, //LL 9
         };
 
         public static readonly List<double[]> StdBasis9corr = new List<double[]>
@@ -135,15 +135,16 @@ namespace QKD_Library.Characterization
             // Plates calibrated against V, measured against V
             // --> (0,0) := H
 
-            new double[] {47.69,17.51,38.26,77.84},//HH1
-            new double[] {47.69,17.51,38.60,26.36},//HD2
-            new double[] {47.69,17.51,19.39,33.11},//HR3
-            new double[] {11.08,-6.07,38.26,77.84},//DH4
-            new double[] {11.08,-6.07,38.60,26.36},//DD5
-            new double[] {11.08,-6.07,19.39,33.11},//DR6
-            new double[] {34.09,57.35,38.26,77.84},//RH7
-            new double[] {34.09,57.35,38.60,26.36},//RD8
-            new double[] {34.09,57.35,19.39,33.11},//RR9
+			new double[] {-13.77,2.27,-3.24,16.38},//HH1
+			new double[] {-13.77,2.27,53.18,28.29},//HD2
+			new double[] {-13.77,2.27,12.17,2.26},//HR3
+			new double[] {26.87,53.91,-3.24,16.38},//DH4
+			new double[] {26.87,53.91,53.18,28.29},//DD5
+			new double[] {26.87,53.91,12.17,2.26},//DR6
+			new double[] {11.51,6.82,-3.24,16.38},//RH7
+			new double[] {11.51,6.82,53.18,28.29},//RD8
+			new double[] {11.51,6.82,12.17,2.26},//RR9
+
         };
 
         //#################################################
