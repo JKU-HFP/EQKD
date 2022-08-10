@@ -141,7 +141,8 @@ namespace EQKDServer.Models
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
             //hydra.Connect(new List<long> { 0, -3820, -31680, -31424 }); //QKD
-            hydra.Connect(new List<long> { 0, 2600, 13800, 15100 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
+            hydra.Connect(new List<long> { 0, -3950, -11650+25000, -12300+25000 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
+            //hydra.Connect(new List<long> { 0,13800,0,0 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
 
 
             NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
@@ -170,12 +171,12 @@ namespace EQKDServer.Models
 
             if (_HWP_A != null)
             {
-                _HWP_A.Offset = 128.9; //old: 45.01;
+                _HWP_A.Offset = 137.3; //old: 45.01;
             }
 
             if (_HWP_B != null)
             {
-                _HWP_B.Offset = 3.9; //old: 100.06;
+                _HWP_B.Offset = 12.55; //old: 100.06;
             }
 
 
@@ -189,7 +190,7 @@ namespace EQKDServer.Models
 
             _QWP_B = new KPRM1EStage(_loggerCallback);
             _QWP_B.Connect("27504148");
-            _QWP_B.Offset = 147.33; //old: 63.84;
+            _QWP_B.Offset = 156.8; //old: 63.84;
 
             //_QWP_C = new KPRM1EStage(_loggerCallback);
             //_QWP_C.Connect("27003707");
@@ -197,13 +198,13 @@ namespace EQKDServer.Models
 
             _QWP_D = new KPRM1EStage(_loggerCallback);
             _QWP_D.Connect("27254574");
-            _QWP_D.Offset = 28.12 + 90; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
+            _QWP_D.Offset = 35.9; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
 
        
 
             //Connect linear stages for XY stabilization
             XY_Controller = new PI_C843_Controller(_loggerCallback);
-            XY_Controller.Connect("M-505.2DG\nM-505.2DG");
+            XY_Controller.Connect("M-505.2DG\nM-505.2DG"); 
             XStage = XY_Controller.GetStages()[0];
             YStage = XY_Controller.GetStages()[1];
 
