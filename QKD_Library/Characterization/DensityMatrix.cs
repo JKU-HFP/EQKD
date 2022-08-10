@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TimeTagger_Library.TimeTagger;
 using TimeTagger_Library.Correlation;
-using Stage_Library;
+using Stage;
 using System.Threading;
 using TimeTagger_Library;
 using System.Diagnostics;

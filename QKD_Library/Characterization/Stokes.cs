@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Thorlabs.TLPM_64.Interop;
 using System.Runtime.InteropServices;
 using Extensions_Library;
-using Stage_Library;
+using Stage;
 using System.IO;
 using System.Diagnostics;
 

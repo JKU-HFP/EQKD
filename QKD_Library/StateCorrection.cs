@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Extensions_Library;
 using MathNet.Numerics;
-using Stage_Library;
+using Stage;
 using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;

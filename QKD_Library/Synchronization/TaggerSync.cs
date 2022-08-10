@@ -14,7 +14,7 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra.Double;
 using MathNet.Numerics.Distributions;
-using Stage_Library.Thorlabs;
+using Stage.Thorlabs;
 
 namespace QKD_Library.Synchronization
 {
