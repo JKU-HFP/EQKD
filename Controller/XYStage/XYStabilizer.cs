@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Stage_Library;
+using Stage;
 
 namespace Controller.XYStage
 {
