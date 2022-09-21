@@ -20,6 +20,7 @@ using TimeTagger_Library;
 using TimeTagger_Library.Correlation;
 using TimeTagger_Library.TimeTagger;
 using System.Windows;
+using EQKDServer.Models.Hardware;
 
 namespace EQKDServer.Models
 {
@@ -37,7 +38,6 @@ namespace EQKDServer.Models
         //-----------------------------------
         //----  P R I V A T E  F I E L D S
         //-----------------------------------
-
         private Action<string> _loggerCallback;
         private Func<string, string, int> _userprompt;
         private ServerSettings _currentServerSettings = new ServerSettings();
@@ -58,6 +58,9 @@ namespace EQKDServer.Models
         //----  P R O P E R T I E S
         //-----------------------------------
 
+        //Hardware Connection
+        public HardwareInterface Hardware { get; set; }
+
         //Synchronization and State correction
         public TaggerSync AliceBobSync { get; private set; }
         public StateCorrection FiberCorrection { get; private set; }
@@ -70,14 +73,7 @@ namespace EQKDServer.Models
         public bool StabilizeCountrate { get; set; } = true;
         public SecQNetServer SecQNetServer { get; private set; }
 
-        //Time Tagger
-        public ITimeTagger ServerTimeTagger { get; set; }
-        public ITimeTagger ClientTimeTagger { get; set; }
-
-        //Stabilization
-        public XYStabilizer XYStabilizer { get; private set; }
-        public bool AutoStabilization { get; set; }
-
+        
         //Key generation
         public ulong Key_TimeBin { get; set; } = 1000;
         public string KeyFolder { get; set; } = "Key";
@@ -87,23 +83,7 @@ namespace EQKDServer.Models
             RectZeroChan =0,
             DiagZeroChan=2
         };
-        //Rotation Stages
-        public SMC100Controller _smcController { get; private set; }
-        public SMC100Stage _HWP_A { get; private set; }
-        public KPRM1EStage _QWP_A { get; private set; }
-        public SMC100Stage _HWP_B { get; private set; }
-        public KPRM1EStage _HWP_C { get; private set; }
-        public KPRM1EStage _QWP_B { get; private set; }
-        public KPRM1EStage _QWP_C { get; private set; }
-        public KPRM1EStage _QWP_D { get; private set; }
-
-        //Linear stages
-        public MFF101Flipper PolarizerFlipper { get; private set; }
-        public MFF101Flipper ShutterFlipper { get; private set; }
-    public PI_C843_Controller XY_Controller { get; private set; }
-        public PI_C843_Stage XStage { get; private set; }
-        public PI_C843_Stage YStage { get; private set; }
-
+        
         //-----------------------------------
         //----  E V E N T S
         //-----------------------------------
@@ -130,26 +110,8 @@ namespace EQKDServer.Models
 
             SecQNetServer = new SecQNetServer(_loggerCallback);
 
-            //Instanciate TimeTaggers
-            HydraHarp hydra = new HydraHarp(_loggerCallback)
-            {
-                DiscriminatorLevel = 200,
-                SyncDivider = 8,
-                SyncDiscriminatorLevel = 200,
-                MeasurementMode = HydraHarp.Mode.MODE_T3,
-                ClockMode = EXTERNAL_CLOCK ? HydraHarp.Clock.External : HydraHarp.Clock.Internal,
-                PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
-            };
-            //hydra.Connect(new List<long> { 0, -3820, -31680, -31424 }); //QKD
-            hydra.Connect(new List<long> { 0, -3950, -11650+25000, -12300+25000 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
-            //hydra.Connect(new List<long> { 0,13800,0,0 }); //DensMatrix --> Delay times of ch0, ch1, ch2, ch3 in [ps]
-
-
-            NetworkTagger nwtagger = new NetworkTagger(_loggerCallback,SecQNetServer);
-
-            ServerTimeTagger = hydra;
-            ClientTimeTagger = nwtagger;
-
+            Hardware = new HardwareInterface(_loggerCallback, SecQNetServer);
+           
             //Instanciate and connect filter flippers
             //PolarizerFlipper = new MFF101Flipper(_loggerCallback);
             //PolarizerFlipper.Connect("37853189");
@@ -158,71 +120,19 @@ namespace EQKDServer.Models
 
             //ShutterFlipper = new MFF101Flipper(_loggerCallback);
             //ShutterFlipper.Connect("37003303"); 
-            
+
             //TriggerShutter(false); //Open after Homing
 
             //Instanciate and connect rotation Stages
-            _smcController = new SMC100Controller(_loggerCallback);
-            _smcController.Connect("COM3");
-            List<SMC100Stage> _smcStages = _smcController.GetStages();
 
-            _HWP_A = _smcStages[1];
-            _HWP_B = _smcStages[2];
-
-            if (_HWP_A != null)
-            {
-                _HWP_A.Offset = 137.3; //old: 45.01;
-            }
-
-            if (_HWP_B != null)
-            {
-                _HWP_B.Offset = 12.55; //old: 100.06;
-            }
-
-
-            //_HWP_C = new KPRM1EStage(_loggerCallback);
-            //_HWP_C.Connect("27254524");
-            //_HWP_C.Offset = 58.5 + 90;
-
-            //_QWP_A = new KPRM1EStage(_loggerCallback);
-            //_QWP_A.Connect("27254310");
-            //_QWP_A.Offset = 35.92; //old: 35.15
-
-            _QWP_B = new KPRM1EStage(_loggerCallback);
-            _QWP_B.Connect("27504148");
-            _QWP_B.Offset = 156.8; //old: 63.84;
-
-            //_QWP_C = new KPRM1EStage(_loggerCallback);
-            //_QWP_C.Connect("27003707");
-            //_QWP_C.Offset = 27.3;
-
-            _QWP_D = new KPRM1EStage(_loggerCallback);
-            _QWP_D.Connect("27254574");
-            _QWP_D.Offset = 35.9; //FAST AXIS WRONG ON THORLABS PLATE --> +90°!
-
-       
 
             //Connect linear stages for XY stabilization
-            XY_Controller = new PI_C843_Controller(_loggerCallback);
-            XY_Controller.Connect("M-505.2DG\nM-505.2DG"); 
-            XStage = XY_Controller.GetStages()[0];
-            YStage = XY_Controller.GetStages()[1];
 
 
-            //Instanciate XYStabilizer
-            string xystabdir = "XYStabilization";
-            if (!Directory.Exists(xystabdir)) Directory.CreateDirectory(xystabdir);
-            XYStabilizer = new XYStabilizer(XStage, YStage, () => ServerTimeTagger.GetCountrate().Sum(), loggerCallback: _loggerCallback)
-            {
-                StepSize = 5E-4,
-                Logfile = xystabdir + "//xystab_log.txt"
-            };
-                
-
-            AliceBobSync = new TaggerSync(ServerTimeTagger, ClientTimeTagger, _loggerCallback, _userprompt, TriggerShutter, PolarizerControl);
-            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { _QWP_A, _HWP_B, _QWP_D }, _loggerCallback);
+            AliceBobSync = new TaggerSync(Hardware.ServerTimeTagger, Hardware.ClientTimeTagger, _loggerCallback, _userprompt, Hardware.TriggerShutter, Hardware.PolarizerControl);
+            FiberCorrection = new StateCorrection(AliceBobSync, new List<IRotationStage> { Hardware._QWP_A, Hardware._HWP_B, Hardware._QWP_D }, _loggerCallback);
             //AliceBobDensMatrix = new DensityMatrix(AliceBobSync, _HWP_A, _QWP_A, _HWP_B, _QWP_B, _loggerCallback);//Before fiber
-            AliceBobDensMatrix = new DensityMatrix(ServerTimeTagger, _HWP_B, _QWP_B, _HWP_A, _QWP_D, _loggerCallback, xystab: XYStabilizer) //Order: HWP_A, QWP_A, HWP_B, QWP_B = same order as used in Basis definition
+            AliceBobDensMatrix = new DensityMatrix(Hardware.ServerTimeTagger, Hardware._HWP_B, Hardware._QWP_B, Hardware._HWP_A, Hardware._QWP_D, _loggerCallback, xystab: Hardware.XYStabilizer) //Order: HWP_A, QWP_A, HWP_B, QWP_B = same order as used in Basis definition
 
             {
                 ChannelA = 0,
@@ -233,59 +143,6 @@ namespace EQKDServer.Models
             //Create key folder
             if (!Directory.Exists(KeyFolder)) Directory.CreateDirectory(KeyFolder);
 
-            //Set and start Stabilization Test Timer
-            _stabTestTimer.Elapsed += _stabTestTimer_Elapsed;
-            _stabTestTimer.Interval = 5000;
-            _stabTestTimer.Start();
-
-            //Test stuff
-            //while(true)
-            //{
-            //    _QWP_A.Move_Absolute(90);
-            //    _QWP_D.Move_Absolute(90);
-            //    _HWP_B.Move_Absolute(90);
-            //    TriggerShutter(true);
-            //    PolarizerControl(true);
-            //    Thread.Sleep(4000);
-            //    _QWP_A.Move_Absolute(0);
-            //    _QWP_D.Move_Absolute(0);
-            //    _HWP_B.Move_Absolute(0);
-            //    TriggerShutter(false);
-            //    PolarizerControl(false);
-            //    Thread.Sleep(4000);
-            //}
-
-
-        }
-
-
-        private void PolarizerControl(bool status)
-        {
-            switch (status)
-            {
-                case true:
-                    PolarizerFlipper.Move(INSERTEDPOS);
-                    break;
-                case false:
-                    PolarizerFlipper.Move(REMOVEDPOS);
-                    break;
-                default:
-                    break;
-            }
-        }
-        private void TriggerShutter(bool status)
-        {
-            switch (status)
-            {
-                case true:
-                    ShutterFlipper.Move(INSERTEDPOS);
-                    break;
-                case false:
-                    ShutterFlipper.Move(REMOVEDPOS);
-                    break;
-                default:
-                    break;
-            }
         }
 
         //--------------------------------------
@@ -302,44 +159,6 @@ namespace EQKDServer.Models
         /// 3 ... X-
         /// </param>
         /// <returns></returns>
-        public Task MoveXYStage(int direction)
-        {
-            double step = 0.2E-3;
-            
-            return Task.Run( () =>
-            {
-                switch (direction)
-                {
-                    case 0:
-                        YStage.Move_Relative(step);
-                        break;
-                    case 1:
-                        YStage.Move_Relative(-step);
-                        break;
-                    case 2:
-                        XStage.Move_Relative(step);
-                        break;
-                    case 3:
-                        XStage.Move_Relative(-step);
-                        break;
-                }
-            });
-        }
-
-        public Task XYStageOptimize()
-        {
-            return XYStabilizer.CorrectAsync();          
-        }
-
-        private void _stabTestTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            //if (AutoStabilization &&
-            //    !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
-            //    && XYStabilizer.ProcessValue < (XYStabilizer.SetPoint - 2*(XYStabilizer.SPTolerance)))
-            //{
-            //    XYStabilizer.CorrectAsync();
-            //}
-        }
 
         public async Task TestClock()
         {
@@ -425,7 +244,7 @@ namespace EQKDServer.Models
         {         
             AliceBobDensMatrix?.CancelMeasurement();
             _cts?.Cancel();
-            XYStabilizer?.Cancel();
+            Hardware.XYStabilizer?.Cancel();
         }
 
         public void ResetTaggers()
@@ -453,14 +272,15 @@ namespace EQKDServer.Models
                 while (!_cts.Token.IsCancellationRequested)
                 {
 
-                    if (AutoStabilization &&
-                       !XYStabilizer.StabilizationActive && XYStabilizer.PVBufferFilled
-                       && XYStabilizer.IsBelowTriggerPoint)
+                    if (Hardware.AutoStabilization &&
+                       !Hardware.XYStabilizer.StabilizationActive && 
+                        Hardware.XYStabilizer.PVBufferFilled && 
+                        Hardware.XYStabilizer.IsBelowTriggerPoint)
                     {
-                        XYStabilizer.Correct();
+                        Hardware.XYStabilizer.Correct();
                     }
 
-                    switch (ClientTimeTagger)
+                    switch (Hardware.ClientTimeTagger)
                     {
                         case NetworkTagger nwtag:
 

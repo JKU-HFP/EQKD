@@ -16,6 +16,7 @@ using System.Windows.Media;
 using TimeTagger_Library.Correlation;
 using System.ComponentModel;
 using System;
+using EQKDServer.Models.Hardware;
 
 namespace EQKDServer.ViewModels.SettingControlViewModels
 {
@@ -166,8 +167,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             set {
                 _autoStabilization = value;
                 OnPropertyChanged("AutoStabilization");
-                _EQKDServer.AutoStabilization = value==1;
-                _EQKDServer.XYStabilizer.Activated = value == 1;
+                _EQKDServer.Hardware.AutoStabilization = value==1;
+                _EQKDServer.Hardware.XYStabilizer.Activated = value == 1;
             }
         }
 
@@ -252,16 +253,16 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             (o) => !_EQKDServer?.FiberCorrection?.IsActive ?? false);
 
 
-            Stage_Yplus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(0));
-            Stage_Yminus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(1));
-            Stage_Xplus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(2));
-            Stage_Xminus_Command = new RelayCommand<object>((o) => _EQKDServer.MoveXYStage(3));
-            Stage_Optimize_Command = new RelayCommand<object>((o) => _EQKDServer.XYStageOptimize());
+            Stage_Yplus_Command = new RelayCommand<object>((o) => _EQKDServer.Hardware.MoveXYStage(0));
+            Stage_Yminus_Command = new RelayCommand<object>((o) => _EQKDServer.Hardware.MoveXYStage(1));
+            Stage_Xplus_Command = new RelayCommand<object>((o) => _EQKDServer.Hardware.MoveXYStage(2));
+            Stage_Xminus_Command = new RelayCommand<object>((o) => _EQKDServer.Hardware.MoveXYStage(3));
+            Stage_Optimize_Command = new RelayCommand<object>((o) => _EQKDServer.Hardware.XYStageOptimize());
 
             SetCountrateSP_Command = new RelayCommand<object>((o) =>
             {
-                _EQKDServer.XYStabilizer.SetPoint = CountrateSetpoint;
-                _EQKDServer.XYStabilizer.TriggerTolerance = CountrateSetpointTolerance;
+                _EQKDServer.Hardware.XYStabilizer.SetPoint = CountrateSetpoint;
+                _EQKDServer.Hardware.XYStabilizer.TriggerTolerance = CountrateSetpointTolerance;
             });
 
             //Handle Messages
@@ -303,8 +304,8 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
             {
                 CurrPos = new ObservableCollection<StagePosModel>(_EQKDServer?.FiberCorrection?.StagePositions.Select(pos => new StagePosModel { Value = pos }).ToList());
 
-                Stage_XPos = _EQKDServer?.XStage?.Position ?? double.NaN;
-                Stage_YPos = _EQKDServer?.YStage?.Position ?? double.NaN;
+                Stage_XPos = _EQKDServer?.Hardware.XStage?.Position ?? double.NaN;
+                Stage_YPos = _EQKDServer?.Hardware.YStage?.Position ?? double.NaN;
             };
             _posTimer.Start();
         }

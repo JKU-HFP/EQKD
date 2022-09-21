@@ -46,6 +46,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -111,6 +112,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\Hardware\Catalogue.cs" />
+    <Compile Include="Models\Hardware\Connections.cs" />
+    <Compile Include="Models\Hardware\HardwareInterface.cs" />
+    <Compile Include="Models\Hardware\Operations.cs" />
     <Compile Include="Models\LocalSiftingResult.cs" />
     <Compile Include="Models\ChannelDiagnosis.cs" />
     <Compile Include="Models\EQKDServerModel.cs" />

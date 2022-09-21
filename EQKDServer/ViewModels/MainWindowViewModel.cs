@@ -221,15 +221,15 @@ namespace EQKDServer.ViewModels
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
 
-            _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
+            _EQKDServer.Hardware.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
              {
-                 ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
-                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
+                 ServerBufferSize = _EQKDServer.Hardware.ServerTimeTagger.BufferSize;
+                 ServerBufferStatus = _EQKDServer.Hardware.ServerTimeTagger.BufferFillStatus;
              };
-            _EQKDServer.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
+            _EQKDServer.Hardware.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
             {
-                ClientBufferSize = _EQKDServer.ClientTimeTagger.BufferSize;
-                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferFillStatus;
+                ClientBufferSize = _EQKDServer.Hardware.ClientTimeTagger.BufferSize;
+                ClientBufferStatus = _EQKDServer.Hardware.ClientTimeTagger.BufferFillStatus;
             };
             _EQKDServer.SecQNetServer.TimeTagsReceived += (sender, e) =>
             {
@@ -299,9 +299,9 @@ namespace EQKDServer.ViewModels
         private void On_OpenCountrateWindowCommand(object obj)
         {
             //TimeTagger ready?
-            if (!_EQKDServer.ServerTimeTagger.CanCollect) return;
+            if (!_EQKDServer.Hardware.ServerTimeTagger.CanCollect) return;
 
-            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.ServerTimeTagger);
+            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.Hardware.ServerTimeTagger);
 
             if (_channelView != null) if (_channelView.IsVisible) return;
 
