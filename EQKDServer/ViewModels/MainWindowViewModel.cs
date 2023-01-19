@@ -59,7 +59,7 @@ namespace EQKDServer.ViewModels
         private bool _isUpdating = false;
 
         private object _messageLock = new object();
-        
+        public StatusWindowViewModel _statusWindow = new StatusWindowViewModel();
 
         #region Propterties
         //#################################################
@@ -76,129 +76,11 @@ namespace EQKDServer.ViewModels
             }
         }
 
-        //Network status
-        private bool _networkConnected;
-        public bool NetworkConnected
-        {
-            get { return _networkConnected; }
-            private set
-            {
-                _networkConnected = value;
-                OnPropertyChanged("NetworkConnected");
-            }
-        }
-
-        private string _networkStatus;
-        public string NetworkStatus
-        {
-            get { return _networkStatus; }
-            private set
-            {
-                _networkStatus = value;
-                OnPropertyChanged("NetworkStatus");
-            }
-        }
-
-        //Gauges
-        private int _serverBufferStatus;
-        public int ServerBufferStatus
-        {
-            get { return _serverBufferStatus; }
-            set
-            {
-                _serverBufferStatus = value;
-                OnPropertyChanged("ServerBufferStatus");
-            }
-        }
-
-        private int _serverBufferSize;
-        public int ServerBufferSize
-        {
-            get { return _serverBufferSize; }
-            set
-            {
-                _serverBufferSize = value;
-                OnPropertyChanged("ServerBufferSize");
-            }
-        }
-
-        private int _clientBufferStatus;
-        public int ClientBufferStatus
-        {
-            get { return _clientBufferStatus; }
-            set
-            {
-                _clientBufferStatus = value;
-                OnPropertyChanged("ClientBufferStatus");
-            }
-        }
-
-        private int _clientBufferSize;
-        public int ClientBufferSize
-        {
-            get { return _clientBufferSize; }
-            set
-            {
-                _clientBufferSize = value;
-                OnPropertyChanged("ClientBufferSize");
-            }
-        }
-
-        private int _receivedClientTagsBufferStatus;
-        public int ReceivedClientTagsBufferStatus
-        {
-            get { return _receivedClientTagsBufferStatus; }
-            set
-            {
-                _receivedClientTagsBufferStatus = value;
-                OnPropertyChanged("ReceivedClientTagsBufferStatus");
-            }
-        }
-
-        private int _reiceivedClientTagsBufferSize;
-        public int ReceivedClientTagsBufferSize
-        {
-            get { return _reiceivedClientTagsBufferSize; }
-            set
-            {
-                _reiceivedClientTagsBufferSize = value;
-                OnPropertyChanged("ReceivedClientTagsBufferSize");
-            }
-        }
-
-        private double _corrChartXMin = -10000;
-        public double CorrChartXMin
-        {
-            get { return _corrChartXMin; }
-            set
-            {
-                _corrChartXMin = value;
-                OnPropertyChanged("CorrChartXMin");
-            }
-        }
-
-        private double _corrChartXMax = 10000;
-        public double CorrChartXMax
-        {
-            get { return _corrChartXMax; }
-            set
-            {
-                _corrChartXMax = value;
-                OnPropertyChanged("CorrChartXMax");
-            }
-        }
         #endregion
 
         //Logging
         public string LogFolder { get; set; } = "Log";
         public string LogFile { get; private set; } = "";
-
-        //Charts
-        public SeriesCollection LinearDriftCompCollection { get; set; }
-        public SeriesCollection GlobalOffsetCollection { get; set; }
-        public SeriesCollection CorrelationCollection { get; set; }
-        public SectionsCollection CorrelationSectionsCollection { get; set; } = new SectionsCollection();
-        public VisualElementsCollection CorrelationVisualElementsCollection { get; set; } = new VisualElementsCollection();
 
         //COMMANDS
         public RelayCommand<object> WindowLoadedCommand { get; private set; }
@@ -220,24 +102,30 @@ namespace EQKDServer.ViewModels
             _EQKDServer.AliceBobDensMatrix.BasisCompleted += BasisComplete;
             _EQKDServer.KeysGenerated += _EQKDServer_KeysGenerated;
 
-
-            _EQKDServer.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
-             {
-                 ServerBufferSize = _EQKDServer.ServerTimeTagger.BufferSize;
-                 ServerBufferStatus = _EQKDServer.ServerTimeTagger.BufferFillStatus;
-             };
-            _EQKDServer.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
+            if (_EQKDServer.Hardware.ServerTimeTagger != null)
             {
-                ClientBufferSize = _EQKDServer.ClientTimeTagger.BufferSize;
-                ClientBufferStatus = _EQKDServer.ClientTimeTagger.BufferFillStatus;
-            };
+                _EQKDServer.Hardware.ServerTimeTagger.TimeTagsCollected += (sender, e) =>
+                {
+                    _statusWindow.ServerBufferSize = _EQKDServer.Hardware.ServerTimeTagger.BufferSize;
+                    _statusWindow.ServerBufferStatus = _EQKDServer.Hardware.ServerTimeTagger.BufferFillStatus;
+                };
+            }
+
+            if (_EQKDServer.Hardware.ClientTimeTagger != null)
+            {
+                _EQKDServer.Hardware.ClientTimeTagger.TimeTagsCollected += (sender, e) =>
+                {
+                    _statusWindow.ClientBufferSize = _EQKDServer.Hardware.ClientTimeTagger.BufferSize;
+                    _statusWindow.ClientBufferStatus = _EQKDServer.Hardware.ClientTimeTagger.BufferFillStatus;
+                };
+            }
+
             _EQKDServer.SecQNetServer.TimeTagsReceived += (sender, e) =>
             {
-                ReceivedClientTagsBufferSize = e.BufferSize;
-                ReceivedClientTagsBufferStatus = e.BufferStatus;
+                _statusWindow.ReceivedClientTagsBufferSize = e.BufferSize;
+                _statusWindow.ReceivedClientTagsBufferStatus = e.BufferStatus;
             };
-
-
+            
             //Handle Messages
             Messenger.Default.Register<string>(this, (s) => LogMessage(s));
 
@@ -249,17 +137,6 @@ namespace EQKDServer.ViewModels
             ReloadSettingsCommand = new RelayCommand<object>((o) => _EQKDServer.ReadServerConfig());
             OpenCountrateWindowCommand = new RelayCommand<object>(On_OpenCountrateWindowCommand);
 
-            NetworkConnected = false;
-            NetworkStatus = "Not connected";
-            ServerBufferSize = 1000;
-            ServerBufferStatus = 0;
-            ClientBufferSize = 1000;
-            ClientBufferStatus = 0;
-
-            //Initialize Chart elements
-            LinearDriftCompCollection = new SeriesCollection();
-            CorrelationCollection = new SeriesCollection();
-            GlobalOffsetCollection = new SeriesCollection();
 
             //Exception Handling
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
@@ -292,16 +169,16 @@ namespace EQKDServer.ViewModels
             _fittingChartValues?.Clear();
             _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(e.HistogramX.Zip(e.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            CorrChartXMin = e.HistogramX[0] / 1000.0;
-            CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
+            _statusWindow.CorrChartXMin = e.HistogramX[0] / 1000.0;
+            _statusWindow.CorrChartXMax = e.HistogramX[e.HistogramX.Length - 1] / 1000.0;
         }
 
         private void On_OpenCountrateWindowCommand(object obj)
         {
             //TimeTagger ready?
-            if (!_EQKDServer.ServerTimeTagger.CanCollect) return;
+            if (!_EQKDServer.Hardware.ServerTimeTagger.CanCollect) return;
 
-            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.ServerTimeTagger);
+            if (_channelViewModel == null) _channelViewModel = new ChannelViewModel(_EQKDServer.Hardware.ServerTimeTagger);
 
             if (_channelView != null) if (_channelView.IsVisible) return;
 
@@ -322,18 +199,18 @@ namespace EQKDServer.ViewModels
         }
 
         private void _dumpMessages(int remain)
-        { 
-            lock(_messageLock)
+        {
+            lock (_messageLock)
             {
                 string[] messages = Messages.Split('\n');
                 if (messages.Length <= remain) return;
 
                 if (!string.IsNullOrEmpty(LogFile)) File.AppendAllLines(LogFile, messages.Take(messages.Length - remain));
 
-                Messages = string.Join("\n",messages.Skip(messages.Length - remain).ToArray());
+                Messages = string.Join("\n", messages.Skip(messages.Length - remain).ToArray());
             }
         }
-        
+
         private int UserPrompt(string mess, string senderID)
         {
             MessageBoxResult res = MessageBox.Show(mess, senderID, MessageBoxButton.OKCancel);
@@ -345,15 +222,15 @@ namespace EQKDServer.ViewModels
         private void OnMainWindowLoaded(object o)
         {
             _correlationChartValues = new ChartValues<ObservablePoint> { };
-            _correlationLineSeries = new LineSeries()
+            _correlationLineSeries  = new LineSeries()
             {
                 Title = "Sync correlations",
                 PointGeometrySize = 0,
                 LineSmoothness = 0.0,
                 Values = _correlationChartValues
-                
+
             };
-            CorrelationCollection.Add(_correlationLineSeries);
+            _statusWindow.CorrelationCollection.Add(_correlationLineSeries);
 
             _fittingChartValues = new ChartValues<ObservablePoint> { };
             _fittingLineSeries = new LineSeries()
@@ -363,7 +240,7 @@ namespace EQKDServer.ViewModels
                 LineSmoothness = 0.0,
                 Values = _fittingChartValues
             };
-            CorrelationCollection.Add(_fittingLineSeries);
+            _statusWindow.CorrelationCollection.Add(_fittingLineSeries);
 
             _linearDriftCompChartValues = new ChartValues<double>() { };
             _linearDriftCompLineSeries = new LineSeries()
@@ -373,7 +250,7 @@ namespace EQKDServer.ViewModels
                 LineSmoothness = 0.0,
                 Values = _linearDriftCompChartValues,
             };
-            LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
+            _statusWindow.LinearDriftCompCollection.Add(_linearDriftCompLineSeries);
 
             _globalOffsetChartValues = new ChartValues<double>() { };
             _globalOffsetLineSeries = new LineSeries()
@@ -383,7 +260,7 @@ namespace EQKDServer.ViewModels
                 LineSmoothness = 0.0,
                 Values = _globalOffsetChartValues,
             };
-            GlobalOffsetCollection.Add(_globalOffsetLineSeries);
+            _statusWindow.GlobalOffsetCollection.Add(_globalOffsetLineSeries);
 
             Messenger.Default.Send<EQKDServerCreatedMessage>(new EQKDServerCreatedMessage(_EQKDServer));
 
@@ -403,20 +280,20 @@ namespace EQKDServer.ViewModels
             switch (e.connectionStatus)
             {
                 case SecQNetServer.ConnectionStatus.NotConnected:
-                    NetworkConnected = false;
-                    NetworkStatus = "Not connected";
+                    _statusWindow.NetworkConnected = false;
+                    _statusWindow.NetworkStatus = "Not connected";
                     break;
                 case SecQNetServer.ConnectionStatus.Listening:
-                    NetworkConnected = false;
-                    NetworkStatus = "Listening on local Socket " + _EQKDServer.SecQNetServer.ServerIP +":"+ _EQKDServer.SecQNetServer.Port.ToString();
+                    _statusWindow.NetworkConnected = false;
+                    _statusWindow.NetworkStatus = "Listening on local Socket " + _EQKDServer.SecQNetServer.ServerIP + ":" + _EQKDServer.SecQNetServer.Port.ToString();
                     break;
                 case SecQNetServer.ConnectionStatus.ClientConnected:
-                    NetworkConnected = true;
-                    NetworkStatus = "Connected to " + e.ClientIPAddress;
+                    _statusWindow.NetworkConnected = true;
+                    _statusWindow.NetworkStatus = "Connected to " + e.ClientIPAddress;
                     break;
                 case SecQNetServer.ConnectionStatus.ClientDisconnected:
-                    NetworkConnected = false;
-                    NetworkStatus = "Disconnected";
+                    _statusWindow.NetworkConnected = false;
+                    _statusWindow.NetworkStatus = "Disconnected";
                     break;
             }
         }
@@ -431,17 +308,17 @@ namespace EQKDServer.ViewModels
             // Correlation Chart
             //-------------------------
 
-            CorrelationSectionsCollection?.Clear();
-            CorrelationVisualElementsCollection?.Clear();
+            _statusWindow.CorrelationSectionsCollection?.Clear();
+            _statusWindow.CorrelationVisualElementsCollection?.Clear();
 
             _correlationChartValues?.Clear();
-            _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X/1000.0, Y))));
+            _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
             _fittingChartValues?.Clear();
-            if(e.SyncRes.HistogramYFit!=null) _fittingChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
+            if (e.SyncRes.HistogramYFit != null) _fittingChartValues?.AddRange(new ChartValues<ObservablePoint>(e.SyncRes.HistogramX.Zip(e.SyncRes.HistogramYFit, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            CorrChartXMin = e.SyncRes.HistogramX[0]/1000.0;
-            CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length-1]/1000.0;
+            _statusWindow.CorrChartXMin = e.SyncRes.HistogramX[0] / 1000.0;
+            _statusWindow.CorrChartXMax = e.SyncRes.HistogramX[e.SyncRes.HistogramX.Length - 1] / 1000.0;
 
 
             if (e.SyncRes.Peaks != null)
@@ -456,18 +333,18 @@ namespace EQKDServer.ViewModels
                         StrokeThickness = 1,
                         StrokeDashArray = new DoubleCollection(new[] { 4d })
                     };
-                    CorrelationSectionsCollection?.Add(axisSection);
+                    _statusWindow.CorrelationSectionsCollection?.Add(axisSection);
                 }
             }
 
-            if(e.SyncRes.MiddlePeak!=null)
+            if (e.SyncRes.MiddlePeak != null)
             {
                 var b = new Border();
                 TextBox tb = new TextBox()
                 {
                     Text = "Pos: " + e.SyncRes.MiddlePeak.MeanTime.ToString() + "\n" +
                            $"Sigma: {e.SyncRes.Sigma.val:F2}({e.SyncRes.Sigma.err:F2})" + "\n" +
-                           $"FWHM: {e.SyncRes.Sigma.val*2.3548:F2}({e.SyncRes.Sigma.err*2.3548:F2})" + "\n" +
+                           $"FWHM: {e.SyncRes.Sigma.val * 2.3548:F2}({e.SyncRes.Sigma.err * 2.3548:F2})" + "\n" +
                            $"Iterations: {e.SyncRes.NumIterations}" + "\n" +
                            $"GroundLevel: ({e.SyncRes.GroundLevel.val}, max:{e.SyncRes.GroundLevel.max:F1}) " + "\n" +
                            "InSync: " + (e.SyncRes.IsClocksSync ? "true" : "false")
@@ -475,11 +352,11 @@ namespace EQKDServer.ViewModels
                 b.Child = tb;
                 VisualElement ve = new VisualElement()
                 {
-                    X = e.SyncRes.MiddlePeak.MeanTime/1000.0,
+                    X = e.SyncRes.MiddlePeak.MeanTime / 1000.0,
                     Y = e.SyncRes.MiddlePeak.Height_Absolute,
                     UIElement = b
                 };
-                CorrelationVisualElementsCollection?.Add(ve);
+                _statusWindow.CorrelationVisualElementsCollection?.Add(ve);
             }
 
 
@@ -496,14 +373,14 @@ namespace EQKDServer.ViewModels
         private void SyncCorrComplete(object sender, SyncCorrCompleteEventArgs e)
         {
             if (_globalOffsetChartValues?.Count >= 100) _globalOffsetChartValues?.RemoveAt(0);
-            
+
             _globalOffsetChartValues?.Add(_EQKDServer.AliceBobSync.GlobalClockOffset_Relative);
 
         }
 
         private void BasisComplete(object sender, BasisCompletedEventArgs e)
         {
-            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);        
+            ShowCorrelationPeaks(e.HistogramX, e.HistogramY, e.Peaks);
         }
 
         private void ShowCorrelationPeaks(long[] HistogramX, long[] HistogramY, List<Peak> peaks)
@@ -511,12 +388,12 @@ namespace EQKDServer.ViewModels
             _correlationChartValues?.Clear();
             _correlationChartValues?.AddRange(new ChartValues<ObservablePoint>(HistogramX.Zip(HistogramY, (X, Y) => new ObservablePoint(X / 1000.0, Y))));
 
-            CorrelationSectionsCollection?.Clear();
-            CorrelationVisualElementsCollection?.Clear();
+            _statusWindow.CorrelationSectionsCollection?.Clear();
+            _statusWindow.CorrelationVisualElementsCollection?.Clear();
 
 
-            CorrChartXMin = HistogramX[0] / 1000.0;
-            CorrChartXMax = HistogramX[HistogramX.Length - 1] / 1000.0;
+            _statusWindow.CorrChartXMin = HistogramX[0] / 1000.0;
+            _statusWindow.CorrChartXMax = HistogramX[HistogramX.Length - 1] / 1000.0;
 
             foreach (Peak peak in peaks)
             {
@@ -528,7 +405,7 @@ namespace EQKDServer.ViewModels
                     StrokeThickness = 1,
                     StrokeDashArray = new DoubleCollection(new[] { 4d })
                 };
-                CorrelationSectionsCollection?.Add(axisSection);
+                _statusWindow.CorrelationSectionsCollection?.Add(axisSection);
             }
         }
 
@@ -545,6 +422,5 @@ namespace EQKDServer.ViewModels
         //}
 
         #endregion
-
     }
 }

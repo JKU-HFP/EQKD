@@ -111,6 +111,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\Hardware\Catalogue.cs" />
+    <Compile Include="Models\Hardware\Connections.cs" />
+    <Compile Include="Models\Hardware\HardwareInterface.cs" />
+    <Compile Include="Models\Hardware\Operations.cs" />
     <Compile Include="Models\LocalSiftingResult.cs" />
     <Compile Include="Models\ChannelDiagnosis.cs" />
     <Compile Include="Models\EQKDServerModel.cs" />
@@ -121,6 +125,7 @@
     <Compile Include="Models\RelayCommand.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\NetworkControlViewModel.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\PolCorrectionControlViewModel.cs" />
+    <Compile Include="ViewModels\StatusWindowViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\TaggerControlViewModel.cs" />
     <Compile Include="ViewModels\SettingControlViewModels\TimeTaggerViewModels\ChannelViewModel.cs" />

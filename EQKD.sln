@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29020.237
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EQKDClient", "EQKDClient\EQKDClient.csproj", "{E6002FAD-30AB-4606-BA96-684C0858F161}"
 EndProject
@@ -30,14 +30,6 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Powermeter_Library", "..\ProjectLibrary\Powermeter_Library\Powermeter_Library.shproj", "{BDA68345-535B-49B1-90A7-584F61A407D6}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{105b3f84-f045-4ec7-b75c-de9a85f2d3e9}*SharedItemsImports = 13
-		..\ProjectLibrary\Powermeter_Library\Powermeter_Library.projitems*{6920f7e2-e626-44cd-a7e2-dc2d33a87df0}*SharedItemsImports = 5
-		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{721af447-1302-4af1-bc15-b3d878afbbf8}*SharedItemsImports = 13
-		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{803c4d5f-67f8-494f-92bb-e69000c7e505}*SharedItemsImports = 5
-		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}*SharedItemsImports = 5
-		..\ProjectLibrary\Powermeter_Library\Powermeter_Library.projitems*{bda68345-535b-49b1-90a7-584f61a407d6}*SharedItemsImports = 13
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -131,5 +123,13 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6FE6E115-78D5-4C4F-BB91-7183E25C04E2}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{105b3f84-f045-4ec7-b75c-de9a85f2d3e9}*SharedItemsImports = 13
+		..\ProjectLibrary\Powermeter_Library\Powermeter_Library.projitems*{6920f7e2-e626-44cd-a7e2-dc2d33a87df0}*SharedItemsImports = 5
+		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{721af447-1302-4af1-bc15-b3d878afbbf8}*SharedItemsImports = 13
+		..\ProjectLibrary\TimeTagger_Library\TimeTagger_Library.projitems*{803c4d5f-67f8-494f-92bb-e69000c7e505}*SharedItemsImports = 5
+		..\ProjectLibrary\Stage_Library\Stage_Library.projitems*{b61f6ae3-55a5-4e34-9c97-06710b0f1d3d}*SharedItemsImports = 5
+		..\ProjectLibrary\Powermeter_Library\Powermeter_Library.projitems*{bda68345-535b-49b1-90a7-584f61a407d6}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

@@ -455,9 +455,10 @@ namespace EQKDServer.ViewModels.SettingControlViewModels
 
         private bool CanSynchrononize(object o)
         {
+            return false;
             return (_EQKDServer != null &&
-                     _EQKDServer.ServerTimeTagger.CanCollect &&
-                     _EQKDServer.ClientTimeTagger.CanCollect);
+                     _EQKDServer.Hardware.ServerTimeTagger.CanCollect &&
+                     _EQKDServer.Hardware.ClientTimeTagger.CanCollect);
         }
                
     }

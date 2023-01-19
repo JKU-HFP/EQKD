@@ -107,28 +107,9 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            
-            <!-- Correlations -->
-            <lvc:CartesianChart Grid.Row="0" Grid.ColumnSpan="2"                 
-                        Zoom="None"
-                        Series="{Binding Path=CorrelationCollection}"
-                        DisableAnimations="True"
-                        VisualElements="{Binding CorrelationVisualElementsCollection}">
-                <lvc:CartesianChart.AxisY>
-                    <lvc:AxesCollection>
-                    <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
-                    </lvc:AxesCollection>
-                </lvc:CartesianChart.AxisY>
-                <lvc:CartesianChart.AxisX>
-                    <lvc:AxesCollection>
-                    <lvc:Axis Title="Delay [ns]" Sections="{Binding CorrelationSectionsCollection}"
-                              MinValue="{Binding CorrChartXMin}" MaxValue="{Binding CorrChartXMax}"></lvc:Axis>
-                    </lvc:AxesCollection>
-                </lvc:CartesianChart.AxisX>
-            </lvc:CartesianChart>
 
             <!-- Global Offset -->
-            <lvc:CartesianChart Grid.Row="1"
+            <lvc:CartesianChart Grid.Row="0"
                         Zoom="None"
                         Series="{Binding GlobalOffsetCollection}"
                         DisableAnimations="True"  >
@@ -140,7 +121,7 @@
             </lvc:CartesianChart>
 
             <!-- Linear Drift Compensation -->
-            <lvc:CartesianChart Grid.Row="1" Grid.Column="1"
+            <lvc:CartesianChart Grid.Row="0" Grid.Column="1"
                         Zoom="None"
                         Series="{Binding LinearDriftCompCollection}"
                         DisableAnimations="True"  >
@@ -150,6 +131,25 @@
                     </lvc:AxesCollection>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
+
+            <!-- Correlations -->
+            <lvc:CartesianChart Grid.Row="1" Grid.ColumnSpan="2"                 
+                        Zoom="None"
+                        Series="{Binding _statusWindow.CorrelationCollection}"
+                        DisableAnimations="True">
+                <lvc:CartesianChart.AxisY>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Coincidences" MinValue="0"></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisY>
+                <lvc:CartesianChart.AxisX>
+                    <lvc:AxesCollection>
+                        <lvc:Axis Title="Delay [ns]" 
+                              MinValue="{Binding _statusWindow.CorrChartXMin}" MaxValue="{Binding _statusWindow.CorrChartXMax}"></lvc:Axis>
+                    </lvc:AxesCollection>
+                </lvc:CartesianChart.AxisX>
+            </lvc:CartesianChart>
+
         </Grid>
 
     </Grid>

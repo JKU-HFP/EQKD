@@ -50,7 +50,10 @@ namespace EQKDClient
                 RefChanDivider = 100,
                 PackageMode = TimeTaggerBase.PMode.ByEllapsedTime
             };
-            TimeTagger.Connect(new List<long> { 0, 0, -75648, -78208, 2176, 2176, 1164, 2176});
+            try {
+                TimeTagger.Connect(new List<long> { 0, 0, -75648, -78208, 2176, 2176, 1164, 2176 });
+            }
+            catch { }
             //List<int> countrate = TimeTagger.GetCountrate();
             //for (int i = 0; i < 8; i++) WriteLog($"Chan {i + 1}: {countrate[i]}");
 
